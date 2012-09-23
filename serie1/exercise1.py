@@ -30,9 +30,10 @@ text = f.read()
 f.close()
 
 wordList = {}
+# extract words from file to a list (does not work for characters other than [a-zA-Z])
 wordArr = re.findall(r'\b\w+\b', text)
 for word in wordArr:
-	word = re.sub(r'[0-9]|\W', '', word.lower())
+	word = re.sub(r'[0-9]|\W', '', word.lower()) # remove any character other than [a-z]
 	if word not in wordList:
 		wordList.update({word:0})
 	wordList[word] += 1

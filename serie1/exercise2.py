@@ -20,9 +20,14 @@ if len( sys.argv[1:] ) < 2:
 path = sys.argv[1]
 words = sys.argv[2:]
 
+# sort the characters of a string alphabetically
+# @param string str: string to be sorted
+# @return sorted string
 def sortString(str):
 	return "".join(sorted(str))
 
+# build a dictionary from all words passed as arguments
+# use the sorted word as key and the word as value
 wordsDict = {}
 for word in words:
 	wordSort = re.sub(r'\W|[0-9]', '', word.lower())
@@ -38,8 +43,8 @@ f = open(path)
 for line in f.readlines():
 	wordSort = re.sub(r'\W|[0-9]', '', line.lower())
 	wordSort = sortString(wordSort)
+	# search for the sorted string in the dict
 	if wordSort in wordsDict:
 		print wordsDict[wordSort], '-', re.sub(r'[\n\r]', '', line)
 
 f.close()
-

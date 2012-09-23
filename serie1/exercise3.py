@@ -24,8 +24,11 @@ if len( sys.argv[1:] ) < 2:
 depth_p = int(sys.argv[2])
 path_p = sys.argv[1]
 
+# function to print content of path (recusive)
+# @param string path: path to show content of
+# @param int depth: depth of directory tree, 0 means print the passed path
 def descendTree(path, depth):
-	if depth > 0:
+	if depth > 0: #stop condition
 		dirList = os.listdir(path)
 		for elem in dirList:
 			if path[-1] != "/":
@@ -33,9 +36,11 @@ def descendTree(path, depth):
 			elemPath = path + elem
 			mode = os.lstat(elemPath).st_mode
 			if stat.S_ISDIR(mode):
+				# element is a directory -> call descendTree recursively
 				print elemPath + "/"
 				descendTree(elemPath + "/", depth-1)
 			else:
+				# not a directory
 				print elemPath
 
 print path_p
