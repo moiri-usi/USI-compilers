@@ -30,7 +30,7 @@ def sortString(str):
 # use the sorted word as key and the word as value
 wordsDict = {}
 for word in words:
-	wordSort = re.sub(r'\W|[0-9]', '', word.lower())
+	wordSort = re.sub(r'[^a-zà-ÿ]', '', word.lower())
 	wordsDict.update({sortString(wordSort):word})
 
 import os.path
@@ -41,7 +41,7 @@ if not os.path.exists( path ):
 f = open(path)
 
 for line in f.readlines():
-	wordSort = re.sub(r'\W|[0-9]', '', line.lower())
+	wordSort = re.sub(r'[^a-zà-ÿ]', '', line.lower())
 	wordSort = sortString(wordSort)
 	# search for the sorted string in the dict
 	if wordSort in wordsDict:
