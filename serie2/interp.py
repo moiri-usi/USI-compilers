@@ -27,6 +27,13 @@ def num_nodes(n):
 
     elif isinstance(n, compiler.ast.Add):
         return 1 + num_nodes(n.left) + num_nodes(n.right)
+   
+    elif isinstance(n, compiler.ast.Const):
+        return n.value # declare as const by python?
+
+    elif isinstance(n, compiler.ast.Discard):
+        num_nodes(n)
+        return
     #Mul
     #Sub
     #Div
@@ -41,6 +48,6 @@ def num_nodes(n):
     #UnarySub
     #UnaryAdd
     else:
-        pass
+        print "unknown ast node"
 # interprete ast
 num_nodes(ast)
