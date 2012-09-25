@@ -52,6 +52,12 @@ class Interpreterer( object ):
         except KeyError:
             die( "ERROR: variable '%s' does not exist" % name )
 
+    def get_value( self ):
+        res = self.stack_pop()
+        if type(res) == str:
+            res = self.vartable_get(res)
+        return res
+
     def num_child_nodes( self, node ):
         print "\t\t\t\tDEBUG: num_child_nodes"
         num = sum([self.num_nodes(x) for x in node.getChildNodes()])
@@ -80,28 +86,28 @@ class Interpreterer( object ):
         elif isinstance(node, compiler.ast.Add):
             print "\t\tAdd" 
             num = 1 + self.num_child_nodes( node )
-            self.stack_push( self.stack_pop() + self.stack_pop() )
+            self.stack_push( self.get_value() + self.get_value() )
             return num
 
         elif isinstance(node, compiler.ast.Mul ):
             print "\t\tMul" 
             num = 1 + self.num_child_nodes( node )
-            self.stack_push( self.stack_pop() * self.stack_pop() )
+            self.stack_push( self.get_value() * self.get_value() )
             return num
 
         elif isinstance(node, compiler.ast.Sub ):
             print "\t\tSub" 
             num = 1 + self.num_child_nodes( node )
-            var_a = self.stack_pop()
-            var_b = self.stack_pop()
+            var_a = self.get_value()
+            var_b = self.get_value()
             self.stack_push( var_b - var_a )
             return num
 
         elif isinstance(node, compiler.ast.Div ):
             print "\t\tDiv" 
             num = 1 + self.num_child_nodes( node )
-            var_a = self.stack_pop()
-            var_b = self.stack_pop()
+            var_a = self.get_value()
+            var_b = self.get_value()
             try: # FIXME, exit on ZeroDivisionError
                 self.stack_push( var_b / var_a )
             except ZeroDivisionError:
@@ -132,8 +138,8 @@ class Interpreterer( object ):
         elif isinstance(node, compiler.ast.Assign ):
             print "\t\tAssign" 
             num = 1 + self.num_child_nodes( node )
-            name = self.stack_pop()
             val = self.stack_pop()
+            name = self.stack_pop()
             self.vartable_set( name, val )
             return num
 
@@ -152,7 +158,8 @@ class Interpreterer( object ):
         elif isinstance(node, compiler.ast.Printnl ):
             print "\t\tPrintnl" 
             num = 1 + self.num_child_nodes( node )
-            print "%s" % str( self.stack_pop() )
+#            print "%s" % str( self.stack_pop() )
+            print "%s" % str( self.get_value() )
             return num
 
         elif isinstance(node, compiler.ast.UnarySub ):
@@ -170,19 +177,20 @@ class Interpreterer( object ):
         elif isinstance(node, compiler.ast.Bitand ):
             print "\t\tBitand" 
             num = 1 + self.num_child_nodes( node )
-            self.stack_push( self.stack_pop() & self.stack_pop() )
+            #self.stack_push( self.stack_pop() & self.stack_pop() )
+            self.stack_push( self.get_value() & self.get_value() )
             return num
 
         elif isinstance(node, compiler.ast.Bitor ):
             print "\t\tBitor" 
             num = 1 + self.num_child_nodes( node )
-            self.stack_push( self.stack_pop() | self.stack_pop() )
+            self.stack_push( self.get_value() | self.get_value() )
             return num
 
         elif isinstance(node, compiler.ast.Bitxor ):
             print "\t\tBitxor" 
             num = 1 + self.num_child_nodes( node )
-            self.stack_push( self.stack_pop() ^ self.stack_pop() )
+            self.stack_push( self.get_value() ^ self.get_value() )
             return num
 
         else:
