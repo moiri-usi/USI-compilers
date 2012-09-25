@@ -24,6 +24,7 @@ class Interpreterer( object ):
                 die( "ERROR: file '%s' does not exist" % filepath )
             else:
                 self.ast = compiler.parseFile( filepath )
+        self.ans = ''
         self.stack = []
         self.vartable = {}
 
@@ -39,12 +40,8 @@ class Interpreterer( object ):
     def stack_pop( self ):
         return self.stack.pop()
 
-    def stack_peek( self ):
-        try:
-            return self.stack[0]
-        except IndexError:
-            # TODO check raise
-            raise IndexError( "ERROR: stack index error" )
+    def stack_ans( self ):
+        return self.ans
 
     def vartable_set( self, name, val ):
         self.vartable.update( {name:val} )
@@ -64,10 +61,7 @@ class Interpreterer( object ):
     def num_nodes(self, node):
         if isinstance( node, compiler.ast.Module):
             print "\tModule" 
-            # flush stack
-            self.stack = []
-            # flush vartable
-            self.vartable = {}
+            self.ans = ''
             return self.num_nodes(node.node)
 
         elif isinstance( node, compiler.ast.Stmt):
@@ -124,13 +118,30 @@ class Interpreterer( object ):
 
         elif isinstance(node, compiler.ast.Discard):
             print "\t\tDiscard" 
-            return 1 + self.num_child_nodes( node )
+            num = 1 + self.num_child_nodes( node )
+            self.ans = str( self.stack_pop() )
+            return num
 
         elif isinstance(node, compiler.ast.AssName ):
+            print "\t\tAssName" 
+            self.stack_pop()
+            self.vartable_set( node.value, -1 )
             return 1    
 
         elif isinstance(node, compiler.ast.Assign ):
+            print "\t\tAssign" 
+            num = 1 + self.num_child_nodes( node )
+            name = self.stack_pop()
+            val = self.stack_pop()
+            self.vartable_set( name, val )
+            return num
+
+        elif isinstance(node, compiler.ast.Name ):
+            print "\t\tName" 
+            self.stack_push( node.value )  
             return 1    
+
+
 
         elif isinstance(node, compiler.ast.Bitand ):
             return 1    
@@ -141,14 +152,21 @@ class Interpreterer( object ):
         elif isinstance(node, compiler.ast.Bitxor ):
             return 1    
 
+
+
         elif isinstance(node, compiler.ast.CallFunc ):
-            return 1    
+            print "\t\tCallFunc"
+            num = 1 + self.num_child_nodes( node )
+            print "stack len '%d'" % len( self.stack )  
+            name = self.stack_pop()
+            print "XXX '%s'" % name 
+            if "input":
+                print "\t\t\tinput()"
+                self.stack_push( input() )  
+            return num
 
-        elif isinstance(node, compiler.ast.List ):
-            return 1    
-
-        elif isinstance(node, compiler.ast.Name ):
-            return 1    
+#        elif isinstance(node, compiler.ast.List ):
+#            return 1    
 
         elif isinstance(node, compiler.ast.Printnl ):
             print "\t\tPrintnl"
@@ -170,4 +188,3 @@ class Interpreterer( object ):
 if 1 == len( sys.argv[1:] ):
     inst = Interpreterer( sys.argv[1] )
     number_of_nodes = inst.interpret_file()
-
