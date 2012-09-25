@@ -85,7 +85,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         res = self.intp.num_nodes( ast ) 
 
         ## test result
-        self.assertEqual( int(self.intp.stack_ans()), 1 )
+        self.assertEqual( int(self.intp.stack_ans()), 0 )
 
         ## test number of executed nodes
         self.assertEqual( 5, res )
@@ -139,6 +139,18 @@ class TestSequenceFunctions( unittest.TestCase ):
 
         ## test number of executed nodes
         self.assertEqual( 4, res )
+
+    def test_multipleInstructions( self ):
+        ast = compiler.parse('x = -1; x + 2')
+        res = self.intp.num_nodes( ast ) 
+
+        ## test result
+        self.assertEqual( int(self.intp.stack_ans()), 1 )
+
+        ## test number of executed nodes
+        self.assertEqual( 9, res )
+
+
 
 # TODO rm
     # def test_shuffle(self):
