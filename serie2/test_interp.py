@@ -25,7 +25,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         res = self.intp.num_nodes( ast )
 
         ## test result
-        self.assertEqual( self.intp.stack[0], 3 )
+        self.assertEqual( int(self.intp.stack_ans()), 3 )
 
         ## test number of executed nodes
         self.assertEqual( 5, res )   
@@ -35,7 +35,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         res = self.intp.num_nodes( ast )
 
         ## test result
-        self.assertEqual( self.intp.stack_peek(), 1 )
+        self.assertEqual( int(self.intp.stack_ans()), 1 )
 
         ## test number of executed nodes
         self.assertEqual( 5, res )   
@@ -45,7 +45,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         res = self.intp.num_nodes( ast )
 
         ## test result
-        self.assertEqual( self.intp.stack_peek(), -1 )
+        self.assertEqual( int(self.intp.stack_ans()), -1 )
 
         ## test number of executed nodes
         self.assertEqual( 5, res )   
@@ -55,7 +55,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         res = self.intp.num_nodes( ast )
 
         ## test result
-        self.assertEqual( self.intp.stack_peek(), 20 )
+        self.assertEqual( int(self.intp.stack_ans()), 20 )
 
         ## test number of executed nodes
         self.assertEqual( 5, res )   
@@ -65,15 +65,80 @@ class TestSequenceFunctions( unittest.TestCase ):
         res = self.intp.num_nodes( ast )
 
         ## test result
-        self.assertEqual( self.intp.stack_peek(), 2 )
+        self.assertEqual( int(self.intp.stack_ans()), 2 )
 
         ## test number of executed nodes
         self.assertEqual( 5, res )   
 
+    def test_Assign( self ):
+        ast = compiler.parse('x = 1')
+        res = self.intp.num_nodes( ast ) 
 
+        ## test result
+        self.assertEqual( self.intp.vartable_get( 'x' ), 1 )
 
+        ## test number of executed nodes
+        self.assertEqual( 4, res )
 
+    def test_Bitand ( self ):
+        ast = compiler.parse('2&1')
+        res = self.intp.num_nodes( ast ) 
 
+        ## test result
+        self.assertEqual( int(self.intp.stack_ans()), 1 )
+
+        ## test number of executed nodes
+        self.assertEqual( 5, res )
+
+    def test_Bitor( self ):
+        ast = compiler.parse('2|1')
+        res = self.intp.num_nodes( ast ) 
+
+        ## test result
+        self.assertEqual( int(self.intp.stack_ans()), 3 )
+
+        ## test number of executed nodes
+        self.assertEqual( 5, res )
+
+    def test_Bitxor( self ):
+        ast = compiler.parse('3^5')
+        res = self.intp.num_nodes( ast ) 
+
+        ## test result
+        self.assertEqual( int(self.intp.stack_ans()), 6 )
+
+        ## test number of executed nodes
+        self.assertEqual( 5, res )
+
+    def test_Name( self ):
+        ast = compiler.parse('x')
+        res = self.intp.num_nodes( ast ) 
+
+        ## test result
+        self.assertEqual( self.intp.stack_ans(), 'x' )
+
+        ## test number of executed nodes
+        self.assertEqual( 3, res )
+
+    def test_UnarySub( self ):
+        ast = compiler.parse('-1')
+        res = self.intp.num_nodes( ast ) 
+
+        ## test result
+        self.assertEqual( int(self.intp.stack_ans()), -1 )
+
+        ## test number of executed nodes
+        self.assertEqual( 4, res )
+
+    def test_UnaryAdd( self ):
+        ast = compiler.parse('+1')
+        res = self.intp.num_nodes( ast ) 
+
+        ## test result
+        self.assertEqual( int(self.intp.stack_ans()), 1 )
+
+        ## test number of executed nodes
+        self.assertEqual( 4, res )
 
 # TODO rm
     # def test_shuffle(self):
