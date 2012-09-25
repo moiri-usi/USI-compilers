@@ -96,12 +96,10 @@ class Interpreterer( object ):
     ## @param obj node: node of the ast
     def num_nodes(self, node):
         if isinstance( node, compiler.ast.Module):
-            print "\tModule" 
             self.ans = ''
             return self.num_nodes(node.node)
 
         elif isinstance( node, compiler.ast.Stmt):
-            print "\t\tStmt" 
             try:
                 num = 1 + self.num_child_nodes( node )
                 return num
@@ -109,19 +107,16 @@ class Interpreterer( object ):
                 die( "ERROR: None Type received, corrupt node handling" )
 
         elif isinstance(node, compiler.ast.Add):
-            print "\t\tAdd" 
             num = 1 + self.num_child_nodes( node )
             self.stack_push( self.stack_pop_smart() + self.stack_pop_smart() )
             return num
 
         elif isinstance(node, compiler.ast.Mul ):
-            print "\t\tMul" 
             num = 1 + self.num_child_nodes( node )
             self.stack_push( self.stack_pop_smart() * self.stack_pop_smart() )
             return num
 
         elif isinstance(node, compiler.ast.Sub ):
-            print "\t\tSub" 
             num = 1 + self.num_child_nodes( node )
             var_a = self.stack_pop_smart()
             var_b = self.stack_pop_smart()
@@ -129,7 +124,6 @@ class Interpreterer( object ):
             return num
 
         elif isinstance(node, compiler.ast.Div ):
-            print "\t\tDiv" 
             num = 1 + self.num_child_nodes( node )
             var_a = self.stack_pop_smart()
             var_b = self.stack_pop_smart()
@@ -140,24 +134,20 @@ class Interpreterer( object ):
             return num
 
         elif isinstance(node, compiler.ast.Const):
-            print "\t\tConst" 
             self.stack_push( self.check_plain_integer( node.value ) )
             return 1
 
         elif isinstance(node, compiler.ast.Discard):
-            print "\t\tDiscard" 
             num = 1 + self.num_child_nodes( node )
             self.stack_pop()
             return num
 
         elif isinstance(node, compiler.ast.AssName ):
-            print "\t\tAssName" 
             self.stack_push( node.name )
             self.vartable_set( node.name, -1 )
             return 1
 
         elif isinstance(node, compiler.ast.Assign ):
-            print "\t\tAssign" 
             num = 1 + self.num_child_nodes( node )
             val = self.stack_pop()
             name = self.stack_pop()
@@ -165,49 +155,41 @@ class Interpreterer( object ):
             return num
 
         elif isinstance(node, compiler.ast.Name ):
-            print "\t\tName" 
             self.stack_push( node.name )
             return 1
 
         elif isinstance(node, compiler.ast.CallFunc ):
-            print "\t\tCallFunc"
             num = 1 + self.num_child_nodes( node )
             name = self.stack_pop()
             if "input" == name: self.stack_push( self.check_plain_integer( input() ) ) # well..
             return num
 
         elif isinstance(node, compiler.ast.Printnl ):
-            print "\t\tPrintnl" 
             num = 1 + self.num_child_nodes( node )
             print "%s" % str( self.stack_pop_smart() )
             return num
 
         elif isinstance(node, compiler.ast.UnarySub ):
-            print "\t\tUnarySub" 
             num = 1 + self.num_child_nodes( node )
             self.stack_push( -self.stack_pop() )
             return num
 
         elif isinstance(node, compiler.ast.UnaryAdd ):
-            print "\t\tUnaryAdd" 
             num = 1 + self.num_child_nodes( node )
             self.stack_push( +self.stack_pop() )
             return num
 
         elif isinstance(node, compiler.ast.Bitand ):
-            print "\t\tBitand" 
             num = 1 + self.num_child_nodes( node )
             self.stack_push( self.stack_pop_smart() & self.stack_pop_smart() )
             return num
 
         elif isinstance(node, compiler.ast.Bitor ):
-            print "\t\tBitor" 
             num = 1 + self.num_child_nodes( node )
             self.stack_push( self.stack_pop_smart() | self.stack_pop_smart() )
             return num
 
         elif isinstance(node, compiler.ast.Bitxor ):
-            print "\t\tBitxor" 
             num = 1 + self.num_child_nodes( node )
             self.stack_push( self.stack_pop_smart() ^ self.stack_pop_smart() )
             return num
