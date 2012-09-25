@@ -1,44 +1,74 @@
-# get file path from param
+#!/usr/bin/env python
+# -*- coding: iso-8859-1 -*-
+#
+# Simon Maurer
+# Lothar Rubusch
+
+"""
+USAGE:
+$ python ./interp.py ./input.txt
+
+TEST:
+$ python ./test_interp.py
+"""
+
 import sys
 import os.path
 import compiler
 
-"""
-USAGE:
-
-python ./interp.py ./input.txt
-
-TEST
-python ./test_interp.py
-"""
-
-
+## abort program
 def die( meng ):
     print meng
     sys.exit( -1 )
 
+## interpreter implementation
 class Interpreterer( object ):
     def __init__( self, filepath=None ):
         if filepath:
             if not os.path.exists( filepath ):
                 die( "ERROR: file '%s' does not exist" % filepath )
             else:
-                self.ast = compiler.parseFile( filepath )
-        self.ans = ''
+                try:
+                    ## provided AST
+                    self.ast = compiler.parseFile( filepath )
+                except SyntaxError:
+                    die( "ERROR: invalid syntax in file '%s'" %filepath )
+
+        ## working stack
         self.stack = []
+
+        ## last element, removed from stack
+        self.ans = ''
+
+        ## lookup table for symbols
         self.vartable = {}
 
     def interpret_file( self ):
         try:
             return self.num_nodes( self.ast )
         except AttributeError:
-            die( "ERROR: class started in DEBUG mode, no AST file set" )
+            ## specific case: TEST mode starts class without providing a P0 code
+            ## file, so there won't be an AST already available here
+            die( "ERROR: class started in TEST mode, no AST file set" )
 
     def stack_push( self, elem):
         self.stack.append( elem )
 
     def stack_pop( self ):
-        return self.stack.pop()
+        try:
+            val = self.stack.pop()
+        except IndexError:
+            die( "ERROR: stack index out of bounds" )
+        self.ans = str( val )
+        return val
+
+    def stack_pop_smart( self ):
+        ## get elem from stack, in case elem is a var name,
+        ## look it up in vartable
+        res = self.stack_pop()
+        if type(res) == str:
+            res = self.vartable_get(res)
+        return res
 
     def stack_ans( self ):
         return self.ans
@@ -52,20 +82,18 @@ class Interpreterer( object ):
         except KeyError:
             die( "ERROR: variable '%s' does not exist" % name )
 
-    def get_value( self ):
-        res = self.stack_pop()
-        if type(res) == str:
-            res = self.vartable_get(res)
-        return res
+    def check_plain_integer( self, val ):
+        if type( val ) is not int:
+            die( "ERROR: syntax error, no plain integer allowed" )
+        return val
+
 
     def num_child_nodes( self, node ):
-        print "\t\t\t\tDEBUG: num_child_nodes"
         num = sum([self.num_nodes(x) for x in node.getChildNodes()])
-#        print "\t\t\t\tDEBUG: returned '%d' children" % str(num) 
         return num
 
     ## function to interprete the ast
-    ## @param obj n: node of the ast
+    ## @param obj node: node of the ast
     def num_nodes(self, node):
         if isinstance( node, compiler.ast.Module):
             print "\tModule" 
@@ -74,41 +102,38 @@ class Interpreterer( object ):
 
         elif isinstance( node, compiler.ast.Stmt):
             print "\t\tStmt" 
-            ## loop over all nodes, thereby execute node operation, construct
-            ## list of nodes to count num of nodes as return value of "num_nodes()"
             try:
                 num = 1 + self.num_child_nodes( node )
                 return num
             except:
-                print "ERROR: None Type received, one node returned NOTHING"
-                return -1
+                die( "ERROR: None Type received, corrupt node handling" )
 
         elif isinstance(node, compiler.ast.Add):
             print "\t\tAdd" 
             num = 1 + self.num_child_nodes( node )
-            self.stack_push( self.get_value() + self.get_value() )
+            self.stack_push( self.stack_pop_smart() + self.stack_pop_smart() )
             return num
 
         elif isinstance(node, compiler.ast.Mul ):
             print "\t\tMul" 
             num = 1 + self.num_child_nodes( node )
-            self.stack_push( self.get_value() * self.get_value() )
+            self.stack_push( self.stack_pop_smart() * self.stack_pop_smart() )
             return num
 
         elif isinstance(node, compiler.ast.Sub ):
             print "\t\tSub" 
             num = 1 + self.num_child_nodes( node )
-            var_a = self.get_value()
-            var_b = self.get_value()
+            var_a = self.stack_pop_smart()
+            var_b = self.stack_pop_smart()
             self.stack_push( var_b - var_a )
             return num
 
         elif isinstance(node, compiler.ast.Div ):
             print "\t\tDiv" 
             num = 1 + self.num_child_nodes( node )
-            var_a = self.get_value()
-            var_b = self.get_value()
-            try: # FIXME, exit on ZeroDivisionError
+            var_a = self.stack_pop_smart()
+            var_b = self.stack_pop_smart()
+            try:
                 self.stack_push( var_b / var_a )
             except ZeroDivisionError:
                 die( "ERROR: division by 0" )
@@ -116,17 +141,13 @@ class Interpreterer( object ):
 
         elif isinstance(node, compiler.ast.Const):
             print "\t\tConst" 
-            ## TODO const flag, no assingment to const
-            if type( node.value ) is not int:
-                print "WARNING: casting float to integer"  
-                node.value = int( node.value )
-            self.stack_push( node.value )
+            self.stack_push( self.check_plain_integer( node.value ) )
             return 1
 
         elif isinstance(node, compiler.ast.Discard):
             print "\t\tDiscard" 
             num = 1 + self.num_child_nodes( node )
-            self.ans = str( self.stack_pop() )
+            self.stack_pop()
             return num
 
         elif isinstance(node, compiler.ast.AssName ):
@@ -152,14 +173,13 @@ class Interpreterer( object ):
             print "\t\tCallFunc"
             num = 1 + self.num_child_nodes( node )
             name = self.stack_pop()
-            if "input": self.stack_push( input() )  
+            if "input" == name: self.stack_push( self.check_plain_integer( input() ) ) # well..
             return num
 
         elif isinstance(node, compiler.ast.Printnl ):
             print "\t\tPrintnl" 
             num = 1 + self.num_child_nodes( node )
-#            print "%s" % str( self.stack_pop() )
-            print "%s" % str( self.get_value() )
+            print "%s" % str( self.stack_pop_smart() )
             return num
 
         elif isinstance(node, compiler.ast.UnarySub ):
@@ -177,25 +197,23 @@ class Interpreterer( object ):
         elif isinstance(node, compiler.ast.Bitand ):
             print "\t\tBitand" 
             num = 1 + self.num_child_nodes( node )
-            #self.stack_push( self.stack_pop() & self.stack_pop() )
-            self.stack_push( self.get_value() & self.get_value() )
+            self.stack_push( self.stack_pop_smart() & self.stack_pop_smart() )
             return num
 
         elif isinstance(node, compiler.ast.Bitor ):
             print "\t\tBitor" 
             num = 1 + self.num_child_nodes( node )
-            self.stack_push( self.get_value() | self.get_value() )
+            self.stack_push( self.stack_pop_smart() | self.stack_pop_smart() )
             return num
 
         elif isinstance(node, compiler.ast.Bitxor ):
             print "\t\tBitxor" 
             num = 1 + self.num_child_nodes( node )
-            self.stack_push( self.get_value() ^ self.get_value() )
+            self.stack_push( self.stack_pop_smart() ^ self.stack_pop_smart() )
             return num
 
         else:
-            print "unknown ast node"
-            return 1
+            die( "unknown AST node" )
 
 ## start
 if 1 == len( sys.argv[1:] ):
