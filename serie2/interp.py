@@ -50,7 +50,10 @@ class Interpreterer( object ):
         self.vartable.update( {name:val} )
 
     def vartable_get( self, name ):
-        return self.vartable[key]
+        try:
+            return self.vartable[key]
+        except KeyError:
+            die( "ERROR: variable '%s' does not exist" % key )
 
     def num_child_nodes( self, node ):
         num = sum([self.num_nodes(x) for x in node.getChildNodes()])
