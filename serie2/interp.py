@@ -48,12 +48,14 @@ class Interpreterer( object ):
 
     def vartable_get( self, name ):
         try:
-            return self.vartable[key]
+            return self.vartable[name]
         except KeyError:
-            die( "ERROR: variable '%s' does not exist" % key )
+            die( "ERROR: variable '%s' does not exist" % name )
 
     def num_child_nodes( self, node ):
+        print "\t\t\t\tDEBUG: num_child_nodes"
         num = sum([self.num_nodes(x) for x in node.getChildNodes()])
+#        print "\t\t\t\tDEBUG: returned '%d' children" % str(num) 
         return num
 
     ## function to interprete the ast
@@ -100,7 +102,6 @@ class Interpreterer( object ):
             num = 1 + self.num_child_nodes( node )
             var_a = self.stack_pop()
             var_b = self.stack_pop()
-#            print "XXX num '%d', var_a '%d', var_b '%d'" % (num, var_a, var_b)   
             try: # FIXME, exit on ZeroDivisionError
                 self.stack_push( var_b / var_a )
             except ZeroDivisionError:
@@ -124,9 +125,9 @@ class Interpreterer( object ):
 
         elif isinstance(node, compiler.ast.AssName ):
             print "\t\tAssName" 
-            self.stack_pop()
-            self.vartable_set( node.value, -1 )
-            return 1    
+            self.stack_push( node.name )
+            self.vartable_set( node.name, -1 )
+            return 1
 
         elif isinstance(node, compiler.ast.Assign ):
             print "\t\tAssign" 
@@ -138,47 +139,51 @@ class Interpreterer( object ):
 
         elif isinstance(node, compiler.ast.Name ):
             print "\t\tName" 
-            self.stack_push( node.value )  
-            return 1    
-
-
-
-        elif isinstance(node, compiler.ast.Bitand ):
-            return 1    
-
-        elif isinstance(node, compiler.ast.Bitor ):
-            return 1    
-
-        elif isinstance(node, compiler.ast.Bitxor ):
-            return 1    
-
-
+            self.stack_push( node.name )
+            return 1
 
         elif isinstance(node, compiler.ast.CallFunc ):
             print "\t\tCallFunc"
             num = 1 + self.num_child_nodes( node )
-            print "stack len '%d'" % len( self.stack )  
             name = self.stack_pop()
-            print "XXX '%s'" % name 
-            if "input":
-                print "\t\t\tinput()"
-                self.stack_push( input() )  
+            if "input": self.stack_push( input() )  
             return num
 
-#        elif isinstance(node, compiler.ast.List ):
-#            return 1    
-
         elif isinstance(node, compiler.ast.Printnl ):
-            print "\t\tPrintnl"
+            print "\t\tPrintnl" 
             num = 1 + self.num_child_nodes( node )
             print "%s" % str( self.stack_pop() )
             return num
 
         elif isinstance(node, compiler.ast.UnarySub ):
-            return 1    
+            print "\t\tUnarySub" 
+            num = 1 + self.num_child_nodes( node )
+            self.stack_push( -self.stack_pop() )
+            return num
 
         elif isinstance(node, compiler.ast.UnaryAdd ):
-            return 1    
+            print "\t\tUnaryAdd" 
+            num = 1 + self.num_child_nodes( node )
+            self.stack_push( +self.stack_pop() )
+            return num
+
+        elif isinstance(node, compiler.ast.Bitand ):
+            print "\t\tBitand" 
+            num = 1 + self.num_child_nodes( node )
+            self.stack_push( self.stack_pop() & self.stack_pop() )
+            return num
+
+        elif isinstance(node, compiler.ast.Bitor ):
+            print "\t\tBitor" 
+            num = 1 + self.num_child_nodes( node )
+            self.stack_push( self.stack_pop() | self.stack_pop() )
+            return num
+
+        elif isinstance(node, compiler.ast.Bitxor ):
+            print "\t\tBitxor" 
+            num = 1 + self.num_child_nodes( node )
+            self.stack_push( self.stack_pop() ^ self.stack_pop() )
+            return num
 
         else:
             print "unknown ast node"
