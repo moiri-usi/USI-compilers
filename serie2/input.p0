@@ -1,0 +1,9 @@
+# P0 input file
+#
+# Simon Maurer
+# Lothar Rubusch
+#
+
+x = - input()
+y = input()
+print x + y

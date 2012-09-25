@@ -1,0 +1,9 @@
+# P0 bad input file
+#
+# Simon Maurer
+# Lothar Rubusch
+#
+
+42 = - input()
+y = input()
+print x + y
