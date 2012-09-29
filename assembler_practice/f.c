@@ -3,7 +3,7 @@ exercise: Assembler practice
 
 Simon Maurer
 Lothar Rubusch
-Yosafat ?
+Yosafat Praquive Triana
 */
 
 #include <stdlib.h>
