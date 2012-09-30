@@ -21,7 +21,155 @@ def die( meng ):
     print meng
     sys.exit( -1 )
 
-## interpreter implementation
+class Expression( object ):
+    def __init( self ):
+        # TODO
+        pass
+
+## TODO in case: Terminal_Expr and Nonterminal_Expr
+
+class Expr_Stmt( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+
+class Expr_Add( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+class Expr_Sub( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+
+class Expr_Mul( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+
+class Expr_Div( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+class Expr_Const( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+class Expr_Discard( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+class Expr_AssName( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+class Expr_Assign( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+class Expr_Name( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+class Expr_CallFunc( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+class Expr_Printnl( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+class Expr_UnarySub( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+class Expr_UnaryAdd( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+class Expr_Bitand( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+class Expr_Bitor( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+class Expr_Bitxor( Expression ):
+    def __init( self ):
+        # TODO
+        pass
+    def __str__( self ):
+        # TODO
+        pass
+
+
+
+## P0 compiler implementation
 class Engine( object ):
     def __init__( self, filepath=None ):
         if filepath:
@@ -83,7 +231,7 @@ class Engine( object ):
             die( "ERROR: syntax error, no plain integer allowed" )
         return val
 
-
+    # TODO  
     def num_child_nodes( self, node ):
         num = sum([self.num_nodes(x) for x in node.getChildNodes()])
         return num
@@ -95,6 +243,7 @@ class Engine( object ):
 
     ## function to interprete the ast
     ## @param obj node: node of the ast
+    # TODO 
     def num_nodes(self, node):
         return 1 + self.num_child_nodes(node);
 
