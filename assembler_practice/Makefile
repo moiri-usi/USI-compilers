@@ -1,4 +1,6 @@
 ## Lothar Rubusch
+## Simon Maurer
+## Yosafat Praquive Triana
 SRC = f
 CC = gcc
 FLAGS += -S -m32

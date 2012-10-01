@@ -29,144 +29,126 @@ class Expression( object ):
 ## TODO in case: Terminal_Expr and Nonterminal_Expr
 
 class Expr_Stmt( Expression ):
-    def __init( self ):
-        # TODO
-        pass
+    def __init__( self ):
+        self.asm = "ASM - Stmt TODO"
     def __str__( self ):
-        # TODO
-        pass
-
-
-class Expr_Add( Expression ):
-    def __init( self ):
-        # TODO
-        pass
-    def __str__( self ):
-        # TODO
-        pass
-
-class Expr_Sub( Expression ):
-    def __init( self ):
-        # TODO
-        pass
-    def __str__( self ):
-        # TODO
-        pass
-
-
-class Expr_Mul( Expression ):
-    def __init( self ):
-        # TODO
-        pass
-    def __str__( self ):
-        # TODO
-        pass
-
-
-class Expr_Div( Expression ):
-    def __init( self ):
-        # TODO
-        pass
-    def __str__( self ):
-        # TODO
-        pass
-
-class Expr_Const( Expression ):
-    def __init( self ):
-        # TODO
-        pass
-    def __str__( self ):
-        # TODO
-        pass
+        return "Expr_Stmt"
 
 class Expr_Discard( Expression ):
-    def __init( self ):
-        # TODO
-        pass
+    def __init__( self ):
+        self.asm = "ASM - Discard TODO"
     def __str__( self ):
-        # TODO
-        pass
+        return "Expr_Discard"
 
-class Expr_AssName( Expression ):
-    def __init( self ):
-        # TODO
-        pass
+class Expr_Add( Expression ):
+    def __init__( self, a, b ):
+        self.asm = "ASM - Add TODO"
+        self.src_a = a
+        self.src_b = b
     def __str__( self ):
-        # TODO
-        pass
+        return "Expr_Add"
 
-class Expr_Assign( Expression ):
-    def __init( self ):
-        # TODO
-        pass
+class Expr_Sub( Expression ):
+    def __init__( self, a, b ):
+        self.asm = "ASM - Sub TODO"
+        self.src_a = a
+        self.src_b = b
     def __str__( self ):
-        # TODO
-        pass
+        return "Expr_Sub"
 
-class Expr_Name( Expression ):
-    def __init( self ):
-        # TODO
-        pass
+class Expr_Mul( Expression ):
+    def __init__( self, a, b ):
+        self.asm = "ASM - Mul TODO"
+        self.src_a = a
+        self.src_b = b
     def __str__( self ):
-        # TODO
-        pass
+        return "Expr_Mul"
 
-class Expr_CallFunc( Expression ):
-    def __init( self ):
-        # TODO
-        pass
+class Expr_Div( Expression ):
+    def __init__( self, a, b ):
+        self.asm = "ASM - Div TODO"
+        self.src_a = a
+        self.src_b = b
     def __str__( self ):
-        # TODO
-        pass
-
-class Expr_Printnl( Expression ):
-    def __init( self ):
-        # TODO
-        pass
-    def __str__( self ):
-        # TODO
-        pass
-
-class Expr_UnarySub( Expression ):
-    def __init( self ):
-        # TODO
-        pass
-    def __str__( self ):
-        # TODO
-        pass
-
-class Expr_UnaryAdd( Expression ):
-    def __init( self ):
-        # TODO
-        pass
-    def __str__( self ):
-        # TODO
-        pass
+        return "Expr_Div"
 
 class Expr_Bitand( Expression ):
-    def __init( self ):
-        # TODO
-        pass
+    def __init__( self, a, b ):
+        self.asm = "ASM - Bitand TODO"
+        self.src_a = a
+        self.src_b = b
     def __str__( self ):
-        # TODO
-        pass
+        return "Expr_Bitand"
 
 class Expr_Bitor( Expression ):
-    def __init( self ):
-        # TODO
-        pass
+    def __init__( self, a, b ):
+        self.asm = "ASM - Bitor TODO"
+        self.src_a = a
+        self.src_b = b
     def __str__( self ):
-        # TODO
-        pass
+        return "Expr_Bitor"
 
 class Expr_Bitxor( Expression ):
-    def __init( self ):
-        # TODO
-        pass
+    def __init__( self, a, b ):
+        self.asm = "ASM - Bitxor TODO"
+        self.src_a = a
+        self.src_b = b
     def __str__( self ):
-        # TODO
-        pass
+        return "Expr_Bitxor"
 
+class Expr_Const( Expression ):
+    def __init__( self, val ):
+        self.asm = "ASM - Const TODO"
+        self.val = val
+    def __str__( self ):
+        return "Expr_Const(%s)" % self.val
+    def __repr__( self ):
+        return self.val
+
+class Expr_AssName( Expression ):
+    def __init__( self, val ):
+        self.asm = "ASM - AssName TODO"
+        self.val = val
+    def __str__( self ):
+        return "Expr_AssNames(%s)" % str( self.val )
+
+class Expr_Assign( Expression ):
+    def __init__( self,  ):
+        self.asm = "ASM - Assign TODO"
+    def __str__( self ):
+        return "Expr_Assign"
+
+class Expr_Name( Expression ):
+    def __init__( self, nam ):
+        self.asm = "ASM - Name TODO"
+        self.nam = nam
+    def __str__( self ):
+        return "Expr_Name"
+
+class Expr_CallFunc( Expression ):
+    def __init__( self, fnc ):
+        self.asm = "ASM - CallFunc TODO"
+        self.fnc = fnc    
+    def __str__( self ):
+        return "Expr_CallFunc"
+
+class Expr_Printnl( Expression ):
+    def __init__( self ):
+        self.asm = "ASM - Printnl TODO"
+    def __str__( self ):
+        return "Expr_Printnl"
+
+class Expr_UnarySub( Expression ):
+    def __init__( self ):
+        self.asm = "ASM - UnarySub TODO"
+    def __str__( self ):
+        return "Expr_UnarySub"
+
+class Expr_UnaryAdd( Expression ):
+    def __init__( self ):
+        self.asm = "ASM - UnaryAdd TODO"
+    def __str__( self ):
+        return "Expr_UnaryAdd"
 
 
 ## P0 compiler implementation
