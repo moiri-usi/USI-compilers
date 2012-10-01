@@ -177,13 +177,16 @@ class Engine( object ):
 
         self.flat_ast = []
 
-    def compile_file( self ):
-        try:
-            return self.flatten_ast( self.ast )
-        except AttributeError:
-            ## specific case: TEST mode starts class without providing a P0 code
-            ## file, so there won't be an AST already available here
-            die( "ERROR: class started in TEST mode, no AST file set" )
+    def compile_file( self, expression=None ):
+        if expression:
+            self.ast = compiler.parse( expression )
+
+        # try:                        
+        return self.flatten_ast( self.ast )
+        # except AttributeError:
+        #     ## specific case: TEST mode starts class without providing a P0 code
+        #     ## file, so there won't be an AST already available here
+        #     die( "ERROR: class started in TEST mode, no AST file set" )
 
     def stack_push( self, elem):
         self.stack.append( elem )
@@ -215,7 +218,7 @@ class Engine( object ):
 
     # TODO  
     def num_child_nodes( self, node ):
-        num = sum([self.num_nodes(x) for x in node.getChildNodes()])
+        num = sum([self.num_nodes( x ) for x in node.getChildNodes()])
         return num
 
     def gen_varname( self ):
@@ -233,17 +236,17 @@ class Engine( object ):
     ## @param obj node: node of the ast
     def flatten_ast(self, node):
         if isinstance( node, compiler.ast.Module):
-            print "Module"
+            print "\t\t\tModule"
             return self.flatten_ast(node.node)
 
         elif isinstance( node, compiler.ast.Stmt):
-            print "Stmt"
+            print "\t\t\tStmt"
             for n in node.nodes:
-                self.flatten_ast(n) 
+                self.flatten_ast(n)
             return compiler.ast.Stmt(self.flat_ast)
 
         elif isinstance(node, compiler.ast.Add):
-            print "Add"
+            print "\t\t\tAdd"
             expr = compiler.ast.Add((self.flatten_ast(node.left), self.flatten_ast(node.right)))
             new_varname = self.gen_varname()
             nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
@@ -252,7 +255,7 @@ class Engine( object ):
             return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Mul ):
-            print "Mul"
+            print "\t\t\tMul"
             expr = compiler.ast.Mul(self.flatten_ast(node.left), self.flatten_ast(node.right))
             new_varname = self.gen_varname()
             nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
@@ -261,7 +264,7 @@ class Engine( object ):
             return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Sub ):
-            print "Sub"
+            print "\t\t\tSub"
             expr = compiler.ast.Sub(self.flatten_ast(node.left), self.flatten_ast(node.right))
             new_varname = self.gen_varname()
             nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
@@ -270,7 +273,7 @@ class Engine( object ):
             return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Div ):
-            print "Div"
+            print "\t\t\tDiv"
             expr = compiler.ast.Div(self.flatten_ast(node.left), self.flatten_ast(node.right))
             new_varname = self.gen_varname()
             nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
@@ -279,19 +282,19 @@ class Engine( object ):
             return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Const):
-            print "Const"
+            print "\t\t\tConst"
             return node
 
         elif isinstance(node, compiler.ast.Discard):
-            print "Discard"
+            print "\t\t\tDiscard"
             return
 
         elif isinstance(node, compiler.ast.AssName ):
-            print "AssName"
+            print "\t\t\tAssName"
             return node
 
         elif isinstance( node, compiler.ast.Assign ):
-            print "Assign"
+            print "\t\t\tAssign"
             nodes = self.flatten_ast(node.nodes[0])
             expr = self.flatten_ast(node.expr)
             self.flat_ast.append(compiler.ast.Assign([nodes], expr))
@@ -299,42 +302,42 @@ class Engine( object ):
             return
 
         elif isinstance( node, compiler.ast.Name ):
-            print "Name"
+            print "\t\t\tName"
             return node
 
         elif isinstance( node, compiler.ast.CallFunc ):
-            print "CallFunc"
+            print "\t\t\tCallFunc"
             expr = compiler.ast.CallFunc(self.flatten_ast(node.node), [])
             new_varname = self.gen_varname()
             nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
             self.flat_ast.append(compiler.ast.Assign([nodes], expr))
             print "CallFunc: new code line, append Assign", new_varname
             return compiler.ast.Name(new_varname)
-            
+
         elif isinstance( node, compiler.ast.Printnl ):
-            print "Printnl"
+            print "\t\t\tPrintnl"
             self.flat_ast.append(compiler.ast.Printnl(self.flatten_ast(node.nodes[0]), None))
             print "Printnl: new code line, append Printnl"
             return
 
         elif isinstance( node, compiler.ast.UnarySub ):
-            print "UnarySub"
+            print "\t\t\tUnarySub"
             return compiler.ast.UnarySub(self.flatten_ast(node.expr))
- 
+
         elif isinstance( node, compiler.ast.UnaryAdd ):
-            print "UnaryAdd"
+            print "\t\t\tUnaryAdd"
             return compiler.ast.UnaryAdd(self.flatten_ast(node.expr))
 
         elif isinstance( node, compiler.ast.Bitand ):
-            print "Bitand"
+            print "\t\t\tBitand"
             pass
 
         elif isinstance( node, compiler.ast.Bitor ):
-            print "Bitor"
+            print "\t\t\tBitor"
             pass
 
         elif isinstance( node, compiler.ast.Bitxor ):
-            print "Bitxor"
+            print "\t\t\tBitxor"
             pass
 
         else:
