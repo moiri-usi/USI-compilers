@@ -31,10 +31,11 @@ class Expression( object ):
 ## TODO in case: Terminal_Expr and Nonterminal_Expr
 
 class Expr_Stmt( Expression ):
-    def __init__( self ):
+    def __init__( self, mem=None ):
         self.DEBUG = "Expr_Stmt"
-        self.mem = 0
-        self.asm = "subl $%d,%%esp" % self.mem # TODO memory     
+        if mem: self.mem = mem
+        else: self.mem = 0
+        self.asm = "        subl $%d,%%esp" % self.mem # TODO memory     
     def __str__( self ):
         return self.asm
 
@@ -203,33 +204,40 @@ class Engine( object ):
         self.var_counter = 0
 
         self.flat_ast = []
-        self.flat_list = []
+        self.expr_list = []
 
         self.asm_prefix = """
+        .text
+LC0:
+        .ascii "Hello, world!\10\0"
 .globl main
 main:
-pushl %ebp
-movl %esp, %ebp""" 
-
-        self.asm_postfix = """leave
-ret
+        pushl %ebp
+        movl %esp, %ebp
 """
 
-    def compile_file( self, expression=None, DEBUG=False ):
+        self.asm_postfix = """
+        leave
+        ret
+"""
+
+    def compile_file( self, expression=None ):
         if expression:
             self.ast = compiler.parse( expression )
 
-        if DEBUG:
-             return self.DEBUG__print_ast_list( self.flatten_ast_2_list( self.flatten_ast( self.ast ), [] ) )
+#        if DEBUG:
+#             return self.DEBUG__print_ast_list( self.flatten_ast_2_list( self.flatten_ast( self.ast ), [] ) )
 
-        # try:                        
+        # try:                       
 #        self.flatten_ast( self.ast )
         # except AttributeError:
         #     ## specific case: TEST mode starts class without providing a P0 code
         #     ## file, so there won't be an AST already available here
         #     die( "ERROR: class started in TEST mode, no AST file set" )
-        #self.flat_list = self.flatten_ast_2_list( self.flatten_ast( self.ast ), [] )      
-        self.print_asm( self.flatten_ast_2_list( self.flatten_ast( self.ast ), [] ) )
+        self.flat_ast = self.flatten_ast( self.ast )
+        self.expr_list = self.flatten_ast_2_list( self.flat_ast, [] )      
+        #self.print_asm( self.flatten_ast_2_list( self.flatten_ast( self.ast ), [] ) )
+        self.print_asm( self.expr_list )
 
 ## TODO rm
     # def stack_push( self, elem):
@@ -284,15 +292,8 @@ ret
             tmp += str( expr.print_debug() )
             print str( expr )
         print self.asm_postfix
-
-    def DEBUG__print_ast_list( self, expr_lst ):
-        ## TODO 
-        tmp = ""
-        for expr in expr_lst:
-            if 0 != len( tmp ): tmp += " "
-            tmp += str( expr.print_debug() )
-        return tmp
-
+        print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+        print ""
 
     ## function to flatten the ast
     ## @param obj node: node of the ast
@@ -523,8 +524,8 @@ ret
             tmp_lst = []
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
-            ast_lst += tmp_lst
             ast_lst += [ Expr_Assign() ]
+            ast_lst += tmp_lst
             return ast_lst
 
         elif isinstance( node, compiler.ast.Name ):
@@ -572,8 +573,20 @@ ret
         else:
             print "\t\t\t*** ELSE ***"
             print node
-            return []   
+            return []  
 
+    def DEBUG__print_ast( self ):
+        return self.ast
+
+    def DEBUG__print_flat( self ):
+        return str( self.flat_ast )
+
+    def DEBUG__print_list( self ):
+        tmp = ""
+        for expr in self.expr_list:
+            if 0 != len( tmp ): tmp += " "
+            tmp += str( expr.print_debug() )
+        return tmp
 
 
     ## function to compile a flatten ast 
@@ -584,10 +597,24 @@ ret
 ## start
 if 1 == len( sys.argv[1:] ):
     compl = Engine( sys.argv[1] )
-    print "AST:", compl.ast
+    compl.compile_file()
+
+    # print "AST:", compl.ast
+    # print ""
+
+    # print "FLAT_AST:", str( compl.compile_file() )
+    # print ""
+
+    print "AST:"
+    print compl.DEBUG__print_ast( )
     print ""
 
-    print "FLAT_AST:", compl.compile_file()
+    print "FLAT AST:"
+    print compl.DEBUG__print_flat( )
+    print ""
+
+    print "EXPR LIST:"
+    print compl.DEBUG__print_list( )
     print ""
 
 ## TODO rm
