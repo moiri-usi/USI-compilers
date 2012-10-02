@@ -25,7 +25,7 @@ class Expression( object ):
     def __init( self ):
         self.DEBUG = ""
     def print_debug( self ):
-        print self.DEBUG
+        return self.DEBUG
 
 
 ## TODO in case: Terminal_Expr and Nonterminal_Expr
@@ -117,7 +117,7 @@ class Expr_Bitxor( Expression ):
 
 class Expr_Const( Expression ):
     def __init__( self, val ):
-        self.DEBUG = "Expr_Const(%s)" % str( val )
+        self.DEBUG = "Expr_Const"
         self.asm = "ASM - Const TODO"
         self.val = val
     def __str__( self ):
@@ -127,7 +127,7 @@ class Expr_Const( Expression ):
 
 class Expr_AssName( Expression ):
     def __init__( self, val ):
-        self.DEBUG = "Expr_AssNames(%s)" % str( val )
+        self.DEBUG = "Expr_AssName"
         self.asm = "ASM - AssName TODO"
         self.val = val
     def __str__( self ):
@@ -215,9 +215,12 @@ movl %esp, %ebp"""
 ret
 """
 
-    def compile_file( self, expression=None ):
+    def compile_file( self, expression=None, DEBUG=False ):
         if expression:
             self.ast = compiler.parse( expression )
+
+        if DEBUG:
+             return self.DEBUG__print_ast_list( self.flatten_ast_2_list( self.flatten_ast( self.ast ), [] ) )
 
         # try:                        
 #        self.flatten_ast( self.ast )
@@ -252,10 +255,10 @@ ret
     #     except KeyError:
     #         die( "ERROR: variable '%s' does not exist" % name )
 
-    # def check_plain_integer( self, val ):
-    #     if type( val ) is not int:
-    #         die( "ERROR: syntax error, no plain integer allowed" )
-    #     return val
+    def check_plain_integer( self, val ):
+        if type( val ) is not int:
+            die( "ERROR: syntax error, no plain integer allowed" )
+        return val
 
     # TODO rm
     # def num_child_nodes( self, node ):
@@ -273,15 +276,22 @@ ret
     # def num_nodes(self, node):
     #     return 1 + self.num_child_nodes(node);
 
-
     def print_asm( self, expr_lst ):
         print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
         print self.asm_prefix
-
+        tmp = ""
         for expr in expr_lst:
-#            print expr.print_debug()   
+            tmp += str( expr.print_debug() )
             print str( expr )
         print self.asm_postfix
+
+    def DEBUG__print_ast_list( self, expr_lst ):
+        ## TODO 
+        tmp = ""
+        for expr in expr_lst:
+            if 0 != len( tmp ): tmp += " "
+            tmp += str( expr.print_debug() )
+        return tmp
 
 
     ## function to flatten the ast
