@@ -3,6 +3,7 @@
 #
 # Simon Maurer
 # Lothar Rubusch
+# Josafat Piranha
 
 """
 USAGE:
@@ -21,167 +22,81 @@ def die( meng ):
     print meng
     sys.exit( -1 )
 
+
+
+
 class Expression( object ):
     def __init( self ):
-        self.DEBUG = ""
+        self.DEBUG_type = ""
     def print_debug( self ):
-        return self.DEBUG
+        return self.DEBUG_type
 
 
-## TODO in case: Terminal_Expr and Nonterminal_Expr
 
-class Expr_Stmt( Expression ):
+class ASM_subl( Expression ):
     def __init__( self, mem=None ):
-        self.DEBUG = "Expr_Stmt"
+        self.DEBUG_type = "ASM_subl"
         if mem: self.mem = mem
-        else: self.mem = 0
+        else: self.mem = 16
         self.asm = "        subl $%d,%%esp" % self.mem # TODO memory     
     def __str__( self ):
         return self.asm
 
-class Expr_Discard( Expression ):
+class ASM_movl( Expression ):
     def __init__( self ):
-        self.DEBUG = "Expr_Discard"
+        self.DEBUG_type = "ASM_movl"
         self.asm = "ASM - Discard TODO"
     def __str__( self ):
         return self.asm
 
-class Expr_Add( Expression ):
-#    def __init__( self, a, b ):
+class ASM_addl( Expression ):
     def __init__( self ):
-        self.DEBUG = "Expr_Add"
+        self.DEBUG_type = "ASM_addl"
         self.asm = "ASM - Add TODO"
-#        self.src_a = a
-#        self.src_b = b
     def __str__( self ):
         return self.asm
 
-class Expr_Sub( Expression ):
-#    def __init__( self, a, b ):
+class ASM_subl( Expression ):
     def __init__( self ):
-        self.DEBUG = "Expr_Sub"
+        self.DEBUG_type = "ASM_subl"
         self.asm = "ASM - Sub TODO"
-#        self.src_a = a
-#        self.src_b = b
     def __str__( self ):
         return self.asm
 
-class Expr_Mul( Expression ):
-#    def __init__( self, a, b ):
+class ASM_mull( Expression ):
     def __init__( self ):
-        self.DEBUG = "Expr_Mul"
+        self.DEBUG_type = "ASM_mull"
         self.asm = "ASM - Mul TODO"
-#        self.src_a = a
-#        self.src_b = b
     def __str__( self ):
         return self.asm
 
-class Expr_Div( Expression ):
-#    def __init__( self, a, b ):
+class ASM_divl( Expression ):
     def __init__( self ):
-        self.DEBUG = "Expr_Div"
+        self.DEBUG_type = "ASM_divl"
         self.asm = "ASM - Div TODO"
-#        self.src_a = a
-#        self.src_b = b
     def __str__( self ):
         return self.asm
 
-class Expr_Bitand( Expression ):
-#    def __init__( self, a, b ):
+class ASM_divl( Expression ):
     def __init__( self ):
-        self.DEBUG = "Expr_Bitand"
-        self.asm = "ASM - Bitand TODO"
-#        self.src_a = a
-#        self.src_b = b
+        self.DEBUG_type = "ASM_divl"
+        self.asm = "ASM - Div TODO"
     def __str__( self ):
         return self.asm
 
-class Expr_Bitor( Expression ):
-#    def __init__( self, a, b ):
+class ASM_negl( Expression ):
     def __init__( self ):
-        self.DEBUG = "Expr_Bitor"
-        self.asm = "ASM - Bitor TODO"
-#        self.src_a = a
-#        self.src_b = b
+        self.DEBUG_type = "ASM_negl"
+        self.asm = "ASM - neg TODO"
     def __str__( self ):
         return self.asm
 
-class Expr_Bitxor( Expression ):
-#    def __init__( self, a, b ):
-    def __init__( self ):
-        self.DEBUG = "Expr_Bitxor"
-        self.asm = "ASM - Bitxor TODO"
-#        self.src_a = a
-#        self.src_b = b
-    def __str__( self ):
-        return self.asm
-
-class Expr_Const( Expression ):
-    def __init__( self, val ):
-        self.DEBUG = "Expr_Const"
-        self.asm = "ASM - Const TODO"
-        self.val = val
-    def __str__( self ):
-        return self.asm
-    def __repr__( self ):
-        return self.val
-
-class Expr_AssName( Expression ):
-    def __init__( self, val ):
-        self.DEBUG = "Expr_AssName"
-        self.asm = "ASM - AssName TODO"
-        self.val = val
-    def __str__( self ):
-        return self.asm
-
-class Expr_Assign( Expression ):
-    def __init__( self ):
-        self.DEBUG = "Expr_Assign"
-        self.asm = "ASM - Assign TODO"
-    def __str__( self ):
-        return self.asm
-
-class Expr_Name( Expression ):
-    def __init__( self, nam ):
-        self.DEBUG = "Expr_Name"
-        self.asm = "ASM - Name TODO"
-        self.nam = nam
-    def __str__( self ):
-        return self.asm
-
-class Expr_CallFunc( Expression ):
-    def __init__( self, fnc ):
-        self.DEBUG = "Expr_CallFunc"
-        self.asm = "ASM - CallFunc TODO"
-        self.fnc = fnc
-    def __str__( self ):
-        return self.asm
-
-class Expr_Printnl( Expression ):
-    def __init__( self ):
-        self.DEBUG = "Expr_Printnl"
-        self.asm = "ASM - Printnl TODO"
-    def __str__( self ):
-        return self.asm
-
-class Expr_UnarySub( Expression ):
-    def __init__( self ):
-        self.DEBUG = "Expr_UnarySub"
-        self.asm = "ASM - UnarySub TODO"
-    def __str__( self ):
-        return self.asm
-
-class Expr_UnaryAdd( Expression ):
-    def __init__( self ):
-        self.DEBUG = "Expr_UnaryAdd"
-        self.asm = "ASM - UnaryAdd TODO"
-    def __str__( self ):
-        return self.asm
+## TODO further ASM_ classes
 
 
 ## P0 compiler implementation
 class Engine( object ):
-    def __init__( self, filepath=None ):
+    def __init__( self, filepath=None, DEBUG=False ):
         if filepath:
             if not os.path.exists( filepath ):
                 die( "ERROR: file '%s' does not exist" % filepath )
@@ -191,6 +106,9 @@ class Engine( object ):
                     self.ast = compiler.parseFile( filepath )
                 except SyntaxError:
                     die( "ERROR: invalid syntax in file '%s'" %filepath )
+
+        if DEBUG: self.DEBUGMODE=True
+        else: self.DEBUGMODE=False
 
         ## working stack
         self.stack = []
@@ -221,68 +139,23 @@ main:
         ret
 """
 
-    def compile_file( self, expression=None ):
+    def compileme( self, expression=None ):
         if expression:
             self.ast = compiler.parse( expression )
 
-#        if DEBUG:
-#             return self.DEBUG__print_ast_list( self.flatten_ast_2_list( self.flatten_ast( self.ast ), [] ) )
-
-        # try:                       
-#        self.flatten_ast( self.ast )
-        # except AttributeError:
-        #     ## specific case: TEST mode starts class without providing a P0 code
-        #     ## file, so there won't be an AST already available here
-        #     die( "ERROR: class started in TEST mode, no AST file set" )
         self.flat_ast = self.flatten_ast( self.ast )
-        self.expr_list = self.flatten_ast_2_list( self.flat_ast, [] )      
-        #self.print_asm( self.flatten_ast_2_list( self.flatten_ast( self.ast ), [] ) )
-        self.print_asm( self.expr_list )
-
-## TODO rm
-    # def stack_push( self, elem):
-    #     self.stack.append( elem )
-
-    # def stack_pop( self ):
-    #     try:
-    #         val = self.stack.pop()
-    #     except IndexError:
-    #         die( "ERROR: stack index out of bounds" )
-    #     self.ans = str( val )
-    #     return val
-
-    # def stack_ans( self ):
-    #     return self.ans
-
-    # def vartable_set( self, name, val ):
-    #     self.vartable.update( {name:val} )
-
-    # def vartable_get( self, name ):
-    #     try:
-    #         return self.vartable[name]
-    #     except KeyError:
-    #         die( "ERROR: variable '%s' does not exist" % name )
+        self.expr_list = self.flatten_ast_2_list( self.flat_ast, [] )
+#        self.print_asm( self.expr_list )
 
     def check_plain_integer( self, val ):
         if type( val ) is not int:
             die( "ERROR: syntax error, no plain integer allowed" )
         return val
 
-    # TODO rm
-    # def num_child_nodes( self, node ):
-    #     num = sum([self.num_nodes( x ) for x in node.getChildNodes()])
-    #     return num
-
     def gen_varname( self ):
         self.var_counter += 1
         print "new var t%d" %self.var_counter
         return 't' + str(self.var_counter)
-
-    ## function to interprete the ast
-    ## @param obj node: node of the ast
-    # TODO rm
-    # def num_nodes(self, node):
-    #     return 1 + self.num_child_nodes(node);
 
     def print_asm( self, expr_lst ):
         print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
@@ -295,22 +168,20 @@ main:
         print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
         print ""
 
-    ## function to flatten the ast
-    ## @param obj node: node of the ast
     def flatten_ast(self, node):
         if isinstance( node, compiler.ast.Module):
-            print "\t\t\tModule"
+            self.DEBUG( "Module" )
             self.flat_ast = compiler.ast.Module( None, self.flatten_ast(node.node) )
             return self.flat_ast
 
         elif isinstance( node, compiler.ast.Stmt):
-            print "\t\t\tStmt"
+            self.DEBUG( "Stmt" )
             for n in node.nodes:
                 self.flatten_ast(n)
             return compiler.ast.Stmt(self.flat_ast)
 
         elif isinstance(node, compiler.ast.Add):
-            print "\t\t\tAdd"
+            self.DEBUG( "Add" )
             expr = compiler.ast.Add((self.flatten_ast(node.left), self.flatten_ast(node.right)))
             new_varname = self.gen_varname()
             nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
@@ -319,7 +190,7 @@ main:
             return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Mul ):
-            print "\t\t\tMul"
+            self.DEBUG( "Mul" )
             expr = compiler.ast.Mul(self.flatten_ast(node.left), self.flatten_ast(node.right))
             new_varname = self.gen_varname()
             nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
@@ -328,7 +199,7 @@ main:
             return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Sub ):
-            print "\t\t\tSub"
+            self.DEBUG( "Sub" )
             expr = compiler.ast.Sub(self.flatten_ast(node.left), self.flatten_ast(node.right))
             new_varname = self.gen_varname()
             nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
@@ -337,7 +208,7 @@ main:
             return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Div ):
-            print "\t\t\tDiv"
+            self.DEBUG( "Div" )
             expr = compiler.ast.Div(self.flatten_ast(node.left), self.flatten_ast(node.right))
             new_varname = self.gen_varname()
             nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
@@ -346,19 +217,19 @@ main:
             return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Const):
-            print "\t\t\tConst"
+            self.DEBUG( "Const" )
             return node
 
         elif isinstance(node, compiler.ast.Discard):
-            print "\t\t\tDiscard"
+            self.DEBUG( "Discard" )
             return
 
         elif isinstance(node, compiler.ast.AssName ):
-            print "\t\t\tAssName"
+            self.DEBUG( "AssName" )
             return node
 
         elif isinstance( node, compiler.ast.Assign ):
-            print "\t\t\tAssign"
+            self.DEBUG( "Assign" )
             nodes = self.flatten_ast(node.nodes[0])
             expr = self.flatten_ast(node.expr)
             self.flat_ast.append(compiler.ast.Assign([nodes], expr))
@@ -366,11 +237,11 @@ main:
             return
 
         elif isinstance( node, compiler.ast.Name ):
-            print "\t\t\tName"
+            self.DEBUG( "Name" )
             return node
 
         elif isinstance( node, compiler.ast.CallFunc ):
-            print "\t\t\tCallFunc"
+            self.DEBUG( "CallFunc" )
             expr = compiler.ast.CallFunc(self.flatten_ast(node.node), [])
             new_varname = self.gen_varname()
             nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
@@ -379,29 +250,29 @@ main:
             return compiler.ast.Name(new_varname)
 
         elif isinstance( node, compiler.ast.Printnl ):
-            print "\t\t\tPrintnl"
+            self.DEBUG( "Printnl" )
             self.flat_ast.append(compiler.ast.Printnl(self.flatten_ast(node.nodes[0]), None))
             print "Printnl: new code line, append Printnl"
             return
 
         elif isinstance( node, compiler.ast.UnarySub ):
-            print "\t\t\tUnarySub"
+            self.DEBUG( "UnarySub" )
             return compiler.ast.UnarySub(self.flatten_ast(node.expr))
 
         elif isinstance( node, compiler.ast.UnaryAdd ):
-            print "\t\t\tUnaryAdd"
+            self.DEBUG( "UnaryAdd" )
             return compiler.ast.UnaryAdd(self.flatten_ast(node.expr))
 
         elif isinstance( node, compiler.ast.Bitand ):
-            print "\t\t\tBitand"
+            self.DEBUG( "Bitand" )
             pass
 
         elif isinstance( node, compiler.ast.Bitor ):
-            print "\t\t\tBitor"
+            self.DEBUG( "Bitor" )
             pass
 
         elif isinstance( node, compiler.ast.Bitxor ):
-            print "\t\t\tBitxor"
+            self.DEBUG( "Bitxor" )
             pass
 
         else:
@@ -411,74 +282,67 @@ main:
     ## return ast_list
     def flatten_ast_2_list( self, node, ast_lst ):    
         if isinstance( node, compiler.ast.Module ):
-            print "\t\t\tModule"
+            self.DEBUG( "Module" )
             ast_lst += self.flatten_ast_2_list( node.node, [] )  
             return ast_lst
 
         elif isinstance( node, compiler.ast.Stmt ):
-            print "\t\t\tStmt"
+            self.DEBUG( "Stmt" )
             tmp_lst = []
-            for child_node in node.getChildren():
-                tmp_lst += self.flatten_ast_2_list( child_node, [] )
-                ## TODO mem calculation, to be passed to Expr_Stmt()   
-            ast_lst += [ Expr_Stmt() ]
+#            for child_node in node.getChildren():
+#                tmp_lst += self.flatten_ast_2_list( child_node, [] )
+                ## TODO translation  
+                ## TODO mem calculation, to be passed to ASM_subl()   
+            ast_lst += [ ASM_subl() ]
             ast_lst += tmp_lst
             return ast_lst
 
         elif isinstance( node, compiler.ast.Discard ):
-            print "\t\t\tDiscard"
+            self.DEBUG( "Discard" )
             for child_node in node.getChildren():
                 ast_lst += self.flatten_ast_2_list( child_node, [] )
-            ast_lst += [ Expr_Discard() ]
+            ast_lst += [ ] # TODO    
             return ast_lst
 
 
         elif isinstance( node, compiler.ast.Add ):
-            print "\t\t\tAdd"
-            # Add must accept (TODO rm)
-            # consts - ok
-            # operations ( vars, results of operations ) - TODO, in case lst_a, and lst_b - how to distinguish? make sure results are in the correct registers!
+            self.DEBUG( "Add" )
             tmp_lst = []
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
             ast_lst += tmp_lst
-#            ast_lst += [ Expr_Add( tmp_lst[0], tmp_lst[1] ) ]  # TODO exceptions
-            ast_lst += [ Expr_Add() ]  # TODO exceptions
+            ast_lst += [ ] # TODO exceptions     
             return ast_lst
 
         elif isinstance( node, compiler.ast.Sub ):
-            print "\t\t\tSub"
-            # TODO must work with consts, and ops
+            self.DEBUG( "Sub" )
             tmp_lst = []
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
             ast_lst += tmp_lst
-#            ast_lst += [ Expr_Sub( tmp_lst[0], tmp_lst[1] ) ]
-            ast_lst += [ Expr_Sub() ]
+            ast_lst += [ ] # TODO     
             return ast_lst
 
         elif isinstance( node, compiler.ast.Mul ):
-            print "\t\t\tMul"
+            self.DEBUG( "Mul" )
             tmp_lst = []
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
             ast_lst += tmp_lst
-#            ast_lst += [ Expr_Mul( tmp_lst[0], tmp_lst[1] ) ]
-            ast_lst += [ Expr_Mul() ]
+            ast_lst += [ ] # TODO   
             return ast_lst
 
         elif isinstance( node, compiler.ast.Div ):
-            print "\t\t\tDiv"
+            self.DEBUG( "Div" )
             tmp_lst = []
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
             ast_lst += tmp_lst
-#            ast_lst += [ Expr_Div( tmp_lst[0], tmp_lst[1] ) ]
-            ast_lst += [ Expr_Div() ]
+            ast_lst += [] # TODO   
             return ast_lst
 
         elif isinstance( node, compiler.ast.Bitand ):
-            print "\t\t\tBitand"
+            self.DEBUG( "Bitand" )
             tmp_lst = []
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
@@ -488,7 +352,7 @@ main:
             return ast_lst
 
         elif isinstance( node, compiler.ast.Bitor ):
-            print "\t\t\tBitor"
+            self.DEBUG( "Bitor" )
             tmp_lst = []
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
@@ -498,7 +362,7 @@ main:
             return ast_lst
 
         elif isinstance( node, compiler.ast.Bitxor ):
-            print "\t\t\tBitxor"
+            self.DEBUG( "Bitxor" )
             tmp_lst = []
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
@@ -508,19 +372,19 @@ main:
             return ast_lst
 
         elif isinstance( node, compiler.ast.Const ):
-            print "\t\t\tConst"
+            self.DEBUG( "Const" )
             ## TODO terminal
             ast_lst += [ Expr_Const( self.check_plain_integer( node.value ) ) ]
             return ast_lst
 
         elif isinstance(node, compiler.ast.AssName ):
-            print "\t\t\tAssName"
+            self.DEBUG( "AssName" )
             ## TODO terminal
             ast_lst += [ Expr_AssName( node.getChildren()[0] ) ]
             return ast_lst
 
         elif isinstance( node, compiler.ast.Assign ):
-            print "\t\t\tAssign"
+            self.DEBUG( "Assign" )
             tmp_lst = []
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
@@ -529,13 +393,13 @@ main:
             return ast_lst
 
         elif isinstance( node, compiler.ast.Name ):
-            print "\t\t\tName"
+            self.DEBUG( "Name" )
             # terminal
             ast_lst += [ Expr_Name( node.getChildren()[0] ) ]
             return ast_lst
 
         elif isinstance( node, compiler.ast.CallFunc ):
-            print "\t\t\tCallFunc - provokes 2 ELSE"
+            self.DEBUG( "CallFunc - provokes 2 ELSE" )
             tmp_lst = []
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
@@ -544,7 +408,7 @@ main:
             return ast_lst
 
         elif isinstance( node, compiler.ast.Printnl ):
-            print "\t\t\tPrintnl - provokes 1 ELSE"
+            self.DEBUG( "Printnl - provokes 1 ELSE" )
             tmp_lst = []
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
@@ -553,7 +417,7 @@ main:
             return ast_lst
 
         elif isinstance( node, compiler.ast.UnarySub ):
-            print "\t\t\tUnarySub"
+            self.DEBUG( "UnarySub" )
             tmp_lst = []
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
@@ -562,7 +426,7 @@ main:
             return ast_lst
 
         elif isinstance( node, compiler.ast.UnaryAdd ):
-            print "\t\t\tUnaryAdd"
+            self.DEBUG( "UnaryAdd" )
             tmp_lst = []
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
@@ -571,12 +435,12 @@ main:
             return ast_lst
         
         else:
-            print "\t\t\t*** ELSE ***"
+            self.DEBUG( "*** ELSE ***" )
             print node
             return []  
 
     def DEBUG__print_ast( self ):
-        return self.ast
+        return str( self.ast )
 
     def DEBUG__print_flat( self ):
         return str( self.flat_ast )
@@ -588,22 +452,14 @@ main:
             tmp += str( expr.print_debug() )
         return tmp
 
+    def DEBUG( self, text ):
+        if self.DEBUGMODE: print "\t\t%s" % str( text )
 
-    ## function to compile a flatten ast 
-    ## @param obj node: node of the ast
-    def compile(self, node):
-        pass
 
 ## start
 if 1 == len( sys.argv[1:] ):
-    compl = Engine( sys.argv[1] )
-    compl.compile_file()
-
-    # print "AST:", compl.ast
-    # print ""
-
-    # print "FLAT_AST:", str( compl.compile_file() )
-    # print ""
+    compl = Engine( sys.argv[1], DEBUG=True )
+    compl.compileme()
 
     print "AST:"
     print compl.DEBUG__print_ast( )
@@ -617,9 +473,3 @@ if 1 == len( sys.argv[1:] ):
     print compl.DEBUG__print_list( )
     print ""
 
-## TODO rm
-#    print "FLAT_LIST:",
-#    for expr in compl.flat_list:
-#        print " '%s'" % str( expr ),
-#        if expr == "Expr_Stmt": print ""
-#    print ""
