@@ -228,38 +228,39 @@ ret
         #self.flat_list = self.flatten_ast_2_list( self.flatten_ast( self.ast ), [] )      
         self.print_asm( self.flatten_ast_2_list( self.flatten_ast( self.ast ), [] ) )
 
-    def stack_push( self, elem):
-        self.stack.append( elem )
+## TODO rm
+    # def stack_push( self, elem):
+    #     self.stack.append( elem )
 
-    def stack_pop( self ):
-        try:
-            val = self.stack.pop()
-        except IndexError:
-            die( "ERROR: stack index out of bounds" )
-        self.ans = str( val )
-        return val
+    # def stack_pop( self ):
+    #     try:
+    #         val = self.stack.pop()
+    #     except IndexError:
+    #         die( "ERROR: stack index out of bounds" )
+    #     self.ans = str( val )
+    #     return val
 
-    def stack_ans( self ):
-        return self.ans
+    # def stack_ans( self ):
+    #     return self.ans
 
-    def vartable_set( self, name, val ):
-        self.vartable.update( {name:val} )
+    # def vartable_set( self, name, val ):
+    #     self.vartable.update( {name:val} )
 
-    def vartable_get( self, name ):
-        try:
-            return self.vartable[name]
-        except KeyError:
-            die( "ERROR: variable '%s' does not exist" % name )
+    # def vartable_get( self, name ):
+    #     try:
+    #         return self.vartable[name]
+    #     except KeyError:
+    #         die( "ERROR: variable '%s' does not exist" % name )
 
-    def check_plain_integer( self, val ):
-        if type( val ) is not int:
-            die( "ERROR: syntax error, no plain integer allowed" )
-        return val
+    # def check_plain_integer( self, val ):
+    #     if type( val ) is not int:
+    #         die( "ERROR: syntax error, no plain integer allowed" )
+    #     return val
 
-    # TODO  
-    def num_child_nodes( self, node ):
-        num = sum([self.num_nodes( x ) for x in node.getChildNodes()])
-        return num
+    # TODO rm
+    # def num_child_nodes( self, node ):
+    #     num = sum([self.num_nodes( x ) for x in node.getChildNodes()])
+    #     return num
 
     def gen_varname( self ):
         self.var_counter += 1
@@ -268,10 +269,10 @@ ret
 
     ## function to interprete the ast
     ## @param obj node: node of the ast
-    # TODO 
-    def num_nodes(self, node):
-        return 1 + self.num_child_nodes(node);
-    
+    # TODO rm
+    # def num_nodes(self, node):
+    #     return 1 + self.num_child_nodes(node);
+
 
     def print_asm( self, expr_lst ):
         print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
@@ -288,7 +289,8 @@ ret
     def flatten_ast(self, node):
         if isinstance( node, compiler.ast.Module):
             print "\t\t\tModule"
-            return compiler.ast.Module( None, self.flatten_ast(node.node) )
+            self.flat_ast = compiler.ast.Module( None, self.flatten_ast(node.node) )
+            return self.flat_ast
 
         elif isinstance( node, compiler.ast.Stmt):
             print "\t\t\tStmt"
