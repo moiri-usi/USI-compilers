@@ -23,132 +23,159 @@ def die( meng ):
 
 class Expression( object ):
     def __init( self ):
-        # TODO
-        pass
+        self.DEBUG = ""
+    def print_debug( self ):
+        print self.DEBUG
+
 
 ## TODO in case: Terminal_Expr and Nonterminal_Expr
 
 class Expr_Stmt( Expression ):
     def __init__( self ):
-        self.asm = "ASM - Stmt TODO"
+        self.DEBUG = "Expr_Stmt"
+        self.mem = 0
+        self.asm = "subl $%d,%%esp" % self.mem # TODO memory     
     def __str__( self ):
-        return "Expr_Stmt"
+        return self.asm
 
 class Expr_Discard( Expression ):
     def __init__( self ):
+        self.DEBUG = "Expr_Discard"
         self.asm = "ASM - Discard TODO"
     def __str__( self ):
-        return "Expr_Discard"
+        return self.asm
 
 class Expr_Add( Expression ):
-    def __init__( self, a, b ):
+#    def __init__( self, a, b ):
+    def __init__( self ):
+        self.DEBUG = "Expr_Add"
         self.asm = "ASM - Add TODO"
-        self.src_a = a
-        self.src_b = b
+#        self.src_a = a
+#        self.src_b = b
     def __str__( self ):
-        return "Expr_Add"
+        return self.asm
 
 class Expr_Sub( Expression ):
-    def __init__( self, a, b ):
+#    def __init__( self, a, b ):
+    def __init__( self ):
+        self.DEBUG = "Expr_Sub"
         self.asm = "ASM - Sub TODO"
-        self.src_a = a
-        self.src_b = b
+#        self.src_a = a
+#        self.src_b = b
     def __str__( self ):
-        return "Expr_Sub"
+        return self.asm
 
 class Expr_Mul( Expression ):
-    def __init__( self, a, b ):
+#    def __init__( self, a, b ):
+    def __init__( self ):
+        self.DEBUG = "Expr_Mul"
         self.asm = "ASM - Mul TODO"
-        self.src_a = a
-        self.src_b = b
+#        self.src_a = a
+#        self.src_b = b
     def __str__( self ):
-        return "Expr_Mul"
+        return self.asm
 
 class Expr_Div( Expression ):
-    def __init__( self, a, b ):
+#    def __init__( self, a, b ):
+    def __init__( self ):
+        self.DEBUG = "Expr_Div"
         self.asm = "ASM - Div TODO"
-        self.src_a = a
-        self.src_b = b
+#        self.src_a = a
+#        self.src_b = b
     def __str__( self ):
-        return "Expr_Div"
+        return self.asm
 
 class Expr_Bitand( Expression ):
-    def __init__( self, a, b ):
+#    def __init__( self, a, b ):
+    def __init__( self ):
+        self.DEBUG = "Expr_Bitand"
         self.asm = "ASM - Bitand TODO"
-        self.src_a = a
-        self.src_b = b
+#        self.src_a = a
+#        self.src_b = b
     def __str__( self ):
-        return "Expr_Bitand"
+        return self.asm
 
 class Expr_Bitor( Expression ):
-    def __init__( self, a, b ):
+#    def __init__( self, a, b ):
+    def __init__( self ):
+        self.DEBUG = "Expr_Bitor"
         self.asm = "ASM - Bitor TODO"
-        self.src_a = a
-        self.src_b = b
+#        self.src_a = a
+#        self.src_b = b
     def __str__( self ):
-        return "Expr_Bitor"
+        return self.asm
 
 class Expr_Bitxor( Expression ):
-    def __init__( self, a, b ):
+#    def __init__( self, a, b ):
+    def __init__( self ):
+        self.DEBUG = "Expr_Bitxor"
         self.asm = "ASM - Bitxor TODO"
-        self.src_a = a
-        self.src_b = b
+#        self.src_a = a
+#        self.src_b = b
     def __str__( self ):
-        return "Expr_Bitxor"
+        return self.asm
 
 class Expr_Const( Expression ):
     def __init__( self, val ):
+        self.DEBUG = "Expr_Const(%s)" % str( val )
         self.asm = "ASM - Const TODO"
         self.val = val
     def __str__( self ):
-        return "Expr_Const(%s)" % self.val
+        return self.asm
     def __repr__( self ):
         return self.val
 
 class Expr_AssName( Expression ):
     def __init__( self, val ):
+        self.DEBUG = "Expr_AssNames(%s)" % str( val )
         self.asm = "ASM - AssName TODO"
         self.val = val
     def __str__( self ):
-        return "Expr_AssNames(%s)" % str( self.val )
+        return self.asm
 
 class Expr_Assign( Expression ):
-    def __init__( self,  ):
+    def __init__( self ):
+        self.DEBUG = "Expr_Assign"
         self.asm = "ASM - Assign TODO"
     def __str__( self ):
-        return "Expr_Assign"
+        return self.asm
 
 class Expr_Name( Expression ):
     def __init__( self, nam ):
+        self.DEBUG = "Expr_Name"
         self.asm = "ASM - Name TODO"
         self.nam = nam
     def __str__( self ):
-        return "Expr_Name"
+        return self.asm
 
 class Expr_CallFunc( Expression ):
     def __init__( self, fnc ):
+        self.DEBUG = "Expr_CallFunc"
         self.asm = "ASM - CallFunc TODO"
-        self.fnc = fnc    
+        self.fnc = fnc
     def __str__( self ):
-        return "Expr_CallFunc"
+        return self.asm
 
 class Expr_Printnl( Expression ):
     def __init__( self ):
+        self.DEBUG = "Expr_Printnl"
         self.asm = "ASM - Printnl TODO"
     def __str__( self ):
-        return "Expr_Printnl"
+        return self.asm
 
 class Expr_UnarySub( Expression ):
     def __init__( self ):
+        self.DEBUG = "Expr_UnarySub"
         self.asm = "ASM - UnarySub TODO"
     def __str__( self ):
-        return "Expr_UnarySub"
+        return self.asm
 
 class Expr_UnaryAdd( Expression ):
     def __init__( self ):
+        self.DEBUG = "Expr_UnaryAdd"
         self.asm = "ASM - UnaryAdd TODO"
     def __str__( self ):
-        return "Expr_UnaryAdd"
+        return self.asm
 
 
 ## P0 compiler implementation
@@ -176,17 +203,30 @@ class Engine( object ):
         self.var_counter = 0
 
         self.flat_ast = []
+        self.flat_list = []
+
+        self.asm_prefix = """
+.globl main
+main:
+pushl %ebp
+movl %esp, %ebp""" 
+
+        self.asm_postfix = """leave
+ret
+"""
 
     def compile_file( self, expression=None ):
         if expression:
             self.ast = compiler.parse( expression )
 
         # try:                        
-        return self.flatten_ast( self.ast )
+#        self.flatten_ast( self.ast )
         # except AttributeError:
         #     ## specific case: TEST mode starts class without providing a P0 code
         #     ## file, so there won't be an AST already available here
         #     die( "ERROR: class started in TEST mode, no AST file set" )
+        #self.flat_list = self.flatten_ast_2_list( self.flatten_ast( self.ast ), [] )      
+        self.print_asm( self.flatten_ast_2_list( self.flatten_ast( self.ast ), [] ) )
 
     def stack_push( self, elem):
         self.stack.append( elem )
@@ -231,13 +271,24 @@ class Engine( object ):
     # TODO 
     def num_nodes(self, node):
         return 1 + self.num_child_nodes(node);
+    
+
+    def print_asm( self, expr_lst ):
+        print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+        print self.asm_prefix
+
+        for expr in expr_lst:
+#            print expr.print_debug()   
+            print str( expr )
+        print self.asm_postfix
+
 
     ## function to flatten the ast
     ## @param obj node: node of the ast
     def flatten_ast(self, node):
         if isinstance( node, compiler.ast.Module):
             print "\t\t\tModule"
-            return self.flatten_ast(node.node)
+            return compiler.ast.Module( None, self.flatten_ast(node.node) )
 
         elif isinstance( node, compiler.ast.Stmt):
             print "\t\t\tStmt"
@@ -344,6 +395,175 @@ class Engine( object ):
             die( "unknown AST node" )
 
 
+    ## return ast_list
+    def flatten_ast_2_list( self, node, ast_lst ):    
+        if isinstance( node, compiler.ast.Module ):
+            print "\t\t\tModule"
+            ast_lst += self.flatten_ast_2_list( node.node, [] )  
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.Stmt ):
+            print "\t\t\tStmt"
+            tmp_lst = []
+            for child_node in node.getChildren():
+                tmp_lst += self.flatten_ast_2_list( child_node, [] )
+                ## TODO mem calculation, to be passed to Expr_Stmt()   
+            ast_lst += [ Expr_Stmt() ]
+            ast_lst += tmp_lst
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.Discard ):
+            print "\t\t\tDiscard"
+            for child_node in node.getChildren():
+                ast_lst += self.flatten_ast_2_list( child_node, [] )
+            ast_lst += [ Expr_Discard() ]
+            return ast_lst
+
+
+        elif isinstance( node, compiler.ast.Add ):
+            print "\t\t\tAdd"
+            # Add must accept (TODO rm)
+            # consts - ok
+            # operations ( vars, results of operations ) - TODO, in case lst_a, and lst_b - how to distinguish? make sure results are in the correct registers!
+            tmp_lst = []
+            for child_node in node.getChildren():
+                tmp_lst += self.flatten_ast_2_list( child_node, [] )
+            ast_lst += tmp_lst
+#            ast_lst += [ Expr_Add( tmp_lst[0], tmp_lst[1] ) ]  # TODO exceptions
+            ast_lst += [ Expr_Add() ]  # TODO exceptions
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.Sub ):
+            print "\t\t\tSub"
+            # TODO must work with consts, and ops
+            tmp_lst = []
+            for child_node in node.getChildren():
+                tmp_lst += self.flatten_ast_2_list( child_node, [] )
+            ast_lst += tmp_lst
+#            ast_lst += [ Expr_Sub( tmp_lst[0], tmp_lst[1] ) ]
+            ast_lst += [ Expr_Sub() ]
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.Mul ):
+            print "\t\t\tMul"
+            tmp_lst = []
+            for child_node in node.getChildren():
+                tmp_lst += self.flatten_ast_2_list( child_node, [] )
+            ast_lst += tmp_lst
+#            ast_lst += [ Expr_Mul( tmp_lst[0], tmp_lst[1] ) ]
+            ast_lst += [ Expr_Mul() ]
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.Div ):
+            print "\t\t\tDiv"
+            tmp_lst = []
+            for child_node in node.getChildren():
+                tmp_lst += self.flatten_ast_2_list( child_node, [] )
+            ast_lst += tmp_lst
+#            ast_lst += [ Expr_Div( tmp_lst[0], tmp_lst[1] ) ]
+            ast_lst += [ Expr_Div() ]
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.Bitand ):
+            print "\t\t\tBitand"
+            tmp_lst = []
+            for child_node in node.getChildren():
+                tmp_lst += self.flatten_ast_2_list( child_node, [] )
+            ast_lst += tmp_lst
+#            ast_lst += [ Expr_Bitand( tmp_lst[0], tmp_lst[1] ) ]
+            ast_lst += [ Expr_Bitand() ]
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.Bitor ):
+            print "\t\t\tBitor"
+            tmp_lst = []
+            for child_node in node.getChildren():
+                tmp_lst += self.flatten_ast_2_list( child_node, [] )
+            ast_lst += tmp_lst
+#            ast_lst += [ Expr_Bitor( tmp_lst[0], tmp_lst[1] ) ]
+            ast_lst += [ Expr_Bitor() ]
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.Bitxor ):
+            print "\t\t\tBitxor"
+            tmp_lst = []
+            for child_node in node.getChildren():
+                tmp_lst += self.flatten_ast_2_list( child_node, [] )
+            ast_lst += tmp_lst
+#            ast_lst += [ Expr_Bitxor( tmp_lst[0], tmp_lst[1] ) ]
+            ast_lst += [ Expr_Bitxor() ]
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.Const ):
+            print "\t\t\tConst"
+            ## TODO terminal
+            ast_lst += [ Expr_Const( self.check_plain_integer( node.value ) ) ]
+            return ast_lst
+
+        elif isinstance(node, compiler.ast.AssName ):
+            print "\t\t\tAssName"
+            ## TODO terminal
+            ast_lst += [ Expr_AssName( node.getChildren()[0] ) ]
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.Assign ):
+            print "\t\t\tAssign"
+            tmp_lst = []
+            for child_node in node.getChildren():
+                tmp_lst += self.flatten_ast_2_list( child_node, [] )
+            ast_lst += tmp_lst
+            ast_lst += [ Expr_Assign() ]
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.Name ):
+            print "\t\t\tName"
+            # terminal
+            ast_lst += [ Expr_Name( node.getChildren()[0] ) ]
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.CallFunc ):
+            print "\t\t\tCallFunc - provokes 2 ELSE"
+            tmp_lst = []
+            for child_node in node.getChildren():
+                tmp_lst += self.flatten_ast_2_list( child_node, [] )
+            ast_lst += tmp_lst
+            ast_lst += [ Expr_CallFunc( node.getChildren()[0] ) ]
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.Printnl ):
+            print "\t\t\tPrintnl - provokes 1 ELSE"
+            tmp_lst = []
+            for child_node in node.getChildren():
+                tmp_lst += self.flatten_ast_2_list( child_node, [] )
+            ast_lst += tmp_lst
+            ast_lst += [ Expr_Printnl() ]
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.UnarySub ):
+            print "\t\t\tUnarySub"
+            tmp_lst = []
+            for child_node in node.getChildren():
+                tmp_lst += self.flatten_ast_2_list( child_node, [] )
+            ast_lst += tmp_lst
+            ast_lst += [ Expr_UnarySub() ]
+            return ast_lst
+
+        elif isinstance( node, compiler.ast.UnaryAdd ):
+            print "\t\t\tUnaryAdd"
+            tmp_lst = []
+            for child_node in node.getChildren():
+                tmp_lst += self.flatten_ast_2_list( child_node, [] )
+            ast_lst += tmp_lst
+            ast_lst += [ Expr_UnaryAdd() ]
+            return ast_lst
+        
+        else:
+            print "\t\t\t*** ELSE ***"
+            print node
+            return []   
+
+
+
     ## function to compile a flatten ast 
     ## @param obj node: node of the ast
     def compile(self, node):
@@ -352,6 +572,15 @@ class Engine( object ):
 ## start
 if 1 == len( sys.argv[1:] ):
     compl = Engine( sys.argv[1] )
-    compl.compile_file()
     print "AST:", compl.ast
-    print "FLAT_AST:", compl.flat_ast
+    print ""
+
+    print "FLAT_AST:", compl.compile_file()
+    print ""
+
+## TODO rm
+#    print "FLAT_LIST:",
+#    for expr in compl.flat_list:
+#        print " '%s'" % str( expr ),
+#        if expr == "Expr_Stmt": print ""
+#    print ""
