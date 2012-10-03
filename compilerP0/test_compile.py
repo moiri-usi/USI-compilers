@@ -24,35 +24,31 @@ class TestSequenceFunctions( unittest.TestCase ):
 
     def test_assign_ast( self ):
         expr = "x = 1"
-        src = compiler.parse( expr )
+        src = str( compiler.parse( expr ) )
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_ast()
-        print "\t\t\t\tSRC:", src
-        print "\t\t\t\tRES:", res
-        self.assertTrue( src == res )
+        self.assertEqual( src, res )
 
     def test_assign_flat( self ):
         expr = "x = 1"
         src = "Module(None, Stmt([Assign([AssName('x', 'OP_ASSIGN')], Const(1))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
-        print "\t\t\t\tSRC:", src
-        print "\t\t\t\tRES:", res
-        self.assertTrue( src == res )
+        self.assertEqual( src, res )
 
     def test_assign_list( self ):
         expr = "x = 1"
         src = "some kind of list" #TODO
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_list()
-        self.assertTrue( src == res )
+        self.assertEqual( src, res )
 
     def test_nestedExpression1_ast( self ):
         expr = "x = -1 + 2"
-        src = compiler.parse( expr )
+        src = str( compiler.parse( expr ) )
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_ast()
-        self.assertTrue( src == res )
+        self.assertEqual( src, res )
 
     def test_nestedExpression1_flat( self ):
         expr = "x = -1 + 2"
@@ -70,7 +66,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         src = "some kind of list" #TODO
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_list()
-        self.assertTrue( src == res )
+        self.assertEqual( src, res )
 
     # def test_Add( self ):
     #     ast = compiler.parse( "1+2" )
