@@ -22,28 +22,51 @@ class TestSequenceFunctions( unittest.TestCase ):
     def setUp(self):
         self.compl = Engine()
 
-    # def test_sequence_a_assigned_7( self ):
-    #     ## test sequence a=7
-    #     self.compl.compile_file( "a=7" )
-    #     self.assertTrue( "[Assign([AssName('a', 'OP_ASSIGN')], Const(7))]" == str( self.compl.flat_ast ) )
+    def test_assign_ast( self ):
+        expr = "x = 1"
+        src = str( compiler.parse( expr ) )
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_ast()
+        self.assertEqual( src, res )
 
-    def test_sequence_x_assined_1_plux_2( self ):
-        self.compl.compile_file( "x=1+2" )
-        self.assertTrue( "[Assign([AssName('t1', 'OP_ASSIGN')], Add((Const(1), Const(2)))), Assign([AssName('x', 'OP_ASSIGN')], Name('t1'))]" == str( self.compl.flat_ast ) )
+    def test_assign_flat( self ):
+        expr = "x = 1"
+        src = "Module(None, Stmt([Assign([AssName('x', 'OP_ASSIGN')], Const(1))]))"
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_flat()
+        self.assertEqual( src, res )
 
-    def test_sequence01( self ):
-        expected_sequence = "Expr_Stmt Expr_AssName Expr_Const Expr_Assign"
-        computed_sequence = self.compl.compile_file( "x=1", DEBUG=True )
-        self.assertTrue( expected_sequence == computed_sequence )
+    def test_assign_list( self ):
+        expr = "x = 1"
+        src = "some kind of list" #TODO
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_list()
+        self.assertEqual( src, res )
 
-    def test_sequence02( self ):
-        expected_sequence = "Expr_Stmt Expr_Name Expr_Const Expr_Add Expr_Assign"
-        computed_sequence = self.compl.compile_file( "x=a+7", DEBUG=True )
-        print "XXX '%s'" % computed_sequence   
-        self.assertTrue( expected_sequence == computed_sequence )
+    def test_nestedExpression1_ast( self ):
+        expr = "x = -1 + 2"
+        src = str( compiler.parse( expr ) )
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_ast()
+        self.assertEqual( src, res )
 
+    def test_nestedExpression1_flat( self ):
+        expr = "x = -1 + 2"
+        ## t1 = -1
+        ## x = t1 + 2
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(1)), Assign([AssName('t1', 'OP_ASSIGN')], UnarySub(Name('t1'))), Assign([AssName('t1', OP_ASSIGN)], Add((Name('t1'), Const(2))))]))"
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_flat()
+        print "\t\t\t\tSRC:", src
+        print "\t\t\t\tRES:", res
+        self.assertEqual( src, res )
 
-#Expr_Stmt None Expr_AssNames(x) None Expr_Const(1) None Expr_Assign None" == tmp )
+    def test_nestedExpression1_list( self ):
+        expr = "x = -1 + 2"
+        src = "some kind of list" #TODO
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_list()
+        self.assertEqual( src, res )
 
     # def test_Add( self ):
     #     ast = compiler.parse( "1+2" )
