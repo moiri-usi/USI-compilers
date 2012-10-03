@@ -263,20 +263,62 @@ main:
         elif isinstance( node, compiler.ast.Bitand ):
             self.DEBUG( "Bitand" )
             flat_nodes = []
+            cnt = 0
             for n in node.nodes:
-                flat_nodes.append(self.flatten_ast(n))
-            expr = compiler.ast.Bitand(flat_nodes)
-            new_varname = self.flatten_ast_add_assign( expr )
-            print "Bitand: new code line, append Assign", new_varname
-            return compiler.ast.Name(new_varname)
+                flat_node = self.flatten_ast(n)
+                if (cnt == 0):
+                    flat_nodes.append(flat_node)
+                elif (cnt == 1):
+                    flat_nodes.append(flat_node)
+                    expr = compiler.ast.Bitand(flat_nodes)
+                    res_varname = new_varname = self.flatten_ast_add_assign( expr )
+                    print "Bitand: new code line, append Assign", new_varname
+                elif (cnt > 1):
+                    expr = compiler.ast.Bitand([compiler.ast.Name(new_varname), flat_node])
+                    new_varname = self.flatten_ast_add_assign( expr )
+                    print "Bitand: new code line, append Assign", new_varname
+                cnt += 1
+            return compiler.ast.Name(res_varname)
 
         elif isinstance( node, compiler.ast.Bitor ):
             self.DEBUG( "Bitor" )
-            pass
+            flat_nodes = []
+            cnt = 0
+            for n in node.nodes:
+                flat_node = self.flatten_ast(n)
+                if (cnt == 0):
+                    flat_nodes.append(flat_node)
+                elif (cnt == 1):
+                    flat_nodes.append(flat_node)
+                    expr = compiler.ast.Bitor(flat_nodes)
+                    res_varname = new_varname = self.flatten_ast_add_assign( expr )
+                    print "Bitor: new code line, append Assign", new_varname
+                elif (cnt > 1):
+                    expr = compiler.ast.Bitor([compiler.ast.Name(new_varname), flat_node])
+                    new_varname = self.flatten_ast_add_assign( expr )
+                    print "Bitor: new code line, append Assign", new_varname
+                cnt += 1
+            return compiler.ast.Name(res_varname)
 
         elif isinstance( node, compiler.ast.Bitxor ):
             self.DEBUG( "Bitxor" )
-            pass
+            flat_nodes = []
+            cnt = 0
+            for n in node.nodes:
+                flat_node = self.flatten_ast(n)
+                if (cnt == 0):
+                    flat_nodes.append(flat_node)
+                elif (cnt == 1):
+                    flat_nodes.append(flat_node)
+                    expr = compiler.ast.Bitxor(flat_nodes)
+                    res_varname = new_varname = self.flatten_ast_add_assign( expr )
+                    print "Bitxor: new code line, append Assign", new_varname
+                elif (cnt > 1):
+                    expr = compiler.ast.Bitxor([compiler.ast.Name(new_varname), flat_node])
+                    new_varname = self.flatten_ast_add_assign( expr )
+                    print "Bitxor: new code line, append Assign", new_varname
+                cnt += 1
+            return compiler.ast.Name(res_varname)
 
         else:
             die( "unknown AST node" )
