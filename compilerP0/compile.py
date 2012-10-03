@@ -145,7 +145,6 @@ main:
 
         self.flat_ast = self.flatten_ast( self.ast )
         self.expr_list = self.flatten_ast_2_list( self.flat_ast, [] )
-#        self.print_asm( self.expr_list )
 
     def check_plain_integer( self, val ):
         if type( val ) is not int:
@@ -347,7 +346,6 @@ main:
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
             ast_lst += tmp_lst
-#            ast_lst += [ Expr_Bitand( tmp_lst[0], tmp_lst[1] ) ]
             ast_lst += [ Expr_Bitand() ]
             return ast_lst
 
@@ -357,7 +355,6 @@ main:
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
             ast_lst += tmp_lst
-#            ast_lst += [ Expr_Bitor( tmp_lst[0], tmp_lst[1] ) ]
             ast_lst += [ Expr_Bitor() ]
             return ast_lst
 
@@ -367,19 +364,16 @@ main:
             for child_node in node.getChildren():
                 tmp_lst += self.flatten_ast_2_list( child_node, [] )
             ast_lst += tmp_lst
-#            ast_lst += [ Expr_Bitxor( tmp_lst[0], tmp_lst[1] ) ]
             ast_lst += [ Expr_Bitxor() ]
             return ast_lst
 
         elif isinstance( node, compiler.ast.Const ):
             self.DEBUG( "Const" )
-            ## TODO terminal
             ast_lst += [ Expr_Const( self.check_plain_integer( node.value ) ) ]
             return ast_lst
 
         elif isinstance(node, compiler.ast.AssName ):
             self.DEBUG( "AssName" )
-            ## TODO terminal
             ast_lst += [ Expr_AssName( node.getChildren()[0] ) ]
             return ast_lst
 
@@ -473,3 +467,4 @@ if 1 == len( sys.argv[1:] ):
     print compl.DEBUG__print_list( )
     print ""
 
+    compl.print_asm( self.expr_list )
