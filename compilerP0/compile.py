@@ -467,4 +467,4 @@ if 1 == len( sys.argv[1:] ):
     print compl.DEBUG__print_list( )
     print ""
 
-    compl.print_asm( self.expr_list )
+    compl.print_asm( compl.expr_list )
