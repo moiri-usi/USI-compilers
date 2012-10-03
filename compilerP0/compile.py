@@ -152,11 +152,6 @@ main:
             die( "ERROR: syntax error, no plain integer allowed" )
         return val
 
-    def gen_varname( self ):
-        self.var_counter += 1
-        print "new var t%d" %self.var_counter
-        return 't' + str(self.var_counter)
-
     def print_asm( self, expr_lst ):
         print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
         print self.asm_prefix
@@ -168,7 +163,14 @@ main:
         print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
         print ""
 
-    def flatten_ast(self, node):
+    def flatten_ast_add_assign( self, expr ):
+        self.var_counter += 1
+        name = 't' + str(self.var_counter)
+        nodes = compiler.ast.AssName(name, 'OP_ASSIGN')
+        self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+        return name
+
+    def flatten_ast( self, node ):
         if isinstance( node, compiler.ast.Module):
             self.DEBUG( "Module" )
             self.flat_ast = compiler.ast.Module( None, self.flatten_ast(node.node) )
@@ -183,36 +185,28 @@ main:
         elif isinstance(node, compiler.ast.Add):
             self.DEBUG( "Add" )
             expr = compiler.ast.Add((self.flatten_ast(node.left), self.flatten_ast(node.right)))
-            new_varname = self.gen_varname()
-            nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
-            self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+            new_varname = self.flatten_ast_add_assign( expr )
             print "Add: new code line, append Assign", new_varname
             return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Mul ):
             self.DEBUG( "Mul" )
             expr = compiler.ast.Mul((self.flatten_ast(node.left), self.flatten_ast(node.right)))
-            new_varname = self.gen_varname()
-            nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
-            self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+            new_varname = self.flatten_ast_add_assign( expr )
             print "Mul: new code line, append Assign", new_varname
             return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Sub ):
             self.DEBUG( "Sub" )
             expr = compiler.ast.Sub((self.flatten_ast(node.left), self.flatten_ast(node.right)))
-            new_varname = self.gen_varname()
-            nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
-            self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+            new_varname = self.flatten_ast_add_assign( expr )
             print "Sub: new code line, append Assign", new_varname
             return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Div ):
             self.DEBUG( "Div" )
             expr = compiler.ast.Div((self.flatten_ast(node.left), self.flatten_ast(node.right)))
-            new_varname = self.gen_varname()
-            nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
-            self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+            new_varname = self.flatten_ast_add_assign( expr )
             print "Div: new code line, append Assign", new_varname
             return compiler.ast.Name(new_varname)
 
@@ -243,9 +237,7 @@ main:
         elif isinstance( node, compiler.ast.CallFunc ):
             self.DEBUG( "CallFunc" )
             expr = compiler.ast.CallFunc(self.flatten_ast(node.node), [])
-            new_varname = self.gen_varname()
-            nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
-            self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+            new_varname = self.flatten_ast_add_assign( expr )
             print "CallFunc: new code line, append Assign", new_varname
             return compiler.ast.Name(new_varname)
 
@@ -258,18 +250,14 @@ main:
         elif isinstance( node, compiler.ast.UnarySub ):
             self.DEBUG( "UnarySub" )
             expr = compiler.ast.UnarySub(self.flatten_ast(node.expr))
-            new_varname = self.gen_varname()
-            nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
-            self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+            new_varname = self.flatten_ast_add_assign( expr )
             print "UnarySub: new code line, append Assign", new_varname
             return compiler.ast.Name(new_varname)
 
         elif isinstance( node, compiler.ast.UnaryAdd ):
             self.DEBUG( "UnaryAdd" )
             expr = compiler.ast.UnaryAdd(self.flatten_ast(node.expr))
-            new_varname = self.gen_varname()
-            nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
-            self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+            new_varname = self.flatten_ast_add_assign( expr )
             print "UnaryAdd: new code line, append Assign", new_varname
             return compiler.ast.Name(new_varname)
 
