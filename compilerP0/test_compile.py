@@ -54,7 +54,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         expr = "x = -1 + 2"
         ## t1 = -1
         ## x = t1 + 2
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], UnarySub(Const(1))), Assign([AssName('x', 'OP_ASSIGN')], Add((Name('t1'), Const(2))))]))"
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(1)), Assign([AssName('t1', 'OP_ASSIGN')], UnarySub(Name('t1'))), Assign([AssName('t1', OP_ASSIGN)], Add((Name('t1'), Const(2))))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         print "\t\t\t\tSRC:", src
