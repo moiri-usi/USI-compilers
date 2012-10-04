@@ -341,7 +341,10 @@ class Engine( object ):
 
         elif isinstance( node, compiler.ast.Printnl ):
             self.DEBUG( "Printnl" )
-            self.flat_ast.append(compiler.ast.Printnl(self.flatten_ast(node.nodes[0]), None))
+            ## create a CallFunc AST with name 'print'
+            expr = compiler.ast.CallFunc(compiler.ast.Name('print'), [])
+            self.flatten_ast_add_assign( expr )
+            ## returns nothing because print has no return value
             return
 
         elif isinstance( node, compiler.ast.UnarySub ):
