@@ -200,6 +200,21 @@ class ASM_negl( Expression ):
     def __str__( self ):
         return self.asm
 
+class ASM_call( Expression ):
+    def __init__( self, nam, stackpos=None ):
+        self.DEBUG_type = "ASM_call"
+        self.stackpos = stackpos
+        self.nam = nam
+        self.asm = ""
+    def stackconfig( self, stacksize ):
+        if self.stackpos:
+            self.stackpos = stacksize + 4 - self.stackpos
+            self.asm = "        movl -%d(%%ebp), %%esp\n" % self.stackpos
+        self.asm += "        call %s" % self.nam
+    def __str__( self ):
+        return self.asm
+
+
                                   
 # class ASM_posl( Expression ):
 #     def __init__( self, srcpos ):
@@ -248,8 +263,7 @@ class Engine( object ):
                 except SyntaxError:
                     die( "ERROR: invalid syntax in file '%s'" %filepath )
 
-        if DEBUG: self.DEBUGMODE=True
-        else: self.DEBUGMODE=False
+        self.DEBUGMODE = DEBUG
 
         self.var_counter = 0
 
@@ -285,13 +299,12 @@ class Engine( object ):
         return val
 
     def print_asm( self, expr_lst ):
-        print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+        self.DEBUG( "\n###############################" )
         tmp = ""
         for expr in expr_lst:
             tmp += str( expr.print_debug() )
             print str( expr )
-        print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
-        print ""
+        self.DEBUG( "\n###############################" )
 
     def flatten_ast_add_assign( self, expr ):
         self.var_counter += 1
@@ -360,14 +373,14 @@ class Engine( object ):
 
         elif isinstance( node, compiler.ast.CallFunc ):
             self.DEBUG( "CallFunc" )
-            expr = compiler.ast.CallFunc(self.flatten_ast(node.node), [])
+            expr = compiler.ast.CallFunc( node.node, [])
             new_varname = self.flatten_ast_add_assign( expr )
             return compiler.ast.Name(new_varname)
 
         elif isinstance( node, compiler.ast.Printnl ):
             self.DEBUG( "Printnl" )
             ## create a CallFunc AST with name 'print'
-            expr = compiler.ast.CallFunc(compiler.ast.Name('print'), [])
+            expr = compiler.ast.CallFunc(compiler.ast.Name('print_int_nl'), [self.flatten_ast( node.nodes[0] ) ])
             self.flatten_ast_add_assign( expr )
             ## returns nothing because print has no return value
             return
@@ -484,7 +497,6 @@ class Engine( object ):
 
         elif isinstance( nd, compiler.ast.Add ):
             self.DEBUG( "Add" )
-
             lst = []
             for chld in nd.getChildren():
                 lst += self.flatten_ast_2_list( chld, [] )
@@ -629,28 +641,32 @@ class Engine( object ):
         elif isinstance( nd, compiler.ast.Name ):
             self.DEBUG( "Name" )
             self.asmlist_vartable_index( nd.name )
-
             return []
 
         elif isinstance( nd, compiler.ast.CallFunc ):
-            
-            self.DEBUG( "CallFunc" )
-            tmp_lst = []
-            for child_node in nd.getChildren():
-                tmp_lst += self.flatten_ast_2_list( child_node, [] )
-            asm_lst += tmp_lst
-            asm_lst += [ Expr_CallFunc( nd.getChildren()[0] ) ]
+
+            self.DEBUG( nd )     
+            ## lhs is name of the function
+            ## rhs is name of the temp var for the param tree
+            if nd.getChildren()[1]:
+                asm_lst += [ ASM_call( nd.getChildren()[0].name, self.asmlist_vartable_index( nd.getChildren()[1].name ) ) ]
+            else:
+                asm_lst += [ ASM_call( nd.getChildren()[0].name ) ]
+
             return asm_lst
 
-        elif isinstance( nd, compiler.ast.Printnl ):
+# TODO rm
+        # elif isinstance( nd, compiler.ast.Printnl ):
             
-            self.DEBUG( "Printnl" )
-            tmp_lst = []
-            for child_node in nd.getChildren():
-                tmp_lst += self.flatten_ast_2_list( child_node, [] )
-            asm_lst += tmp_lst
-            asm_lst += [ Expr_Printnl() ]
-            return asm_lst
+        #     die("Printnl - TODO")
+        #     # self.DEBUG( "Printnl" )
+        #     # tmp_lst = []
+        #     # for child_node in nd.getChildren():
+        #     #     tmp_lst += self.flatten_ast_2_list( child_node, [] )
+        #     # asm_lst += tmp_lst
+        #     # asm_lst += [ Expr_Printnl() ]
+        #     # return asm_lst
+        #     return []
 
         # elif isinstance( nd, compiler.ast.UnarySub ):
             
@@ -696,23 +712,30 @@ class Engine( object ):
 
 
 ## start
-if 1 == len( sys.argv[1:] ):
-    compl = Engine( sys.argv[1], DEBUG=True )
+
+
+if 1 <= len( sys.argv[1:] ):
+    DEBUG = True if 1 < len( sys.argv[1:]) and  sys.argv[2] == "DEBUG" else False
+
+    compl = Engine( sys.argv[1], DEBUG )
     compl.compileme()
 
-    print "AST:"
-    print compl.DEBUG__print_ast( )
-    print ""
+    if DEBUG == True:
 
-    print "FLAT AST:"
-    print compl.DEBUG__print_flat( )
-    print ""
+        print "AST:"
+        print compl.DEBUG__print_ast( )
+        print ""
 
-    print "ASM LIST:"
-    print compl.DEBUG__print_list( )
-    print ""
+        print "FLAT AST:"
+        print compl.DEBUG__print_flat( )
+        print ""
 
+        print "ASM LIST:"
+        print compl.DEBUG__print_list( )
+        print ""
+
+        print "len of asmlist_vartable '%d'" % len(compl.asmlist_vartable)
+        print compl.asmlist_vartable
+
+##
     compl.print_asm( compl.expr_list )
-
-    print "len of asmlist_vartable '%d'" % len(compl.asmlist_vartable)
-    print compl.asmlist_vartable
