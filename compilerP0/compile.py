@@ -55,10 +55,9 @@ class ASM_start( Expression ):
         self.asm += "main:\n"
         self.asm += "        pushl %ebp\n"
         self.asm += "        movl %esp, %ebp\n"
-        self.asm += "        subl $%d, %%esp\n" % self.mem
+        self.asm += "        subl $%d, %%esp" % self.mem
     def __str__( self ):
         return self.asm
-
 
 
 class ASM_end( Expression ):
@@ -112,34 +111,103 @@ class ASM_addl( Expression ):
         self.apos = stacksize + 4 - self.apos
         self.bpos = stacksize + 4 - self.bpos
         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
-        self.asm += "        addl -%d(%%ebp), %%eax\n" % self.bpos
+        self.asm += "        addl -%d(%%ebp), %%eax" % self.bpos
 
     def __str__( self ):
         return self.asm
 
-
-
-                               
 class ASM_subl( Expression ):
-    def __init__( self ):
+    def __init__( self, apos, bpos ):
         self.DEBUG_type = "ASM_subl"
-        self.asm = "ASM - Sub TODO"
+        self.apos = apos
+        self.bpos = bpos
+    def stackconfig( self, stacksize ):
+        self.apos = stacksize + 4 - self.apos
+        self.bpos = stacksize + 4 - self.bpos
+        self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
+        self.asm += "        subl -%d(%%ebp), %%eax" % self.bpos
     def __str__( self ):
         return self.asm
+
+
 
 class ASM_mull( Expression ):
-    def __init__( self ):
+    def __init__( self, apos, bpos ):
         self.DEBUG_type = "ASM_mull"
-        self.asm = "ASM - Mul TODO"
+        self.apos = apos
+        self.bpos = bpos
+    def stackconfig( self, stacksize ):
+        self.apos = stacksize + 4 - self.apos
+        self.bpos = stacksize + 4 - self.bpos
+        self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
+        self.asm += "        mull -%d(%%ebp), %%eax" % self.bpos
     def __str__( self ):
         return self.asm
 
-class ASM_negl( Expression ):
-    def __init__( self ):
-        self.DEBUG_type = "ASM_negl"
-        self.asm = "ASM - neg TODO"
+
+class ASM_bitand( Expression ):
+    def __init__( self, apos, bpos ):
+        self.DEBUG_type = "ASM_bitand"
+        self.apos = apos
+        self.bpos = bpos
+    def stackconfig( self, stacksize ):
+        self.apos = stacksize + 4 - self.apos
+        self.bpos = stacksize + 4 - self.bpos
+        self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
+        self.asm = "        movl -%d(%%ebp), %%edx\n"  % self.bpos
+        self.asm += "        andl %edx, %eax"
     def __str__( self ):
         return self.asm
+
+
+class ASM_bitor( Expression ):
+    def __init__( self, apos, bpos ):
+        self.DEBUG_type = "ASM_bitor"
+        self.apos = apos
+        self.bpos = bpos
+    def stackconfig( self, stacksize ):
+        self.apos = stacksize + 4 - self.apos
+        self.bpos = stacksize + 4 - self.bpos
+        self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
+        self.asm = "        movl -%d(%%ebp), %%edx\n"  % self.bpos
+        self.asm += "        orl %edx, %eax"
+    def __str__( self ):
+        return self.asm
+
+class ASM_bitxor( Expression ):
+    def __init__( self, apos, bpos ):
+        self.DEBUG_type = "ASM_bitxor"
+        self.apos = apos
+        self.bpos = bpos
+    def stackconfig( self, stacksize ):
+        self.apos = stacksize + 4 - self.apos
+        self.bpos = stacksize + 4 - self.bpos
+        self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
+        self.asm = "        movl -%d(%%ebp), %%edx\n"  % self.bpos
+        self.asm += "        xorl %edx, %eax"
+    def __str__( self ):
+        return self.asm
+
+
+class ASM_negl( Expression ):
+    def __init__( self, srcpos ):
+        self.DEBUG_type = "ASM_negl"
+        self.srcpos = srcpos
+    def stackconfig( self, stacksize ):
+        self.srcpos = stacksize + 4 - self.srcpos
+        self.asm = "        movl -%d(%%ebp), %%eax\n" % self.srcpos
+        self.asm += "        negl %eax"
+    def __str__( self ):
+        return self.asm
+
+                               
+
+# class ASM_negl( Expression ):
+#     def __init__( self ):
+#         self.DEBUG_type = "ASM_negl"
+#         self.asm = "ASM - neg TODO"
+#     def __str__( self ):
+#         return self.asm
 
 ## TODO further ASM_ classes
 
@@ -397,7 +465,6 @@ class Engine( object ):
             lst = []
             for chld in nd.getChildren():
                 lst += self.flatten_ast_2_list( chld, [] )
-
             asm_lst += lst
             asm_lst += [ ASM_addl( self.asmlist_vartable_index( nd.left.name ), self.asmlist_vartable_index( nd.right.name ) ) ]
 
@@ -405,44 +472,82 @@ class Engine( object ):
 
 
         elif isinstance( nd, compiler.ast.Sub ):
-            
             self.DEBUG( "Sub" )
-            tmp_lst = []
-            for child_node in nd.getChildren():
-                tmp_lst += self.flatten_ast_2_list( child_node, [] )
-            asm_lst += tmp_lst
-            asm_lst += [ ] # TODO     
+
+            lst = []
+            for chld in nd.getChildren():
+                lst += self.flatten_ast_2_list( chld, [] )
+            asm_lst += lst
+            asm_lst += [ ASM_subl( self.asmlist_vartable_index( nd.left.name ), self.asmlist_vartable_index( nd.right.name ) ) ]
+
             return asm_lst
 
+
         elif isinstance( nd, compiler.ast.Mul ):
-            
             self.DEBUG( "Mul" )
-            tmp_lst = []
-            for child_node in nd.getChildren():
-                tmp_lst += self.flatten_ast_2_list( child_node, [] )
-            asm_lst += tmp_lst
-            asm_lst += [ ] # TODO   
+
+            lst = []
+            for chld in nd.getChildren():
+                lst += self.flatten_ast_2_list( chld, [] )
+            asm_lst += lst
+            asm_lst += [ ASM_mull( self.asmlist_vartable_index( nd.left.name ), self.asmlist_vartable_index( nd.right.name ) ) ]
+
             return asm_lst
 
         elif isinstance( nd, compiler.ast.Bitand ):
-            
             self.DEBUG( "Bitand" )
-            tmp_lst = []
-            for child_node in nd.getChildren():
-                tmp_lst += self.flatten_ast_2_list( child_node, [] )
-            asm_lst += tmp_lst
-            asm_lst += [ Expr_Bitand() ]
+
+            lst = []
+            for chld in nd.getChildren():
+                lst += self.flatten_ast_2_list( chld, [] )
+            asm_lst += lst
+            asm_lst += [ ASM_bitand( self.asmlist_vartable_index( nd.getChildren()[0].name ), self.asmlist_vartable_index( nd.getChildren()[1].name ) ) ]
+
             return asm_lst
 
         elif isinstance( nd, compiler.ast.Bitor ):
-            
             self.DEBUG( "Bitor" )
-            tmp_lst = []
-            for child_node in nd.getChildren():
-                tmp_lst += self.flatten_ast_2_list( child_node, [] )
-            asm_lst += tmp_lst
-            asm_lst += [ Expr_Bitor() ]
+
+            lst = []
+            for chld in nd.getChildren():
+                lst += self.flatten_ast_2_list( chld, [] )
+            asm_lst += lst
+            asm_lst += [ ASM_bitor( self.asmlist_vartable_index( nd.getChildren()[0].name ), self.asmlist_vartable_index( nd.getChildren()[1].name ) ) ]
+
             return asm_lst
+
+        elif isinstance( nd, compiler.ast.Bitxor ):
+            ## TODO test
+            self.DEBUG( "Bitxor" )
+
+            lst = []
+            for chld in nd.getChildren():
+                lst += self.flatten_ast_2_list( chld, [] )
+            asm_lst += lst
+            asm_lst += [ ASM_bitxor( self.asmlist_vartable_index( nd.getChildren()[0].name ), self.asmlist_vartable_index( nd.getChildren()[1].name ) ) ]
+
+            return asm_lst
+
+
+        elif isinstance( nd, compiler.ast.UnarySub ):
+            self.DEBUG( "UnarySub" )
+            lst = []
+            for chld in nd.getChildren():
+                lst += self.flatten_ast_2_list( chld, [] )
+            asm_lst += lst
+            asm_lst += [ ASM_negl( self.asmlist_vartable_index( nd.getChildren()[0].name ) ) ]
+
+            return asm_lst
+
+        # elif isinstance( nd, compiler.ast.Bitor ):
+            
+        #     self.DEBUG( "Bitor" )
+        #     tmp_lst = []
+        #     for child_node in nd.getChildren():
+        #         tmp_lst += self.flatten_ast_2_list( child_node, [] )
+        #     asm_lst += tmp_lst
+        #     asm_lst += [ Expr_Bitor() ]
+        #     return asm_lst
 
         elif isinstance( nd, compiler.ast.Bitxor ):
             
@@ -524,15 +629,15 @@ class Engine( object ):
             asm_lst += [ Expr_Printnl() ]
             return asm_lst
 
-        elif isinstance( nd, compiler.ast.UnarySub ):
+        # elif isinstance( nd, compiler.ast.UnarySub ):
             
-            self.DEBUG( "UnarySub" )
-            tmp_lst = []
-            for child_node in nd.getChildren():
-                tmp_lst += self.flatten_ast_2_list( child_node, [] )
-            asm_lst += tmp_lst
-            asm_lst += [ Expr_UnarySub() ]
-            return asm_lst
+        #     self.DEBUG( "UnarySub" )
+        #     tmp_lst = []
+        #     for child_node in nd.getChildren():
+        #         tmp_lst += self.flatten_ast_2_list( child_node, [] )
+        #     asm_lst += tmp_lst
+        #     asm_lst += [ Expr_UnarySub() ]
+        #     return asm_lst
 
         elif isinstance( nd, compiler.ast.UnaryAdd ):
             
