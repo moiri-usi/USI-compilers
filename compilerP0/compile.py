@@ -331,9 +331,7 @@ class Engine( object ):
 
         elif isinstance( node, compiler.ast.Name ):
             self.DEBUG( "Name" )
-            expr = compiler.ast.Name( node.name )
-            new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name( new_varname )
+            return node
 
         elif isinstance( node, compiler.ast.CallFunc ):
             self.DEBUG( "CallFunc" )
