@@ -59,7 +59,6 @@ tst()
             res="FAIL - execute"
             break
         fi
-die "XXX"
         break
     done
     printf "${res}\t\t${op}\n"
