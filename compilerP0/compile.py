@@ -367,6 +367,20 @@ class Engine( object ):
             print "UnaryAdd: new code line, append Assign", new_varname
             return compiler.ast.Name(new_varname)
 
+        elif isinstance(node, compiler.ast.LeftShift):
+            self.DEBUG( "LeftShift" )
+            expr = compiler.ast.LeftShift((self.flatten_ast(node.left), self.flatten_ast(node.right)))
+            new_varname = self.flatten_ast_add_assign( expr )
+            print "LeftShift: new code line, append Assign", new_varname
+            return compiler.ast.Name(new_varname)
+
+        elif isinstance(node, compiler.ast.RightShift):
+            self.DEBUG( "RightShift" )
+            expr = compiler.ast.RightShift((self.flatten_ast(node.left), self.flatten_ast(node.right)))
+            new_varname = self.flatten_ast_add_assign( expr )
+            print "RightShift: new code line, append Assign", new_varname
+            return compiler.ast.Name(new_varname)
+
         elif isinstance( node, compiler.ast.Bitand ):
             self.DEBUG( "Bitand" )
             flat_nodes = []
