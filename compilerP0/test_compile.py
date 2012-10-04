@@ -36,12 +36,35 @@ class TestSequenceFunctions( unittest.TestCase ):
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
 
-    def test_assign_list( self ):
-        expr = "x = 1"
-        src = "some kind of list" #TODO
+    # def test_assign_list( self ):
+    #     expr = "x = 1"
+    #     src = "some kind of list" #TODO
+    #     self.compl.compileme( expr )
+    #     res = self.compl.DEBUG__print_list()
+    #     self.assertEqual( src, res )
+
+    def test_add_ast( self ):
+        expr = "x = 1 + 2"
+        src = str( compiler.parse( expr ) )
         self.compl.compileme( expr )
-        res = self.compl.DEBUG__print_list()
+        res = self.compl.DEBUG__print_ast()
         self.assertEqual( src, res )
+
+    def test_add_flat( self ):
+        expr = "x = 1 + 2"
+        ## t1 = 1 + 2
+        ## x = t1
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Add((Const(1), Const(2)))), Assign([AssName('x', 'OP_ASSIGN')], Name('t1'))]))"
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_flat()
+        self.assertEqual( src, res )
+
+    # def test_add_list( self ):
+    #     expr = "x = 1 + 2"
+    #     src = "some kind of list" #TODO
+    #     self.compl.compileme( expr )
+    #     res = self.compl.DEBUG__print_list()
+    #     self.assertEqual( src, res )
 
     def test_nestedExpression1_ast( self ):
         expr = "x = -1 + 2"
@@ -53,23 +76,53 @@ class TestSequenceFunctions( unittest.TestCase ):
     def test_nestedExpression1_flat( self ):
         expr = "x = -1 + 2"
         ## t1 = -1
-        ## x = t1 + 2
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(1)), Assign([AssName('t1', 'OP_ASSIGN')], UnarySub(Name('t1'))), Assign([AssName('t1', OP_ASSIGN)], Add((Name('t1'), Const(2))))]))"
+        ## t2 = t1 + 2
+        ## x = t2
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], UnarySub(Const(1))), Assign([AssName('t2', 'OP_ASSIGN')], Add((Name('t1'), Const(2)))), Assign([AssName('x', 'OP_ASSIGN')], Name('t2'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
-        print "\t\t\t\tSRC:", src
-        print "\t\t\t\tRES:", res
         self.assertEqual( src, res )
 
-    def test_nestedExpression1_list( self ):
-        expr = "x = -1 + 2"
-        src = "some kind of list" #TODO
+    # def test_nestedExpression1_list( self ):
+    #     expr = "x = -1 + 2"
+    #     src = "some kind of list" #TODO
+    #     self.compl.compileme( expr )
+    #     res = self.compl.DEBUG__print_list()
+    #     self.assertEqual( src, res )
+
+    def test_nestedExpression2_ast( self ):
+        expr = "x = -1 + -(-2 + 3) + 5"
+        src = str( compiler.parse( expr ) )
         self.compl.compileme( expr )
-        res = self.compl.DEBUG__print_list()
+        res = self.compl.DEBUG__print_ast()
         self.assertEqual( src, res )
 
+    def test_nestedExpression2_flat( self ):
+        expr = "x = -1 + -(-2 + 3) + 5"
+        ## t1 = -2
+        ## t2 = t1 + 3
+        ## t3 = -t2
+        ## t4 = -1
+        ## t5 = t3 + t4
+        ## t6 = t5 + 5
+        ## x = t6
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], UnarySub(Const(1))), Assign([AssName('t2', 'OP_ASSIGN')], UnarySub(Const(2))), Assign([AssName('t3', 'OP_ASSIGN')], Add((Name('t2'), Const(3)))), Assign([AssName('t4', 'OP_ASSIGN')], UnarySub(Name('t3'))), Assign([AssName('t5', 'OP_ASSIGN')], Add((Name('t1'), Name('t4')))), Assign([AssName('t6', 'OP_ASSIGN')], Add((Name('t5'), Const(5)))), Assign([AssName('x', 'OP_ASSIGN')], Name('t6'))]))"
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_flat()
+        self.assertEqual( src, res )
+
+    # def test_nestedExpression2_list( self ):
+    #     expr = "x = -1 - (-2 + 3) + 5"
+    #     src = "some kind of list" #TODO
+    #     self.compl.compileme( expr )
+    #     res = self.compl.DEBUG__print_list()
+    #     self.assertEqual( src, res )
+
+
+
+## TODO: rm
     # def test_Add( self ):
-    #     ast = compiler.parse( "1+2" )
+    #     ast = compiler.parse( "x = 1 + 2" )
     #     res = self.compl.num_nodes( ast )
 
     #     ## test result

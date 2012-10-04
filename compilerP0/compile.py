@@ -193,11 +193,6 @@ class Engine( object ):
             die( "ERROR: syntax error, no plain integer allowed" )
         return val
 
-    def gen_varname( self ):
-        self.var_counter += 1
-        print "new var t%d" %self.var_counter
-        return 't' + str(self.var_counter)
-
     def print_asm( self, expr_lst ):
         print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
         tmp = ""
@@ -207,7 +202,14 @@ class Engine( object ):
         print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
         print ""
 
-    def flatten_ast(self, node):
+    def flatten_ast_add_assign( self, expr ):
+        self.var_counter += 1
+        name = 't' + str(self.var_counter)
+        nodes = compiler.ast.AssName(name, 'OP_ASSIGN')
+        self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+        return name
+
+    def flatten_ast( self, node ):
         if isinstance( node, compiler.ast.Module):
             self.DEBUG( "Module" )
             self.flat_ast = compiler.ast.Module( None, self.flatten_ast(node.node) )
@@ -222,42 +224,30 @@ class Engine( object ):
         elif isinstance(node, compiler.ast.Add):
             self.DEBUG( "Add" )
             expr = compiler.ast.Add((self.flatten_ast(node.left), self.flatten_ast(node.right)))
-            new_varname = self.gen_varname()
-            nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
-            self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+            new_varname = self.flatten_ast_add_assign( expr )
             print "Add: new code line, append Assign", new_varname
             return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Mul ):
             self.DEBUG( "Mul" )
-            expr = compiler.ast.Mul(self.flatten_ast(node.left), self.flatten_ast(node.right))
-            new_varname = self.gen_varname()
-            nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
-            self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+            expr = compiler.ast.Mul((self.flatten_ast(node.left), self.flatten_ast(node.right)))
+            new_varname = self.flatten_ast_add_assign( expr )
             print "Mul: new code line, append Assign", new_varname
             return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Sub ):
             self.DEBUG( "Sub" )
-            expr = compiler.ast.Sub(self.flatten_ast(node.left), self.flatten_ast(node.right))
-            new_varname = self.gen_varname()
-            nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
-            self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+            expr = compiler.ast.Sub((self.flatten_ast(node.left), self.flatten_ast(node.right)))
+            new_varname = self.flatten_ast_add_assign( expr )
             print "Sub: new code line, append Assign", new_varname
-            return compiler.ast.Name(new_varname)
-
-        elif isinstance(node, compiler.ast.Div ):
-            self.DEBUG( "Div" )
-            expr = compiler.ast.Div(self.flatten_ast(node.left), self.flatten_ast(node.right))
-            new_varname = self.gen_varname()
-            nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
-            self.flat_ast.append(compiler.ast.Assign([nodes], expr))
-            print "Div: new code line, append Assign", new_varname
             return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Const):
             self.DEBUG( "Const" )
-            return node
+            expr = compiler.ast.Const(node.value)
+            new_varname = self.flatten_ast_add_assign( expr )
+            print "Const: new code line, append Assign", new_varname
+            return compiler.ast.Name(new_varname)
 
         elif isinstance(node, compiler.ast.Discard):
             self.DEBUG( "Discard" )
@@ -269,22 +259,23 @@ class Engine( object ):
 
         elif isinstance( node, compiler.ast.Assign ):
             self.DEBUG( "Assign" )
-            nodes = self.flatten_ast(node.nodes[0])
-            expr = self.flatten_ast(node.expr)
-            self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+            nodes = self.flatten_ast( node.nodes[0] )
+            expr = self.flatten_ast( node.expr )
+            self.flat_ast.append( compiler.ast.Assign( [nodes], expr ) )
             print "Assign: new code line, append Assign"
             return
 
         elif isinstance( node, compiler.ast.Name ):
             self.DEBUG( "Name" )
-            return node
+            expr = compiler.ast.Name( node.name )
+            new_varname = self.flatten_ast_add_assign( expr )
+            print "Name: new code line, append Assign", new_varname
+            return compiler.ast.Name( new_varname )
 
         elif isinstance( node, compiler.ast.CallFunc ):
             self.DEBUG( "CallFunc" )
             expr = compiler.ast.CallFunc(self.flatten_ast(node.node), [])
-            new_varname = self.gen_varname()
-            nodes = compiler.ast.AssName(new_varname, 'OP_ASSIGN')
-            self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+            new_varname = self.flatten_ast_add_assign( expr )
             print "CallFunc: new code line, append Assign", new_varname
             return compiler.ast.Name(new_varname)
 
@@ -296,23 +287,77 @@ class Engine( object ):
 
         elif isinstance( node, compiler.ast.UnarySub ):
             self.DEBUG( "UnarySub" )
-            return compiler.ast.UnarySub(self.flatten_ast(node.expr))
+            expr = compiler.ast.UnarySub(self.flatten_ast(node.expr))
+            new_varname = self.flatten_ast_add_assign( expr )
+            print "UnarySub: new code line, append Assign", new_varname
+            return compiler.ast.Name(new_varname)
 
         elif isinstance( node, compiler.ast.UnaryAdd ):
             self.DEBUG( "UnaryAdd" )
-            return compiler.ast.UnaryAdd(self.flatten_ast(node.expr))
+            expr = compiler.ast.UnaryAdd(self.flatten_ast(node.expr))
+            new_varname = self.flatten_ast_add_assign( expr )
+            print "UnaryAdd: new code line, append Assign", new_varname
+            return compiler.ast.Name(new_varname)
 
         elif isinstance( node, compiler.ast.Bitand ):
             self.DEBUG( "Bitand" )
-            pass
+            flat_nodes = []
+            cnt = 0
+            for n in node.nodes:
+                flat_node = self.flatten_ast(n)
+                if (cnt == 0):
+                    flat_nodes.append(flat_node)
+                elif (cnt == 1):
+                    flat_nodes.append(flat_node)
+                    expr = compiler.ast.Bitand(flat_nodes)
+                    res_varname = new_varname = self.flatten_ast_add_assign( expr )
+                    print "Bitand: new code line, append Assign", new_varname
+                elif (cnt > 1):
+                    expr = compiler.ast.Bitand([compiler.ast.Name(new_varname), flat_node])
+                    new_varname = self.flatten_ast_add_assign( expr )
+                    print "Bitand: new code line, append Assign", new_varname
+                cnt += 1
+            return compiler.ast.Name(res_varname)
 
         elif isinstance( node, compiler.ast.Bitor ):
             self.DEBUG( "Bitor" )
-            pass
+            flat_nodes = []
+            cnt = 0
+            for n in node.nodes:
+                flat_node = self.flatten_ast(n)
+                if (cnt == 0):
+                    flat_nodes.append(flat_node)
+                elif (cnt == 1):
+                    flat_nodes.append(flat_node)
+                    expr = compiler.ast.Bitor(flat_nodes)
+                    res_varname = new_varname = self.flatten_ast_add_assign( expr )
+                    print "Bitor: new code line, append Assign", new_varname
+                elif (cnt > 1):
+                    expr = compiler.ast.Bitor([compiler.ast.Name(new_varname), flat_node])
+                    new_varname = self.flatten_ast_add_assign( expr )
+                    print "Bitor: new code line, append Assign", new_varname
+                cnt += 1
+            return compiler.ast.Name(res_varname)
 
         elif isinstance( node, compiler.ast.Bitxor ):
             self.DEBUG( "Bitxor" )
-            pass
+            flat_nodes = []
+            cnt = 0
+            for n in node.nodes:
+                flat_node = self.flatten_ast(n)
+                if (cnt == 0):
+                    flat_nodes.append(flat_node)
+                elif (cnt == 1):
+                    flat_nodes.append(flat_node)
+                    expr = compiler.ast.Bitxor(flat_nodes)
+                    res_varname = new_varname = self.flatten_ast_add_assign( expr )
+                    print "Bitxor: new code line, append Assign", new_varname
+                elif (cnt > 1):
+                    expr = compiler.ast.Bitxor([compiler.ast.Name(new_varname), flat_node])
+                    new_varname = self.flatten_ast_add_assign( expr )
+                    print "Bitxor: new code line, append Assign", new_varname
+                cnt += 1
+            return compiler.ast.Name(res_varname)
 
         else:
             die( "unknown AST node" )
