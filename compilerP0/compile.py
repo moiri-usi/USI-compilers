@@ -209,7 +209,8 @@ class ASM_call( Expression ):
     def stackconfig( self, stacksize ):
         if self.stackpos:
             self.stackpos = stacksize + 4 - self.stackpos
-            self.asm = "        movl -%d(%%ebp), %%esp\n" % self.stackpos
+            self.asm = "        movl -%d(%%ebp), %%eax\n"  % self.stackpos
+            self.asm = "        movl %eax, (%esp)\n"
         self.asm += "        call %s" % self.nam
     def __str__( self ):
         return self.asm
