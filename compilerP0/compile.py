@@ -200,16 +200,39 @@ class ASM_negl( Expression ):
     def __str__( self ):
         return self.asm
 
-                               
-
-# class ASM_negl( Expression ):
-#     def __init__( self ):
-#         self.DEBUG_type = "ASM_negl"
-#         self.asm = "ASM - neg TODO"
+                                  
+# class ASM_posl( Expression ):
+#     def __init__( self, srcpos ):
+#         self.DEBUG_type = "ASM_posl"
+#         self.srcpos = srcpos
+#     def stackconfig( self, stacksize ):
+#         self.srcpos = stacksize + 4 - self.srcpos
+#         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.srcpos
+#         self.asm += "        posl %eax"
 #     def __str__( self ):
 #         return self.asm
 
-## TODO further ASM_ classes
+# class ASM_leftshift( Expression ):
+#     def __init__( self, srcpos ):
+#         self.DEBUG_type = "ASM_leftshift"
+#         self.srcpos = srcpos
+#     def stackconfig( self, stacksize ):
+#         self.srcpos = stacksize + 4 - self.srcpos
+#         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.srcpos
+#         self.asm += "        negl %eax"
+#     def __str__( self ):
+#         return self.asm
+
+# class ASM_rightshift( Expression ):
+#     def __init__( self, srcpos ):
+#         self.DEBUG_type = "ASM_rightshift"
+#         self.srcpos = srcpos
+#     def stackconfig( self, stacksize ):
+#         self.srcpos = stacksize + 4 - self.srcpos
+#         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.srcpos
+#         self.asm += "        negl %eax"
+#     def __str__( self ):
+#         return self.asm
 
 
 ## P0 compiler implementation
