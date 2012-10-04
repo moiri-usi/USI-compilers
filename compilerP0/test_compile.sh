@@ -9,32 +9,49 @@
 ## executes .exe
 
 die(){ echo $@ && exit 1; }
-generate(){ python ./compile.py ${1}.py > ./${1}.s || return 1; }
-compile(){ gcc -m32 ./${1}.s ./runtime.c -o ./${1}.exe || return 1; }
+generate(){ python ./compile.py "./${1}.p0" > "./${1}.s" || RES=1; }
+
+compile(){ gcc -m32 ./${1}.s ./runtime.c -o ./${1}.exe || RES=1; }
 
 execute()
 {
     local tgt=$1
     local expected=$2
+    RES=0
     ret="$(./${tgt}.exe)"
-    [[ "${ret}" == "${expected}" ]] && return 0
-    return 1
+    [[ "${ret}" == "${expected}" ]] && return
+    RES=1 # failed
 }
 
 tst()
 {
     local op="$1"
     local expect="$2"
-    local res="OK"
+    local res="ITZOK! "
     let NUM+=1
     local fnam="test${NUM}"
-    [[ -f "./${fnam}.p0" ]] && die "file './${fnam}' already exists"
+    [[ -f "./${fnam}.p0" ]] && die "file './${fnam}.p0' already exists"
     echo "${op}" >> "./${fnam}.p0"
     echo "print x" >> "./${fnam}.p0"
     while [[ 1 ]]; do
-        generate "${fnam}" || res="FAIL - generate" && break
-        compile "${fnam}" || res="FAIL - compile" && break
-        execute "${fnam}" "${expect}" || res="FAIL - execute" && break
+        generate "${fnam}"
+        if [[ "${RES}" -eq 1 ]]; then
+            res="FAIL - generate"
+            break
+        fi
+
+        compile "${fnam}"
+        if [[ "${RES}" -eq 1 ]]; then
+            res="FAIL - compile"
+            break
+        fi
+
+        execute "${fnam}" "${expect}" || res="FAIL - execute"
+        if [[ "${RES}" -eq 1 ]]; then
+            res="FAIL - execute"
+            break
+        fi
+
         break
     done
     printf "${res}\t\t${op}\n"
@@ -63,13 +80,12 @@ lst=(
 
     "x=1|0#1"
     "x=1|1|1|1#1"
-    "x=0|0|1|1#1"
-
-    
+    "x=0|0|1|1#1"    
 )
 
 #set -x   
 NUM=0
+RES=0
 for testcase in "${lst[@]}"; do
     term=$(echo $testcase | sed -e 's/#/ /g' | awk '{print $1}' )
     expct=$(echo $testcase | sed -e 's/#/ /g' | awk '{print $2}' )
