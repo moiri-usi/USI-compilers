@@ -9,9 +9,15 @@
 ## executes .exe
 
 die(){ echo $@ && exit 1; }
-generate(){ python ./compile.py "./${1}.p0" > "./${1}.s" || RES=1; }
+generate(){
+    RES=0
+    python ./compile.py "./${1}.p0" > "./${1}.s" || RES=1
+}
 
-compile(){ gcc -m32 ./${1}.s ./runtime.c -o ./${1}.exe || RES=1; }
+compile(){
+    RES=0
+    gcc -m32 ./${1}.s ./runtime.c -o ./${1}.exe || RES=1
+}
 
 execute()
 {
@@ -19,7 +25,9 @@ execute()
     local expected=$2
     RES=0
     ret="$(./${tgt}.exe)"
-    [[ "${ret}" == "${expected}" ]] && return
+    if [[ "${ret}" == "${expected}" ]]; then
+        return
+    fi
     RES=1 # failed
 }
 
@@ -80,7 +88,7 @@ lst=(
 
     "x=1|0#1"
     "x=1|1|1|1#1"
-    "x=0|0|1|1#1"    
+    "x=0|0|1|1#1"
 )
 
 #set -x   
