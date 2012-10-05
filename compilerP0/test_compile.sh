@@ -36,7 +36,7 @@ tst()
 {
     local op="$1"
     local expect="$2"
-    local res="ITZOK! "
+    local res="iiTZOK! "
     let NUM+=1
     local fnam="test${NUM}"
     [[ -f "./${fnam}.p0" ]] && die "file './${fnam}.p0' already exists"
@@ -73,27 +73,45 @@ tst()
 
 
 lst=(
+## add
     "x=2+3#5"
     "x=2+3+4#9"
 
+## sub
     "x=3-2#1"
     "x=7-2-2#3"
 
+## mul
     "x=2*3#6"
     "x=2*3*4#24"
 
+## bitand
     "x=1&0#0"
-	"x=1&1&0#0"
-    "x=1&1&1&1#1"
+    "x=1&1&0#0"
     "x=1&1&1&0#0"
+    "x=1&1&1&1#1"
 
+    "x=1&0&1#0"
+    "x=1&0&1&1#0"
+
+## bitor
     "x=1|0#1"
-    "x=1|1|1|1#1"
-    "x=0|0|1|1#1"
-	"x=0|0#0"
-	"x=0|0|0#0"
-	"x=0|0|0|0#0"
-	"x=7|5|0|1#7"
+    "x=1|1|0#1"
+    "x=1|1|1|0#1"
+    "x=0|0|0|0#0"
+
+    "x=0|1#1"
+    "x=0|0|1#1"
+    "x=0|0|0|1#1"
+
+    "x=7|5|0|1#7"
+
+## bitxor
+    "x=1^0#1"
+    "x=1^1#0"
+    "x=1^1^1#1"
+    "x=1^1^1^1#1"
+    "x=1^1^1^0#0"
 )
 
 #set -x   
@@ -105,4 +123,5 @@ for testcase in "${lst[@]}"; do
     tst $term $expct
 done
 
-echo "READY. - '$NUM'"
+
+echo "DATAZAAAD CANNOT OkuR - WAaaaaaaiiiIIYYY!!!!"

@@ -578,6 +578,17 @@ class Engine( object ):
 
             return asm_lst
 
+        # elif isinstance( nd, compiler.ast.UnaryAdd ):
+        #     self.DEBUG( "UnaryAdd" )
+        #     lst = []
+        #     for chld in nd.getChildren():
+        #         lst += self.flatten_ast_2_list( chld, [] )
+        #     asm_lst += lst
+        #     asm_lst += [ ASM_posl( self.asmlist_vartable_index( nd.getChildren()[0].name ) ) ]
+
+        #     return asm_lst
+
+
         # elif isinstance( nd, compiler.ast.Bitor ):
             
         #     self.DEBUG( "Bitor" )
@@ -659,38 +670,16 @@ class Engine( object ):
 
             return asm_lst
 
-# TODO rm
-        # elif isinstance( nd, compiler.ast.Printnl ):
-            
-        #     die("Printnl - TODO")
-        #     # self.DEBUG( "Printnl" )
-        #     # tmp_lst = []
-        #     # for child_node in nd.getChildren():
-        #     #     tmp_lst += self.flatten_ast_2_list( child_node, [] )
-        #     # asm_lst += tmp_lst
-        #     # asm_lst += [ Expr_Printnl() ]
-        #     # return asm_lst
-        #     return []
-
-        # elif isinstance( nd, compiler.ast.UnarySub ):
-            
-        #     self.DEBUG( "UnarySub" )
-        #     tmp_lst = []
-        #     for child_node in nd.getChildren():
-        #         tmp_lst += self.flatten_ast_2_list( child_node, [] )
-        #     asm_lst += tmp_lst
-        #     asm_lst += [ Expr_UnarySub() ]
-        #     return asm_lst
-
         elif isinstance( nd, compiler.ast.UnaryAdd ):
             
             self.DEBUG( "UnaryAdd" )
-            tmp_lst = []
-            for child_node in nd.getChildren():
-                tmp_lst += self.flatten_ast_2_list( child_node, [] )
-            asm_lst += tmp_lst
-            asm_lst += [ Expr_UnaryAdd() ]
-            return asm_lst
+            # tmp_lst = []
+            # for child_node in nd.getChildren():
+            #     tmp_lst += self.flatten_ast_2_list( child_node, [] )
+            # asm_lst += tmp_lst
+            # asm_lst += [ Expr_UnaryAdd() ]
+            # return asm_lst
+            return []
         
         else:
             
@@ -740,6 +729,7 @@ if 1 <= len( sys.argv[1:] ):
 
         print "len of asmlist_vartable '%d'" % len(compl.asmlist_vartable)
         print compl.asmlist_vartable
+        print "asmlist_mem '%'" % compl.asmlist_mem
 
 ##
     compl.print_asm( compl.expr_list )
