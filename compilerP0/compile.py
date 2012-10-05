@@ -3,7 +3,7 @@
 #
 # Simon Maurer
 # Lothar Rubusch
-# Josafat Piranha
+# Josafat Piraquive
 
 """
 USAGE:

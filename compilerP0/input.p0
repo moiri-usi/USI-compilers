@@ -2,7 +2,7 @@
 #
 # Simon Maurer
 # Lothar Rubusch
-#
+# Josafat Piraquive
 
 x = - input()
 y = input()

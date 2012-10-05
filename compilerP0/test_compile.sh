@@ -1,5 +1,11 @@
 #!/bin/bash
 ##
+## Lothar Rubusch
+## Simon Maurer
+## Josafat Piraquive
+##
+##
+##
 ## needs "printnl()" running
 ## no "input()" test
 ## all needs to be assigned to 'x='
@@ -25,7 +31,7 @@ execute()
     local expected=$2
     RES=0
     ret="$(./${tgt}.exe)"
-    printf "${ret}\t\t"   
+#    printf "${ret}\t\t"   
     if [[ "${ret}" == "${expected}" ]]; then
         return
     fi
