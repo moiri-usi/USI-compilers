@@ -31,7 +31,7 @@ class TestSequenceFunctions( unittest.TestCase ):
 
     def test_assign_flat( self ):
         expr = "x = 1"
-        src = "Module(None, Stmt([Assign([AssName('x', 'OP_ASSIGN')], Const(1))]))"
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(1)), Assign([AssName('x', 'OP_ASSIGN')], Name('t1'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
@@ -52,9 +52,10 @@ class TestSequenceFunctions( unittest.TestCase ):
 
     def test_add_flat( self ):
         expr = "x = 1 + 2"
-        ## t1 = 1 + 2
-        ## x = t1
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Add((Const(1), Const(2)))), Assign([AssName('x', 'OP_ASSIGN')], Name('t1'))]))"
+        ## t1 = 1
+        ## t2 = 2
+        ## x = t1+t2
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(1)), Assign([AssName('t2', 'OP_ASSIGN')], Const(2)), Assign([AssName('t3', 'OP_ASSIGN')], Add((Name('t1'), Name('t2')))), Assign([AssName('x', 'OP_ASSIGN')], Name('t3'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
@@ -75,10 +76,12 @@ class TestSequenceFunctions( unittest.TestCase ):
 
     def test_nestedExpression1_flat( self ):
         expr = "x = -1 + 2"
-        ## t1 = -1
-        ## t2 = t1 + 2
-        ## x = t2
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], UnarySub(Const(1))), Assign([AssName('t2', 'OP_ASSIGN')], Add((Name('t1'), Const(2)))), Assign([AssName('x', 'OP_ASSIGN')], Name('t2'))]))"
+        ## t1 =  1
+        ## t2 = -t1
+        ## t3 = 2
+        ## t4 = t2 + t3
+        ## x = t4
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(1)), Assign([AssName('t2', 'OP_ASSIGN')], UnarySub(Name('t1'))), Assign([AssName('t3', 'OP_ASSIGN')], Const(2)), Assign([AssName('t4', 'OP_ASSIGN')], Add((Name('t2'), Name('t3')))), Assign([AssName('x', 'OP_ASSIGN')], Name('t4'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
@@ -99,14 +102,18 @@ class TestSequenceFunctions( unittest.TestCase ):
 
     def test_nestedExpression2_flat( self ):
         expr = "x = -1 + -(-2 + 3) + 5"
-        ## t1 = -2
-        ## t2 = t1 + 3
-        ## t3 = -t2
-        ## t4 = -1
-        ## t5 = t3 + t4
-        ## t6 = t5 + 5
-        ## x = t6
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], UnarySub(Const(1))), Assign([AssName('t2', 'OP_ASSIGN')], UnarySub(Const(2))), Assign([AssName('t3', 'OP_ASSIGN')], Add((Name('t2'), Const(3)))), Assign([AssName('t4', 'OP_ASSIGN')], UnarySub(Name('t3'))), Assign([AssName('t5', 'OP_ASSIGN')], Add((Name('t1'), Name('t4')))), Assign([AssName('t6', 'OP_ASSIGN')], Add((Name('t5'), Const(5)))), Assign([AssName('x', 'OP_ASSIGN')], Name('t6'))]))"
+        ## t1 = 1
+        ## t2 = -t1
+        ## t3 = 2
+        ## t4 = -t3
+        ## t5 = 3
+        ## t6 = t4 + t5
+        ## t7 = -t6
+        ## t8 = t2 + t7
+        ## t9 = 5
+        ## t10 = t8 + t9
+        ## x = t10
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(1)), Assign([AssName('t2', 'OP_ASSIGN')], UnarySub(Name('t1'))), Assign([AssName('t3', 'OP_ASSIGN')], Const(2)), Assign([AssName('t4', 'OP_ASSIGN')], UnarySub(Name('t3'))), Assign([AssName('t5', 'OP_ASSIGN')], Const(3)), Assign([AssName('t6', 'OP_ASSIGN')], Add((Name('t4'), Name('t5')))), Assign([AssName('t7', 'OP_ASSIGN')], UnarySub(Name('t6'))), Assign([AssName('t8', 'OP_ASSIGN')], Add((Name('t2'), Name('t7')))), Assign([AssName('t9', 'OP_ASSIGN')], Const(5)), Assign([AssName('t10', 'OP_ASSIGN')], Add((Name('t8'), Name('t9')))), Assign([AssName('x', 'OP_ASSIGN')], Name('t10'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
@@ -118,6 +125,163 @@ class TestSequenceFunctions( unittest.TestCase ):
     #     res = self.compl.DEBUG__print_list()
     #     self.assertEqual( src, res )
 
+
+#5
+
+    def test_sub_ast( self ):
+        expr = "x = 2 - 1"
+        src = str( compiler.parse( expr ) )
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_ast()
+        self.assertEqual( src, res )
+
+    def test_sub_flat( self ):
+        expr = "x = 2 - 1"
+        ## t1 = 2
+        ## t2 = 1
+        ## t3 = t1 - t2
+        ## x = t3
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(2)), Assign([AssName('t2', 'OP_ASSIGN')], Const(1)), Assign([AssName('t3', 'OP_ASSIGN')], Sub((Name('t1'), Name('t2')))), Assign([AssName('x', 'OP_ASSIGN')], Name('t3'))]))"
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_flat()
+        self.assertEqual( src, res )
+
+    # def test_sub_list( self ):
+    #     expr = "x = 2 -1"
+    #     src = "some kind of list" #TODO
+    #     self.compl.compileme( expr )
+    #     res = self.compl.DEBUG__print_list()
+    #     self.assertEqual( src, res )
+    
+# 6
+
+    
+    def test_mul_ast( self ):
+        expr = "x = 2 * 10"
+        src = str( compiler.parse( expr ) )
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_ast()
+        self.assertEqual( src, res )
+
+    def test_mul_flat( self ):
+        expr = "x = 2 * 10"
+        ## t1 = 2 
+        ## t2 = 10
+        ## t3 = t1 * t2
+        ## x = t3
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(2)), Assign([AssName('t2', 'OP_ASSIGN')], Const(10)), Assign([AssName('t3', 'OP_ASSIGN')], Mul((Name('t1'), Name('t2')))), Assign([AssName('x', 'OP_ASSIGN')], Name('t3'))]))"
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_flat()
+        self.assertEqual( src, res )
+
+    # def test_mul_list( self ):
+    #     expr = "x = 2 * 10"
+    #     src = "some kind of list" #TODO
+    #     self.compl.compileme( expr )
+    #     res = self.compl.DEBUG__print_list()
+    #     self.assertEqual( src, res )
+
+##
+###7  
+##
+##    def test_div_ast( self ):
+##        expr = "x = 10 / 5"
+##        src = str( compiler.parse( expr ) )
+##        self.compl.compileme( expr )
+##        res = self.compl.DEBUG__print_ast()
+##        self.assertEqual( src, res )
+##
+##    def test_div_flat( self ):
+##        expr = "x = 10 / 5"
+##        ## t1 = 10 / 5
+##        ## x = t1
+##        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Div((Const(10), Const(5)))), Assign([AssName('x', 'OP_ASSIGN')], Name('t1'))]))"
+##        self.compl.compileme( expr )
+##        res = self.compl.DEBUG__print_flat()
+##        self.assertEqual( src, res )
+##
+##    # def test_div_list( self ):
+##    #     expr = "x = 10 / 5"
+##    #     src = "some kind of list" #TODO
+##    #     self.compl.compileme( expr )
+##    #     res = self.compl.DEBUG__print_list()
+##    #     self.assertEqual( src, res )
+##
+##
+###8
+
+    def test_UnaryAdd_ast( self ):
+        expr = "x = +5"
+        src = str( compiler.parse( expr ) )
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_ast()
+        self.assertEqual( src, res )
+
+    def test_UnaryAdd_flat( self ):
+        expr = "x = +5"
+        ## t1 = +5
+        ## x = t1
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], UnaryAdd(Const(5))), Assign([AssName('x', 'OP_ASSIGN')], Name('t1'))]))"
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_flat()
+        self.assertEqual( src, res )
+
+    # def test_UnaryAdd_list( self ):
+    #     expr = "x = +5"
+    #     src = "some kind of list" #TODO
+    #     self.compl.compileme( expr )
+    #     res = self.compl.DEBUG__print_list()
+    #     self.assertEqual( src, res )
+
+###9
+##
+##    def test_UnarySub_ast( self ):
+##        expr = "x = -5"
+##        src = str( compiler.parse( expr ) )
+##        self.compl.compileme( expr )
+##        res = self.compl.DEBUG__print_ast()
+##        self.assertEqual( src, res )
+##
+##    def test_UnarySub_flat( self ):
+##        expr = "x = -5"
+##        ## t1 = -5
+##        ## x = t1
+##        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], UnarySub(Const(5))), Assign([AssName('x', 'OP_ASSIGN')], Name('t1'))]))"
+##        self.compl.compileme( expr )
+##        res = self.compl.DEBUG__print_flat()
+##        self.assertEqual( src, res )
+##
+##    # def test_UnarySub_list( self ):
+##    #     expr = "x = -5"
+##    #     src = "some kind of list" #TODO
+##    #     self.compl.compileme( expr )
+##    #     res = self.compl.DEBUG__print_list()
+##    #     self.assertEqual( src, res )
+##
+###10
+##
+##    def test_BitAnd_ast( self ):
+##        expr = "x = 2&1"
+##        src = str( compiler.parse( expr ) )
+##        self.compl.compileme( expr )
+##        res = self.compl.DEBUG__print_ast()
+##        self.assertEqual( src, res )
+##
+##    def test_BitAnd_flat( self ):
+##        expr = "x = 2&1"
+##        ## t1 = 2&1
+##        ## x = t1
+##        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Bitand((Const(2), Const(1)))), Assign([AssName('x', 'OP_ASSIGN')], Name('t1'))]))"
+##        self.compl.compileme( expr )
+##        res = self.compl.DEBUG__print_flat()
+##        self.assertEqual( src, res )
+
+    # def test_BitAnd_list( self ):
+    #     expr = "x = 2&1"
+    #     src = "some kind of list" #TODO
+    #     self.compl.compileme( expr )
+    #     res = self.compl.DEBUG__print_list()
+    #     self.assertEqual( src, res )
 
 
 ## TODO: rm
