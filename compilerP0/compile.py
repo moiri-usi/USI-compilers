@@ -17,7 +17,10 @@ import sys
 import os.path
 import compiler
 
-## abort program
+
+
+## auxiliary
+
 def die( meng ):
     print meng
     sys.exit( -1 )
@@ -29,14 +32,18 @@ def usage():
     print "    %s <inputfile> DEBUG" % sys.argv[0]
 
 
-class Expression( object ):
+
+## ASM Expression
+
+class ASM_BASE( object ):
     def __init( self ):
         self.DEBUG_type = ""
     def print_debug( self ):
         return self.DEBUG_type
+    def __str__( self ):
+        return self.asm
 
-
-class ASM_start( Expression ):
+class ASM_start( ASM_BASE ):
     def __init__( self, mem=0 ):
         self.DEBUG_type = "ASM_start"
         ## lowest position on stack
@@ -50,7 +57,6 @@ class ASM_start( Expression ):
             else: self.mem = 16
         else:
             self.mem = 16
-
     def stackconfig( self, stacksize ):
         self.asm = "        .text\n"
         self.asm += "LC0:\n"
@@ -60,11 +66,9 @@ class ASM_start( Expression ):
         self.asm += "        pushl %ebp\n"
         self.asm += "        movl %esp, %ebp\n"
         self.asm += "        subl $%d, %%esp" % self.mem
-    def __str__( self ):
-        return self.asm
 
 
-class ASM_end( Expression ):
+class ASM_end( ASM_BASE ):
     def __init__( self, mem=0 ):
         self.DEBUG_type = "ASM_end"
         self.stackpos = mem # TODO stack mech
@@ -73,11 +77,9 @@ class ASM_end( Expression ):
         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.stackpos
         self.asm += "        leave\n"
         self.asm += "        ret\n"
-    def __str__( self ):
-        return self.asm
 
 
-class ASM_movl_to_stack( Expression ):
+class ASM_movl_to_stack( ASM_BASE ):
     def __init__( self, pos, val=None ):
         self.DEBUG_type = "ASM_movl_to_stack"
         self.stackpos = pos
@@ -89,22 +91,17 @@ class ASM_movl_to_stack( Expression ):
         else:
             self.asm = "        movl %%eax, -%d(%%ebp)" % self.stackpos
 
-    def __str__( self ):
-        return self.asm
 
-
-class ASM_movl_from_stack( Expression ):
+class ASM_movl_from_stack( ASM_BASE ):
     def __init__( self, srcpos ):
         self.DEBUG_type = "ASM_movl_to_stack"
         self.stackpos = srcpos
     def stackconfig( self, stacksize ):
         self.stackpos = stacksize + 4 - self.stackpos
         self.asm = "        movl -%d(%%ebp), %%eax" % self.stackpos
-    def __str__( self ):
-        return self.asm
 
 
-class ASM_addl( Expression ):
+class ASM_addl( ASM_BASE ):
     def __init__( self, apos, bpos ):
         self.DEBUG_type = "ASM_addl"
         self.apos = apos
@@ -114,11 +111,9 @@ class ASM_addl( Expression ):
         self.bpos = stacksize + 4 - self.bpos
         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
         self.asm += "        addl -%d(%%ebp), %%eax" % self.bpos
-    def __str__( self ):
-        return self.asm
 
 
-class ASM_subl( Expression ):
+class ASM_subl( ASM_BASE ):
     def __init__( self, apos, bpos ):
         self.DEBUG_type = "ASM_subl"
         self.apos = apos
@@ -128,11 +123,9 @@ class ASM_subl( Expression ):
         self.bpos = stacksize + 4 - self.bpos
         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
         self.asm += "        subl -%d(%%ebp), %%eax" % self.bpos
-    def __str__( self ):
-        return self.asm
 
 
-class ASM_mull( Expression ):
+class ASM_mull( ASM_BASE ):
     def __init__( self, apos, bpos ):
         self.DEBUG_type = "ASM_mull"
         self.apos = apos
@@ -143,11 +136,9 @@ class ASM_mull( Expression ):
         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
         self.asm += "        movl -%d(%%ebp), %%ebx\n" % self.bpos
         self.asm += "        mull %ebx\n"
-    def __str__( self ):
-        return self.asm
 
 
-class ASM_bitand( Expression ):
+class ASM_bitand( ASM_BASE ):
     def __init__( self, apos, bpos ):
         self.DEBUG_type = "ASM_bitand"
         self.apos = apos
@@ -158,11 +149,9 @@ class ASM_bitand( Expression ):
         self.asm = "        movl -%d(%%ebp), %%ebx\n" % self.bpos
         self.asm += "        movl -%d(%%ebp), %%eax\n" % self.apos
         self.asm += "        andl %ebx, %eax"
-    def __str__( self ):
-        return self.asm
 
 
-class ASM_bitor( Expression ):
+class ASM_bitor( ASM_BASE ):
     def __init__( self, apos, bpos ):
         self.DEBUG_type = "ASM_bitor"
         self.apos = apos
@@ -173,11 +162,9 @@ class ASM_bitor( Expression ):
         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
         self.asm += "        movl -%d(%%ebp), %%edx\n"  % self.bpos
         self.asm += "        orl %edx, %eax"
-    def __str__( self ):
-        return self.asm
 
 
-class ASM_bitxor( Expression ):
+class ASM_bitxor( ASM_BASE ):
     def __init__( self, apos, bpos ):
         self.DEBUG_type = "ASM_bitxor"
         self.apos = apos
@@ -188,11 +175,9 @@ class ASM_bitxor( Expression ):
         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
         self.asm += "        movl -%d(%%ebp), %%edx\n"  % self.bpos
         self.asm += "        xorl %edx, %eax"
-    def __str__( self ):
-        return self.asm
 
 
-class ASM_negl( Expression ):
+class ASM_negl( ASM_BASE ):
     def __init__( self, srcpos ):
         self.DEBUG_type = "ASM_negl"
         self.srcpos = srcpos
@@ -200,11 +185,9 @@ class ASM_negl( Expression ):
         self.srcpos = stacksize + 4 - self.srcpos
         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.srcpos
         self.asm += "        negl %eax"
-    def __str__( self ):
-        return self.asm
 
 
-class ASM_call( Expression ):
+class ASM_call( ASM_BASE ):
     def __init__( self, nam, stackpos=None ):
         self.DEBUG_type = "ASM_call"
         self.stackpos = stackpos
@@ -216,11 +199,9 @@ class ASM_call( Expression ):
             self.asm = "        movl -%d(%%ebp), %%eax\n"  % self.stackpos
             self.asm += "        movl %eax, (%esp)\n"
         self.asm += "        call %s" % self.nam
-    def __str__( self ):
-        return self.asm
 
 
-class ASM_leftshift( Expression ):     
+class ASM_leftshift( ASM_BASE ):
     def __init__( self, srcpos, shiftpos ):
         self.DEBUG_type = "ASM_leftshift"
         self.srcpos = srcpos
@@ -228,14 +209,15 @@ class ASM_leftshift( Expression ):
     def stackconfig( self, stacksize ):
         self.srcpos = stacksize + 4 - self.srcpos
         self.shiftpos = stacksize + 4 - self.shiftpos
-# TODO 
-        self.asm = "        movl -%d(%%ebp), %%eax\n" % self.srcpos
-        self.asm += "        shll -%d(%%ebp), %%eax" % self.shiftpos
-    def __str__( self ):
-        return self.asm
+        self.asm = "        movl -%d(%%ebp), %%eax\n" % self.shiftpos
+        self.asm += "        movl -%d(%%ebp), %%edx\n" % self.srcpos
+        self.asm += "        movl %edx, %ebx\n"
+        self.asm += "        movl %eax, %ecx\n"
+        self.asm += "        shll %cl, %ebx\n"
+        self.asm += "        movl %ebx, %eax"
 
 
-class ASM_rightshift( Expression ):    
+class ASM_rightshift( ASM_BASE ):
     def __init__( self, srcpos, shiftpos ):
         self.DEBUG_type = "ASM_rightshift"
         self.srcpos = srcpos
@@ -243,18 +225,18 @@ class ASM_rightshift( Expression ):
     def stackconfig( self, stacksize ):
         self.srcpos = stacksize + 4 - self.srcpos
         self.shiftpos = stacksize + 4 - self.shiftpos
-# TODO 
-        self.asm = "        movl -%d(%%ebp), %%eax\n" % self.srcpos
-#        self.asm += "        shrl -%d(%%ebp), %%eax" % self.shiftpos
-        self.asm += "        movl -%d(%%ebp), %%ebx\n" % self.shiftpos
-        self.asm += "        shrl %ebx, %eax"
-    def __str__( self ):
-        return self.asm
+        self.asm = "        movl -%d(%%ebp), %%eax\n" % self.shiftpos
+        self.asm += "        movl -%d(%%ebp), %%edx\n" % self.srcpos
+        self.asm += "        movl %edx, %ebx\n"
+        self.asm += "        movl %eax, %ecx\n"
+        self.asm += "        shrl %cl, %ebx\n"
+        self.asm += "        movl %ebx, %eax"
 
 
 ## P0 compiler implementation
 class Engine( object ):
     def __init__( self, filepath=None, DEBUG=False ):
+        self.DEBUGMODE = DEBUG
         if filepath:
             if not os.path.exists( filepath ):
                 die( "ERROR: file '%s' does not exist" % filepath )
@@ -264,9 +246,6 @@ class Engine( object ):
                     self.ast = compiler.parseFile( filepath )
                 except SyntaxError:
                     die( "ERROR: invalid syntax in file '%s'" %filepath )
-
-        self.DEBUGMODE = DEBUG
-
         self.var_counter = 0
         self.tempvar = "$temp"
 
@@ -276,10 +255,7 @@ class Engine( object ):
 
         ## list handling
         self.asmlist_mem = 0
-        self.asmlist_reg = ""
-        self.asmlist_op = None
         self.asmlist_vartable = {}
-
 
     def compileme( self, expression=None ):
         if expression:
@@ -317,6 +293,8 @@ class Engine( object ):
         self.DEBUG( "\t\t\tnew statement node: append Assign" + str( name ) )
         return name
 
+
+    ## part 1: flatten AST
     def flatten_ast( self, node ):
         if isinstance( node, compiler.ast.Module):
             self.DEBUG( "Module" )
@@ -470,7 +448,9 @@ class Engine( object ):
             die( "unknown AST node" )
 
 
-    ## convert the flattened AST into a list of ASM expressions
+
+
+    ## part 2: convert the flattened AST into a list of ASM expressions
     def flatten_ast_2_list( self, nd, asm_lst ):
         if isinstance( nd, compiler.ast.Module ):
             self.DEBUG( "Module" )
@@ -487,11 +467,6 @@ class Engine( object ):
             asm_lst += lst
             asm_lst += [ ASM_end( self.asmlist_mem ) ] ## asm epilog
             for item in asm_lst: item.stackconfig( self.asmlist_mem)
-            return asm_lst
-
-        elif isinstance( nd, compiler.ast.Discard ):
-            self.DEBUG( "Discard" )
-            asm_lst += [ ]
             return asm_lst
 
         elif isinstance( nd, compiler.ast.Add ):
@@ -575,16 +550,6 @@ class Engine( object ):
             asm_lst += [ ASM_rightshift( self.asmlist_vartable_index( nd.getChildren()[0].name ), self.asmlist_vartable_index( nd.getChildren()[1].name ) ) ]
             return asm_lst
 
-        elif isinstance( nd, compiler.ast.Const ):
-            ## upper node is handling
-            self.DEBUG( "Const" )
-            return []
-
-        elif isinstance( nd, compiler.ast.AssName ):
-            ## upper node is handling
-            self.DEBUG( "AssName" )
-            return []
-
         elif isinstance( nd, compiler.ast.Assign ):
             self.DEBUG( "Assign" )
 
@@ -614,11 +579,6 @@ class Engine( object ):
             asm_lst += lst
             return asm_lst
 
-        elif isinstance( nd, compiler.ast.Name ):
-            self.DEBUG( "Name" )
-            self.asmlist_vartable_index( nd.name )
-            return []
-
         elif isinstance( nd, compiler.ast.CallFunc ):
             self.DEBUG( "CallFunc" )
             ## lhs is name of the function
@@ -627,24 +587,37 @@ class Engine( object ):
                 asm_lst += [ ASM_call( nd.getChildren()[0].name, self.asmlist_vartable_index( nd.getChildren()[1].name ) ) ]
             else:
                 asm_lst += [ ASM_call( nd.getChildren()[0].name ) ]
-
             return asm_lst
 
-#        elif isinstance( nd, compiler.ast.UnaryAdd ):
-            
-#            self.DEBUG( "UnaryAdd" )
-            # tmp_lst = []
-            # for child_node in nd.getChildren():
-            #     tmp_lst += self.flatten_ast_2_list( child_node, [] )
-            # asm_lst += tmp_lst
-            # asm_lst += [ Expr_UnaryAdd() ]
-            # return asm_lst
-#            return []
-        
+        ## misc
+        elif isinstance( nd, compiler.ast.Discard ):
+            self.DEBUG( "Discard" )
+            asm_lst += [ ]
+            return asm_lst
+
+        elif isinstance( nd, compiler.ast.Name ):
+            self.DEBUG( "Name" )
+            ## handled by higher node
+            self.asmlist_vartable_index( nd.name )
+            return []
+
+        elif isinstance( nd, compiler.ast.UnaryAdd ):
+            self.DEBUG( "UnaryAdd" )
+            return self.flatten_ast_2_list( nd.getChildren()[0], [] ) ## TODO check    
+
+        elif isinstance( nd, compiler.ast.Const ):
+            ## handled by higher node
+            self.DEBUG( "Const" )
+            return []
+
+        elif isinstance( nd, compiler.ast.AssName ):
+            ## handled by higher node
+            self.DEBUG( "AssName" )
+            return []
+
         else:
-            
             self.DEBUG( "*** ELSE ***" )
-            return []  
+            return []
 
     def DEBUG__print_ast( self ):
         return str( self.ast )
@@ -688,7 +661,8 @@ if 1 <= len( sys.argv[1:] ):
 
         print "len of asmlist_vartable '%d'" % len(compl.asmlist_vartable)
         print compl.asmlist_vartable
-        print "asmlist_mem '%'" % compl.asmlist_mem
+
+        print "asmlist_mem '%d'" % compl.asmlist_mem
 
 ##
     compl.print_asm( compl.expr_list )
