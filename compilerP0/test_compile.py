@@ -21,6 +21,7 @@ from compile import *
 class TestSequenceFunctions( unittest.TestCase ):
     def setUp(self):
         self.compl = Engine()
+        self.temp = self.compl.tempvar
 
     def test_assign_ast( self ):
         expr = "x = 1"
@@ -31,7 +32,7 @@ class TestSequenceFunctions( unittest.TestCase ):
 
     def test_assign_flat( self ):
         expr = "x = 1"
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(1)), Assign([AssName('x', 'OP_ASSIGN')], Name('t1'))]))"
+        src = "Module(None, Stmt([Assign([AssName('"+ self.temp +"1', 'OP_ASSIGN')], Const(1)), Assign([AssName('x', 'OP_ASSIGN')], Name('"+self.temp+"1'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
@@ -43,19 +44,19 @@ class TestSequenceFunctions( unittest.TestCase ):
     #     res = self.compl.DEBUG__print_list()
     #     self.assertEqual( src, res )
 
-##    def test_assignvar_ast( self ):
-##        expr = "x = 1; y = x"
-##        src = str( compiler.parse( expr ) )
-##        self.compl.compileme( expr )
-##        res = self.compl.DEBUG__print_ast()
-##        self.assertEqual( src, res )
-##
-##    def test_assignvar_flat( self ):
-##        expr = "x = 1; y = x"
-##        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(1)), Assign([AssName('x', 'OP_ASSIGN')], Name('t1')), Assign([AssName('y', 'OP_ASSIGN')], Name('x'))]))"
-##        self.compl.compileme( expr )
-##        res = self.compl.DEBUG__print_flat()
-##        self.assertEqual( src, res )
+    def test_assignvar_ast( self ):
+        expr = "x = 1; y = x"
+        src = str( compiler.parse( expr ) )
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_ast()
+        self.assertEqual( src, res )
+
+    def test_assignvar_flat( self ):
+        expr = "x = 1; y = x"
+        src = "Module(None, Stmt([Assign([AssName('"+self.temp+"1', 'OP_ASSIGN')], Const(1)), Assign([AssName('x', 'OP_ASSIGN')], Name('"+self.temp+"1')), Assign([AssName('"+self.temp+"2', 'OP_ASSIGN')], Name('x')), Assign([AssName('y', 'OP_ASSIGN')], Name('"+self.temp+"2'))]))"
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_flat()
+        self.assertEqual( src, res )
 
     # def test_assignvar_list( self ):
     #     expr = "x = 1; y = x"
@@ -77,7 +78,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         ## t1 = 1
         ## t2 = 2
         ## x = t1+t2
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(1)), Assign([AssName('t2', 'OP_ASSIGN')], Const(2)), Assign([AssName('t3', 'OP_ASSIGN')], Add((Name('t1'), Name('t2')))), Assign([AssName('x', 'OP_ASSIGN')], Name('t3'))]))"
+        src = "Module(None, Stmt([Assign([AssName('"+self.temp+"1', 'OP_ASSIGN')], Const(1)), Assign([AssName('"+self.temp+"2', 'OP_ASSIGN')], Const(2)), Assign([AssName('"+self.temp+"3', 'OP_ASSIGN')], Add((Name('"+self.temp+"1'), Name('"+self.temp+"2')))), Assign([AssName('x', 'OP_ASSIGN')], Name('"+self.temp+"3'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
@@ -103,7 +104,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         ## t3 = 2
         ## t4 = t2 + t3
         ## x = t4
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(1)), Assign([AssName('t2', 'OP_ASSIGN')], UnarySub(Name('t1'))), Assign([AssName('t3', 'OP_ASSIGN')], Const(2)), Assign([AssName('t4', 'OP_ASSIGN')], Add((Name('t2'), Name('t3')))), Assign([AssName('x', 'OP_ASSIGN')], Name('t4'))]))"
+        src = "Module(None, Stmt([Assign([AssName('"+self.temp+"1', 'OP_ASSIGN')], Const(1)), Assign([AssName('"+self.temp+"2', 'OP_ASSIGN')], UnarySub(Name('"+self.temp+"1'))), Assign([AssName('"+self.temp+"3', 'OP_ASSIGN')], Const(2)), Assign([AssName('"+self.temp+"4', 'OP_ASSIGN')], Add((Name('"+self.temp+"2'), Name('"+self.temp+"3')))), Assign([AssName('x', 'OP_ASSIGN')], Name('"+self.temp+"4'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
@@ -135,7 +136,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         ## t9 = 5
         ## t10 = t8 + t9
         ## x = t10
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(1)), Assign([AssName('t2', 'OP_ASSIGN')], UnarySub(Name('t1'))), Assign([AssName('t3', 'OP_ASSIGN')], Const(2)), Assign([AssName('t4', 'OP_ASSIGN')], UnarySub(Name('t3'))), Assign([AssName('t5', 'OP_ASSIGN')], Const(3)), Assign([AssName('t6', 'OP_ASSIGN')], Add((Name('t4'), Name('t5')))), Assign([AssName('t7', 'OP_ASSIGN')], UnarySub(Name('t6'))), Assign([AssName('t8', 'OP_ASSIGN')], Add((Name('t2'), Name('t7')))), Assign([AssName('t9', 'OP_ASSIGN')], Const(5)), Assign([AssName('t10', 'OP_ASSIGN')], Add((Name('t8'), Name('t9')))), Assign([AssName('x', 'OP_ASSIGN')], Name('t10'))]))"
+        src = "Module(None, Stmt([Assign([AssName('"+self.temp+"1', 'OP_ASSIGN')], Const(1)), Assign([AssName('"+self.temp+"2', 'OP_ASSIGN')], UnarySub(Name('"+self.temp+"1'))), Assign([AssName('"+self.temp+"3', 'OP_ASSIGN')], Const(2)), Assign([AssName('"+self.temp+"4', 'OP_ASSIGN')], UnarySub(Name('"+self.temp+"3'))), Assign([AssName('"+self.temp+"5', 'OP_ASSIGN')], Const(3)), Assign([AssName('"+self.temp+"6', 'OP_ASSIGN')], Add((Name('"+self.temp+"4'), Name('"+self.temp+"5')))), Assign([AssName('"+self.temp+"7', 'OP_ASSIGN')], UnarySub(Name('"+self.temp+"6'))), Assign([AssName('"+self.temp+"8', 'OP_ASSIGN')], Add((Name('"+self.temp+"2'), Name('"+self.temp+"7')))), Assign([AssName('"+self.temp+"9', 'OP_ASSIGN')], Const(5)), Assign([AssName('"+self.temp+"10', 'OP_ASSIGN')], Add((Name('"+self.temp+"8'), Name('"+self.temp+"9')))), Assign([AssName('x', 'OP_ASSIGN')], Name('"+self.temp+"10'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
@@ -163,7 +164,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         ## t2 = 1
         ## t3 = t1 - t2
         ## x = t3
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(2)), Assign([AssName('t2', 'OP_ASSIGN')], Const(1)), Assign([AssName('t3', 'OP_ASSIGN')], Sub((Name('t1'), Name('t2')))), Assign([AssName('x', 'OP_ASSIGN')], Name('t3'))]))"
+        src = "Module(None, Stmt([Assign([AssName('"+self.temp+"1', 'OP_ASSIGN')], Const(2)), Assign([AssName('"+self.temp+"2', 'OP_ASSIGN')], Const(1)), Assign([AssName('"+self.temp+"3', 'OP_ASSIGN')], Sub((Name('"+self.temp+"1'), Name('"+self.temp+"2')))), Assign([AssName('x', 'OP_ASSIGN')], Name('"+self.temp+"3'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
@@ -191,7 +192,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         ## t2 = 10
         ## t3 = t1 * t2
         ## x = t3
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(2)), Assign([AssName('t2', 'OP_ASSIGN')], Const(10)), Assign([AssName('t3', 'OP_ASSIGN')], Mul((Name('t1'), Name('t2')))), Assign([AssName('x', 'OP_ASSIGN')], Name('t3'))]))"
+        src = "Module(None, Stmt([Assign([AssName('"+self.temp+"1', 'OP_ASSIGN')], Const(2)), Assign([AssName('"+self.temp+"2', 'OP_ASSIGN')], Const(10)), Assign([AssName('"+self.temp+"3', 'OP_ASSIGN')], Mul((Name('"+self.temp+"1'), Name('"+self.temp+"2')))), Assign([AssName('x', 'OP_ASSIGN')], Name('"+self.temp+"3'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
@@ -217,7 +218,7 @@ class TestSequenceFunctions( unittest.TestCase ):
 ##        expr = "x = 10 / 5"
 ##        ## t1 = 10 / 5
 ##        ## x = t1
-##        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Div((Const(10), Const(5)))), Assign([AssName('x', 'OP_ASSIGN')], Name('t1'))]))"
+##        src = "Module(None, Stmt([Assign([AssName('"+self.temp+"1', 'OP_ASSIGN')], Div((Const(10), Const(5)))), Assign([AssName('x', 'OP_ASSIGN')], Name('"+self.temp+"1'))]))"
 ##        self.compl.compileme( expr )
 ##        res = self.compl.DEBUG__print_flat()
 ##        self.assertEqual( src, res )
@@ -244,7 +245,7 @@ class TestSequenceFunctions( unittest.TestCase ):
 ##        ## t1 = 5
 ##        ## t2 = -t1
 ##        ## x = t2
-##        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(5)), Assign([AssName('t2', 'OP_ASSIGN')], UnaryAdd(Name(t1))), Assign([AssName('x', 'OP_ASSIGN')], Name('t2'))]))"
+##        src = "Module(None, Stmt([Assign([AssName('"+self.temp+"1', 'OP_ASSIGN')], Const(5)), Assign([AssName('"+self.temp+"2', 'OP_ASSIGN')], UnaryAdd(Name(t1))), Assign([AssName('x', 'OP_ASSIGN')], Name('"+self.temp+"2'))]))"
 ##        self.compl.compileme( expr )
 ##        res = self.compl.DEBUG__print_flat()
 ##        self.assertEqual( src, res )
@@ -270,7 +271,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         ## t1 = 5
         ## t2 = -t1
         ## x = t2
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(5)), Assign([AssName('t2', 'OP_ASSIGN')], UnarySub(Name('t1'))), Assign([AssName('x', 'OP_ASSIGN')], Name('t2'))]))"
+        src = "Module(None, Stmt([Assign([AssName('"+self.temp+"1', 'OP_ASSIGN')], Const(5)), Assign([AssName('"+self.temp+"2', 'OP_ASSIGN')], UnarySub(Name('"+self.temp+"1'))), Assign([AssName('x', 'OP_ASSIGN')], Name('"+self.temp+"2'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
@@ -285,19 +286,19 @@ class TestSequenceFunctions( unittest.TestCase ):
 #10
 
     def test_BitAnd_ast( self ):
-        expr = "x = 2&1"
+        expr = "x = 0&1"
         src = str( compiler.parse( expr ) )
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_ast()
         self.assertEqual( src, res )
 
     def test_BitAnd_flat( self ):
-        expr = "x = 2&1"
+        expr = "x = 0&1"
         ## t1 = 2
         ## t2 = 1
         ## t3 = t1 & t2
         ## x = t3
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(2)), Assign([AssName('t2', 'OP_ASSIGN')], Const(1)), Assign([AssName('t3', 'OP_ASSIGN')], Bitand([Name('t1'), Name('t2')])), Assign([AssName('x', 'OP_ASSIGN')], Name('t3'))]))"
+        src = "Module(None, Stmt([Assign([AssName('"+self.temp+"1', 'OP_ASSIGN')], Const(0)), Assign([AssName('"+self.temp+"2', 'OP_ASSIGN')], Const(1)), Assign([AssName('"+self.temp+"3', 'OP_ASSIGN')], Bitand([Name('"+self.temp+"1'), Name('"+self.temp+"2')])), Assign([AssName('x', 'OP_ASSIGN')], Name('"+self.temp+"3'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
@@ -324,7 +325,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         ## t2 = 1
         ## t3 = t1|t2
         ## x = t3
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(2)), Assign([AssName('t2', 'OP_ASSIGN')], Const(1)), Assign([AssName('t3', 'OP_ASSIGN')], Bitor([Name('t1'), Name('t2')])), Assign([AssName('x', 'OP_ASSIGN')], Name('t3'))]))"
+        src = "Module(None, Stmt([Assign([AssName('"+self.temp+"1', 'OP_ASSIGN')], Const(2)), Assign([AssName('"+self.temp+"2', 'OP_ASSIGN')], Const(1)), Assign([AssName('"+self.temp+"3', 'OP_ASSIGN')], Bitor([Name('"+self.temp+"1'), Name('"+self.temp+"2')])), Assign([AssName('x', 'OP_ASSIGN')], Name('"+self.temp+"3'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
@@ -351,7 +352,7 @@ class TestSequenceFunctions( unittest.TestCase ):
         ## t2 = 1
         ## t3 = t1^t2
         ## x = t3
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(2)), Assign([AssName('t2', 'OP_ASSIGN')], Const(1)), Assign([AssName('t3', 'OP_ASSIGN')], Bitxor([Name('t1'), Name('t2')])), Assign([AssName('x', 'OP_ASSIGN')], Name('t3'))]))"
+        src = "Module(None, Stmt([Assign([AssName('"+self.temp+"1', 'OP_ASSIGN')], Const(2)), Assign([AssName('"+self.temp+"2', 'OP_ASSIGN')], Const(1)), Assign([AssName('"+self.temp+"3', 'OP_ASSIGN')], Bitxor([Name('"+self.temp+"1'), Name('"+self.temp+"2')])), Assign([AssName('x', 'OP_ASSIGN')], Name('"+self.temp+"3'))]))"
         self.compl.compileme( expr )
         res = self.compl.DEBUG__print_flat()
         self.assertEqual( src, res )
