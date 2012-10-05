@@ -22,7 +22,11 @@ def die( meng ):
     print meng
     sys.exit( -1 )
 
-
+def usage():
+    print "USAGE:"
+    print "    %s <inputfile>" % sys.argv[0]
+    print "or"
+    print "    %s <inputfile> DEBUG" % sys.argv[0]
 
 
 class Expression( object ):
@@ -81,7 +85,7 @@ class ASM_movl_to_stack( Expression ):
 
     def stackconfig( self, stacksize ):
         self.stackpos = stacksize + 4 - self.stackpos
-        if self.val:
+        if self.val is not None:
             self.asm = "        movl $%d, -%d(%%ebp)" % (self.val, self.stackpos)
         else:
             self.asm = "        movl %%eax, -%d(%%ebp)" % self.stackpos
@@ -93,11 +97,9 @@ class ASM_movl_from_stack( Expression ):
     def __init__( self, srcpos ):
         self.DEBUG_type = "ASM_movl_to_stack"
         self.stackpos = srcpos
-
     def stackconfig( self, stacksize ):
         self.stackpos = stacksize + 4 - self.stackpos
         self.asm = "        movl -%d(%%ebp), %%eax" % self.stackpos
-
     def __str__( self ):
         return self.asm
 
@@ -130,7 +132,6 @@ class ASM_subl( Expression ):
         return self.asm
 
 
-
 class ASM_mull( Expression ):
     def __init__( self, apos, bpos ):
         self.DEBUG_type = "ASM_mull"
@@ -140,7 +141,8 @@ class ASM_mull( Expression ):
         self.apos = stacksize + 4 - self.apos
         self.bpos = stacksize + 4 - self.bpos
         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
-        self.asm += "        mull -%d(%%ebp), %%eax" % self.bpos
+        self.asm += "        movl -%d(%%ebp), %%ebx\n" % self.bpos
+        self.asm += "        mull %ebx\n"
     def __str__( self ):
         return self.asm
 
@@ -153,9 +155,9 @@ class ASM_bitand( Expression ):
     def stackconfig( self, stacksize ):
         self.apos = stacksize + 4 - self.apos
         self.bpos = stacksize + 4 - self.bpos
-        self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
-        self.asm = "        movl -%d(%%ebp), %%edx\n"  % self.bpos
-        self.asm += "        andl %edx, %eax"
+        self.asm = "        movl -%d(%%ebp), %%ebx\n" % self.bpos
+        self.asm += "        movl -%d(%%ebp), %%eax\n" % self.apos
+        self.asm += "        andl %ebx, %eax"
     def __str__( self ):
         return self.asm
 
@@ -169,7 +171,7 @@ class ASM_bitor( Expression ):
         self.apos = stacksize + 4 - self.apos
         self.bpos = stacksize + 4 - self.bpos
         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
-        self.asm = "        movl -%d(%%ebp), %%edx\n"  % self.bpos
+        self.asm += "        movl -%d(%%ebp), %%edx\n"  % self.bpos
         self.asm += "        orl %edx, %eax"
     def __str__( self ):
         return self.asm
@@ -183,7 +185,7 @@ class ASM_bitxor( Expression ):
         self.apos = stacksize + 4 - self.apos
         self.bpos = stacksize + 4 - self.bpos
         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
-        self.asm = "        movl -%d(%%ebp), %%edx\n"  % self.bpos
+        self.asm += "        movl -%d(%%ebp), %%edx\n"  % self.bpos
         self.asm += "        xorl %edx, %eax"
     def __str__( self ):
         return self.asm
@@ -210,7 +212,7 @@ class ASM_call( Expression ):
         if self.stackpos:
             self.stackpos = stacksize + 4 - self.stackpos
             self.asm = "        movl -%d(%%ebp), %%eax\n"  % self.stackpos
-            self.asm = "        movl %eax, (%esp)\n"
+            self.asm += "        movl %eax, (%esp)\n"
         self.asm += "        call %s" % self.nam
     def __str__( self ):
         return self.asm
@@ -740,3 +742,5 @@ if 1 <= len( sys.argv[1:] ):
 
 ##
     compl.print_asm( compl.expr_list )
+else:
+    usage()
