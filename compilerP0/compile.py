@@ -43,13 +43,11 @@ class ASM_BASE( object ):
     def __str__( self ):
         return self.asm
 
+
 class ASM_start( ASM_BASE ):
     def __init__( self, mem=0 ):
         self.DEBUG_type = "ASM_start"
-        ## lowest position on stack
-        self.stack = mem
-        ## stack alloc
-        self.mem = 0
+        self.mem = 0 ## stack alloc
         if 0 < mem:
             if 16 < mem:
                 if 0 != (mem%16): self.mem = 16
@@ -71,7 +69,7 @@ class ASM_start( ASM_BASE ):
 class ASM_end( ASM_BASE ):
     def __init__( self, mem=0 ):
         self.DEBUG_type = "ASM_end"
-        self.stackpos = mem # TODO stack mech
+        self.stackpos = mem
     def stackconfig( self, stacksize ):
         self.stackpos = stacksize + 4 - self.stackpos
         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.stackpos
@@ -264,7 +262,7 @@ class Engine( object ):
         self.flat_ast = self.flatten_ast( self.ast )
         self.expr_list = self.flatten_ast_2_list( self.flat_ast, [] )
 
-    def asmlist_vartable_index( self, nam ):
+    def vartable_lookup( self, nam ):
         if nam not in self.asmlist_vartable:
             ## var is new - add, then return pos
             self.asmlist_mem += 4
@@ -278,12 +276,9 @@ class Engine( object ):
         return val
 
     def print_asm( self, expr_lst ):
-        self.DEBUG( "\n###############################" )
-        tmp = ""
+        self.DEBUG('\n\n\n')
         for expr in expr_lst:
-            tmp += str( expr.print_debug() )
             print str( expr )
-        self.DEBUG( "\n###############################" )
 
     def flatten_ast_add_assign( self, expr ):
         self.var_counter += 1
@@ -309,27 +304,19 @@ class Engine( object ):
 
         elif isinstance(node, compiler.ast.Add):
             self.DEBUG( "Add" )
-            expr = compiler.ast.Add((self.flatten_ast(node.left), self.flatten_ast(node.right)))
-            new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name(new_varname)
+            return compiler.ast.Name( self.flatten_ast_add_assign( compiler.ast.Add((self.flatten_ast(node.left), self.flatten_ast(node.right))) ) )
 
         elif isinstance(node, compiler.ast.Mul ):
             self.DEBUG( "Mul" )
-            expr = compiler.ast.Mul((self.flatten_ast(node.left), self.flatten_ast(node.right)))
-            new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name(new_varname)
+            return compiler.ast.Name( self.flatten_ast_add_assign( compiler.ast.Mul((self.flatten_ast(node.left), self.flatten_ast(node.right))) ) )
 
         elif isinstance(node, compiler.ast.Sub ):
             self.DEBUG( "Sub" )
-            expr = compiler.ast.Sub((self.flatten_ast(node.left), self.flatten_ast(node.right)))
-            new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name(new_varname)
+            return compiler.ast.Name( self.flatten_ast_add_assign( compiler.ast.Sub((self.flatten_ast(node.left), self.flatten_ast(node.right))) ) )
 
         elif isinstance(node, compiler.ast.Const):
             self.DEBUG( "Const" )
-            expr = compiler.ast.Const(node.value)
-            new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name(new_varname)
+            return compiler.ast.Name( self.flatten_ast_add_assign( compiler.ast.Const(node.value) ) )
 
         elif isinstance(node, compiler.ast.Discard):
             self.DEBUG( "Discard" )
@@ -475,7 +462,7 @@ class Engine( object ):
             for chld in nd.getChildren():
                 lst += self.flatten_ast_2_list( chld, [] )
             asm_lst += lst
-            asm_lst += [ ASM_addl( self.asmlist_vartable_index( nd.left.name ), self.asmlist_vartable_index( nd.right.name ) ) ]
+            asm_lst += [ ASM_addl( self.vartable_lookup( nd.left.name ), self.vartable_lookup( nd.right.name ) ) ]
             return asm_lst
 
         elif isinstance( nd, compiler.ast.Sub ):
@@ -484,7 +471,7 @@ class Engine( object ):
             for chld in nd.getChildren():
                 lst += self.flatten_ast_2_list( chld, [] )
             asm_lst += lst
-            asm_lst += [ ASM_subl( self.asmlist_vartable_index( nd.left.name ), self.asmlist_vartable_index( nd.right.name ) ) ]
+            asm_lst += [ ASM_subl( self.vartable_lookup( nd.left.name ), self.vartable_lookup( nd.right.name ) ) ]
             return asm_lst
 
         elif isinstance( nd, compiler.ast.Mul ):
@@ -493,7 +480,7 @@ class Engine( object ):
             for chld in nd.getChildren():
                 lst += self.flatten_ast_2_list( chld, [] )
             asm_lst += lst
-            asm_lst += [ ASM_mull( self.asmlist_vartable_index( nd.left.name ), self.asmlist_vartable_index( nd.right.name ) ) ]
+            asm_lst += [ ASM_mull( self.vartable_lookup( nd.left.name ), self.vartable_lookup( nd.right.name ) ) ]
             return asm_lst
 
         elif isinstance( nd, compiler.ast.Bitand ):
@@ -502,7 +489,7 @@ class Engine( object ):
             for chld in nd.getChildren():
                 lst += self.flatten_ast_2_list( chld, [] )
             asm_lst += lst
-            asm_lst += [ ASM_bitand( self.asmlist_vartable_index( nd.getChildren()[0].name ), self.asmlist_vartable_index( nd.getChildren()[1].name ) ) ]
+            asm_lst += [ ASM_bitand( self.vartable_lookup( nd.getChildren()[0].name ), self.vartable_lookup( nd.getChildren()[1].name ) ) ]
             return asm_lst
 
         elif isinstance( nd, compiler.ast.Bitor ):
@@ -511,7 +498,7 @@ class Engine( object ):
             for chld in nd.getChildren():
                 lst += self.flatten_ast_2_list( chld, [] )
             asm_lst += lst
-            asm_lst += [ ASM_bitor( self.asmlist_vartable_index( nd.getChildren()[0].name ), self.asmlist_vartable_index( nd.getChildren()[1].name ) ) ]
+            asm_lst += [ ASM_bitor( self.vartable_lookup( nd.getChildren()[0].name ), self.vartable_lookup( nd.getChildren()[1].name ) ) ]
             return asm_lst
 
         elif isinstance( nd, compiler.ast.Bitxor ):
@@ -520,7 +507,7 @@ class Engine( object ):
             for chld in nd.getChildren():
                 lst += self.flatten_ast_2_list( chld, [] )
             asm_lst += lst
-            asm_lst += [ ASM_bitxor( self.asmlist_vartable_index( nd.getChildren()[0].name ), self.asmlist_vartable_index( nd.getChildren()[1].name ) ) ]
+            asm_lst += [ ASM_bitxor( self.vartable_lookup( nd.getChildren()[0].name ), self.vartable_lookup( nd.getChildren()[1].name ) ) ]
             return asm_lst
 
         elif isinstance( nd, compiler.ast.UnarySub ):
@@ -529,7 +516,7 @@ class Engine( object ):
             for chld in nd.getChildren():
                 lst += self.flatten_ast_2_list( chld, [] )
             asm_lst += lst
-            asm_lst += [ ASM_negl( self.asmlist_vartable_index( nd.getChildren()[0].name ) ) ]
+            asm_lst += [ ASM_negl( self.vartable_lookup( nd.getChildren()[0].name ) ) ]
             return asm_lst
 
         elif isinstance( nd, compiler.ast.LeftShift ):
@@ -538,7 +525,7 @@ class Engine( object ):
             for chld in nd.getChildren():
                 lst += self.flatten_ast_2_list( chld, [] )
             asm_lst += lst
-            asm_lst += [ ASM_leftshift( self.asmlist_vartable_index( nd.getChildren()[0].name ), self.asmlist_vartable_index( nd.getChildren()[1].name ) ) ]
+            asm_lst += [ ASM_leftshift( self.vartable_lookup( nd.getChildren()[0].name ), self.vartable_lookup( nd.getChildren()[1].name ) ) ]
             return asm_lst
 
         elif isinstance( nd, compiler.ast.RightShift ):
@@ -547,7 +534,7 @@ class Engine( object ):
             for chld in nd.getChildren():
                 lst += self.flatten_ast_2_list( chld, [] )
             asm_lst += lst
-            asm_lst += [ ASM_rightshift( self.asmlist_vartable_index( nd.getChildren()[0].name ), self.asmlist_vartable_index( nd.getChildren()[1].name ) ) ]
+            asm_lst += [ ASM_rightshift( self.vartable_lookup( nd.getChildren()[0].name ), self.vartable_lookup( nd.getChildren()[1].name ) ) ]
             return asm_lst
 
         elif isinstance( nd, compiler.ast.Assign ):
@@ -560,21 +547,17 @@ class Engine( object ):
             ## rhs is const
             if isinstance( nd.getChildren()[1], compiler.ast.Const ):
                 val = nd.getChildren()[1].value
-                stackpos = self.asmlist_vartable_index( nam )
+                stackpos = self.vartable_lookup( nam )
                 lst = [ ASM_movl_to_stack( stackpos, val ) ]
 
             elif isinstance( nd.getChildren()[1], compiler.ast.Name ):
                 ## rhs is a var, in list
-                srcnam = nd.getChildren()[1].name
-                srcpos = self.asmlist_vartable_index( srcnam )
-                dstpos = self.asmlist_vartable_index( nam )
-                lst = [ ASM_movl_from_stack( srcpos ), ASM_movl_to_stack( dstpos ) ]
-
+                lst = [ ASM_movl_from_stack( self.vartable_lookup( nd.getChildren()[1].name ) ), ASM_movl_to_stack( self.vartable_lookup( nam ) ) ]
             else:
                 ## rhs is not const
-                ## else take %eax
+                ## else take %eax as default reg
                 lst = self.flatten_ast_2_list( nd.getChildren()[1], [] )
-                stackpos = self.asmlist_vartable_index( nam )
+                stackpos = self.vartable_lookup( nam )
                 lst += [ ASM_movl_to_stack( stackpos ) ]
             asm_lst += lst
             return asm_lst
@@ -584,26 +567,25 @@ class Engine( object ):
             ## lhs is name of the function
             ## rhs is name of the temp var for the param tree
             if nd.getChildren()[1]:
-                asm_lst += [ ASM_call( nd.getChildren()[0].name, self.asmlist_vartable_index( nd.getChildren()[1].name ) ) ]
+                asm_lst += [ ASM_call( nd.getChildren()[0].name, self.vartable_lookup( nd.getChildren()[1].name ) ) ]
             else:
                 asm_lst += [ ASM_call( nd.getChildren()[0].name ) ]
             return asm_lst
 
-        ## misc
         elif isinstance( nd, compiler.ast.Discard ):
             self.DEBUG( "Discard" )
-            asm_lst += [ ]
-            return asm_lst
+            ## discard all below
+            return []
 
         elif isinstance( nd, compiler.ast.Name ):
             self.DEBUG( "Name" )
             ## handled by higher node
-            self.asmlist_vartable_index( nd.name )
             return []
 
         elif isinstance( nd, compiler.ast.UnaryAdd ):
             self.DEBUG( "UnaryAdd" )
-            return self.flatten_ast_2_list( nd.getChildren()[0], [] ) ## TODO check    
+            ## treat as transparent
+            return self.flatten_ast_2_list( nd.getChildren()[0], [] )
 
         elif isinstance( nd, compiler.ast.Const ):
             ## handled by higher node
@@ -619,6 +601,8 @@ class Engine( object ):
             self.DEBUG( "*** ELSE ***" )
             return []
 
+
+    ## debug
     def DEBUG__print_ast( self ):
         return str( self.ast )
 
@@ -636,6 +620,7 @@ class Engine( object ):
         if self.DEBUGMODE: print "\t\t%s" % str( text )
 
 
+
 ## start
 
 
@@ -646,7 +631,6 @@ if 1 <= len( sys.argv[1:] ):
     compl.compileme()
 
     if DEBUG == True:
-
         print "AST:"
         print compl.DEBUG__print_ast( )
         print ""
