@@ -110,8 +110,14 @@ lst=(
     "x=1^0#1"
     "x=1^1#0"
     "x=1^1^1#1"
-    "x=1^1^1^1#1"
-    "x=1^1^1^0#0"
+    "x=1^1^1^1#0"
+    "x=1^1^1^0#1"
+
+## leftshift
+    "x=16<<2#64"
+
+## rightshift
+    "x=64>>2#16"
 )
 
 #set -x   
@@ -123,5 +129,7 @@ for testcase in "${lst[@]}"; do
     tst $term $expct
 done
 
-
+echo
+echo
 echo "DATAZAAAD CANNOT OkuR - WAaaaaaaiiiIIYYY!!!!"
+echo
