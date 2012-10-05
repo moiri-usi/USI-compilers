@@ -269,6 +269,7 @@ class Engine( object ):
         self.DEBUGMODE = DEBUG
 
         self.var_counter = 0
+        self.tempvar = "$temp"
 
         ## data structures
         self.flat_ast = []
@@ -311,7 +312,7 @@ class Engine( object ):
 
     def flatten_ast_add_assign( self, expr ):
         self.var_counter += 1
-        name = 't' + str(self.var_counter)
+        name = self.tempvar + str(self.var_counter)
         nodes = compiler.ast.AssName(name, 'OP_ASSIGN')
         self.flat_ast.append(compiler.ast.Assign([nodes], expr))
         self.DEBUG( "\t\t\tnew statement node: append Assign" + str( name ) )
