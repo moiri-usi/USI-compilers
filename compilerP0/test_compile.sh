@@ -51,19 +51,19 @@ tst()
     while [[ 1 ]]; do
         generate "${fnam}"
         if [[ "${RES}" -eq 1 ]]; then
-            res="FAIL - generate"
+            res="KAPUTT - generate"
             break
         fi
 
         compile "${fnam}"
         if [[ "${RES}" -eq 1 ]]; then
-            res="FAIL - compile"
+            res="KAPUTT - compile"
             break
         fi
 
-        execute "${fnam}" "${expect}" || res="FAIL - execute"
+        execute "${fnam}" "${expect}" || res="KAPUTT - execute"
         if [[ "${RES}" -eq 1 ]]; then
-            res="FAIL - execute"
+            res="KAPUTT - execute"
             break
         fi
         break
