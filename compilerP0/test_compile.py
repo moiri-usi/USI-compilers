@@ -43,6 +43,28 @@ class TestSequenceFunctions( unittest.TestCase ):
     #     res = self.compl.DEBUG__print_list()
     #     self.assertEqual( src, res )
 
+##    def test_assignvar_ast( self ):
+##        expr = "x = 1; y = x"
+##        src = str( compiler.parse( expr ) )
+##        self.compl.compileme( expr )
+##        res = self.compl.DEBUG__print_ast()
+##        self.assertEqual( src, res )
+##
+##    def test_assignvar_flat( self ):
+##        expr = "x = 1; y = x"
+##        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(1)), Assign([AssName('x', 'OP_ASSIGN')], Name('t1')), Assign([AssName('y', 'OP_ASSIGN')], Name('x'))]))"
+##        self.compl.compileme( expr )
+##        res = self.compl.DEBUG__print_flat()
+##        self.assertEqual( src, res )
+
+    # def test_assignvar_list( self ):
+    #     expr = "x = 1; y = x"
+    #     src = "some kind of list" #TODO
+    #     self.compl.compileme( expr )
+    #     res = self.compl.DEBUG__print_list()
+    #     self.assertEqual( src, res )
+
+
     def test_add_ast( self ):
         expr = "x = 1 + 2"
         src = str( compiler.parse( expr ) )
@@ -209,22 +231,23 @@ class TestSequenceFunctions( unittest.TestCase ):
 ##
 ##
 ###8
-
-    def test_UnaryAdd_ast( self ):
-        expr = "x = +5"
-        src = str( compiler.parse( expr ) )
-        self.compl.compileme( expr )
-        res = self.compl.DEBUG__print_ast()
-        self.assertEqual( src, res )
-
-    def test_UnaryAdd_flat( self ):
-        expr = "x = +5"
-        ## t1 = +5
-        ## x = t1
-        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], UnaryAdd(Const(5))), Assign([AssName('x', 'OP_ASSIGN')], Name('t1'))]))"
-        self.compl.compileme( expr )
-        res = self.compl.DEBUG__print_flat()
-        self.assertEqual( src, res )
+##
+##    def test_UnaryAdd_ast( self ):
+##        expr = "x = +5"
+##        src = str( compiler.parse( expr ) )
+##        self.compl.compileme( expr )
+##        res = self.compl.DEBUG__print_ast()
+##        self.assertEqual( src, res )
+##
+##    def test_UnaryAdd_flat( self ):
+##        expr = "x = +5"
+##        ## t1 = 5
+##        ## t2 = -t1
+##        ## x = t2
+##        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(5)), Assign([AssName('t2', 'OP_ASSIGN')], UnaryAdd(Name(t1))), Assign([AssName('x', 'OP_ASSIGN')], Name('t2'))]))"
+##        self.compl.compileme( expr )
+##        res = self.compl.DEBUG__print_flat()
+##        self.assertEqual( src, res )
 
     # def test_UnaryAdd_list( self ):
     #     expr = "x = +5"
@@ -233,48 +256,51 @@ class TestSequenceFunctions( unittest.TestCase ):
     #     res = self.compl.DEBUG__print_list()
     #     self.assertEqual( src, res )
 
-###9
-##
-##    def test_UnarySub_ast( self ):
-##        expr = "x = -5"
-##        src = str( compiler.parse( expr ) )
-##        self.compl.compileme( expr )
-##        res = self.compl.DEBUG__print_ast()
-##        self.assertEqual( src, res )
-##
-##    def test_UnarySub_flat( self ):
-##        expr = "x = -5"
-##        ## t1 = -5
-##        ## x = t1
-##        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], UnarySub(Const(5))), Assign([AssName('x', 'OP_ASSIGN')], Name('t1'))]))"
-##        self.compl.compileme( expr )
-##        res = self.compl.DEBUG__print_flat()
-##        self.assertEqual( src, res )
-##
-##    # def test_UnarySub_list( self ):
-##    #     expr = "x = -5"
-##    #     src = "some kind of list" #TODO
-##    #     self.compl.compileme( expr )
-##    #     res = self.compl.DEBUG__print_list()
-##    #     self.assertEqual( src, res )
-##
-###10
-##
-##    def test_BitAnd_ast( self ):
-##        expr = "x = 2&1"
-##        src = str( compiler.parse( expr ) )
-##        self.compl.compileme( expr )
-##        res = self.compl.DEBUG__print_ast()
-##        self.assertEqual( src, res )
-##
-##    def test_BitAnd_flat( self ):
-##        expr = "x = 2&1"
-##        ## t1 = 2&1
-##        ## x = t1
-##        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Bitand((Const(2), Const(1)))), Assign([AssName('x', 'OP_ASSIGN')], Name('t1'))]))"
-##        self.compl.compileme( expr )
-##        res = self.compl.DEBUG__print_flat()
-##        self.assertEqual( src, res )
+#9
+
+    def test_UnarySub_ast( self ):
+        expr = "x = -5"
+        src = str( compiler.parse( expr ) )
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_ast()
+        self.assertEqual( src, res )
+
+    def test_UnarySub_flat( self ):
+        expr = "x = -5"
+        ## t1 = 5
+        ## t2 = -t1
+        ## x = t2
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(5)), Assign([AssName('t2', 'OP_ASSIGN')], UnarySub(Name('t1'))), Assign([AssName('x', 'OP_ASSIGN')], Name('t2'))]))"
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_flat()
+        self.assertEqual( src, res )
+
+    # def test_UnarySub_list( self ):
+    #     expr = "x = -5"
+    #     src = "some kind of list" #TODO
+    #     self.compl.compileme( expr )
+    #     res = self.compl.DEBUG__print_list()
+    #     self.assertEqual( src, res )
+
+#10
+
+    def test_BitAnd_ast( self ):
+        expr = "x = 2&1"
+        src = str( compiler.parse( expr ) )
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_ast()
+        self.assertEqual( src, res )
+
+    def test_BitAnd_flat( self ):
+        expr = "x = 2&1"
+        ## t1 = 2
+        ## t2 = 1
+        ## t3 = t1 & t2
+        ## x = t3
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(2)), Assign([AssName('t2', 'OP_ASSIGN')], Const(1)), Assign([AssName('t3', 'OP_ASSIGN')], Bitand([Name('t1'), Name('t2')])), Assign([AssName('x', 'OP_ASSIGN')], Name('t3'))]))"
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_flat()
+        self.assertEqual( src, res )
 
     # def test_BitAnd_list( self ):
     #     expr = "x = 2&1"
@@ -283,6 +309,59 @@ class TestSequenceFunctions( unittest.TestCase ):
     #     res = self.compl.DEBUG__print_list()
     #     self.assertEqual( src, res )
 
+#11
+
+    def test_BitOr_ast( self ):
+        expr = "x = 2|1"
+        src = str( compiler.parse( expr ) )
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_ast()
+        self.assertEqual( src, res )
+
+    def test_BitOr_flat( self ):
+        expr = "x = 2|1"
+        ## t1 = 2
+        ## t2 = 1
+        ## t3 = t1|t2
+        ## x = t3
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(2)), Assign([AssName('t2', 'OP_ASSIGN')], Const(1)), Assign([AssName('t3', 'OP_ASSIGN')], Bitor([Name('t1'), Name('t2')])), Assign([AssName('x', 'OP_ASSIGN')], Name('t3'))]))"
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_flat()
+        self.assertEqual( src, res )
+
+    # def test_BitOr_list( self ):
+    #     expr = "x = 2&1"
+    #     src = "some kind of list" #TODO1
+    #     self.compl.compileme( expr )
+    #     res = self.compl.DEBUG__print_list()
+    #     self.assertEqual( src, res )
+
+
+
+    def test_Bitxor_ast( self ):
+        expr = "x = 2^1"
+        src = str( compiler.parse( expr ) )
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_ast()
+        self.assertEqual( src, res )
+
+    def test_Bitxor_flat( self ):
+        expr = "x = 2^1"
+        ## t1 = 2
+        ## t2 = 1
+        ## t3 = t1^t2
+        ## x = t3
+        src = "Module(None, Stmt([Assign([AssName('t1', 'OP_ASSIGN')], Const(2)), Assign([AssName('t2', 'OP_ASSIGN')], Const(1)), Assign([AssName('t3', 'OP_ASSIGN')], Bitxor([Name('t1'), Name('t2')])), Assign([AssName('x', 'OP_ASSIGN')], Name('t3'))]))"
+        self.compl.compileme( expr )
+        res = self.compl.DEBUG__print_flat()
+        self.assertEqual( src, res )
+
+    # def test_Bitxor_list( self ):
+    #     expr = "x = 2^1"
+    #     src = "some kind of list" #TODO1
+    #     self.compl.compileme( expr )
+    #     res = self.compl.DEBUG__print_list()
+    #     self.assertEqual( src, res )
 
 ## TODO: rm
     # def test_Add( self ):
