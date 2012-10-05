@@ -424,12 +424,12 @@ class Engine( object ):
                 elif (cnt == 1):
                     flat_nodes.append(flat_node)
                     expr = compiler.ast.Bitand(flat_nodes)
-                    res_varname = new_varname = self.flatten_ast_add_assign( expr )
+                    new_varname = self.flatten_ast_add_assign( expr )
                 elif (cnt > 1):
                     expr = compiler.ast.Bitand([compiler.ast.Name(new_varname), flat_node])
                     new_varname = self.flatten_ast_add_assign( expr )
                 cnt += 1
-            return compiler.ast.Name(res_varname)
+            return compiler.ast.Name(new_varname)
 
         elif isinstance( node, compiler.ast.Bitor ):
             self.DEBUG( "Bitor" )
@@ -442,12 +442,12 @@ class Engine( object ):
                 elif (cnt == 1):
                     flat_nodes.append(flat_node)
                     expr = compiler.ast.Bitor(flat_nodes)
-                    res_varname = new_varname = self.flatten_ast_add_assign( expr )
+                    new_varname = self.flatten_ast_add_assign( expr )
                 elif (cnt > 1):
                     expr = compiler.ast.Bitor([compiler.ast.Name(new_varname), flat_node])
                     new_varname = self.flatten_ast_add_assign( expr )
                 cnt += 1
-            return compiler.ast.Name(res_varname)
+            return compiler.ast.Name(new_varname)
 
         elif isinstance( node, compiler.ast.Bitxor ):
             self.DEBUG( "Bitxor" )
@@ -460,12 +460,12 @@ class Engine( object ):
                 elif (cnt == 1):
                     flat_nodes.append(flat_node)
                     expr = compiler.ast.Bitxor(flat_nodes)
-                    res_varname = new_varname = self.flatten_ast_add_assign( expr )
+                    new_varname = self.flatten_ast_add_assign( expr )
                 elif (cnt > 1):
                     expr = compiler.ast.Bitxor([compiler.ast.Name(new_varname), flat_node])
                     new_varname = self.flatten_ast_add_assign( expr )
                 cnt += 1
-            return compiler.ast.Name(res_varname)
+            return compiler.ast.Name(new_varname)
 
         else:
             die( "unknown AST node" )
