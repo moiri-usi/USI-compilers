@@ -31,6 +31,42 @@ def usage():
     print "or"
     print "    %s <inputfile> DEBUG" % sys.argv[0]
 
+## ASM vat types
+
+
+class ASM_register( object ):
+    def __init__( self, name, caller=True ):
+        self.name = name
+        self.caller = caller
+    def is_caller(self):
+        return self.caller
+    def __str__( self ):
+        return "%" + self.name
+
+
+class ASM_v_register( object ):
+    def __init__( self, name ):
+        self.name = name
+    def __str__( self ):
+        return self.name;
+
+
+class ASM_stack( object ):
+    def __init__( self, pos, stackptr ):
+        self.pos = pos
+        self.stackptr = stackptr
+    def __str__( self ):
+        pos_str = ''
+        if pos != 0:
+            pos_str = str(self.pos)
+        return  pos_str + "(" + str(self.stackptr) + ")"
+
+
+class ASM_immedeate( object ):
+    def __init__(self, val ):
+        self.val = val
+    def __str__( self ):
+        return '$%d' % self.val
 
 
 ## ASM Expression
@@ -453,7 +489,7 @@ class Engine( object ):
             asm_lst += [ ASM_start( self.asmlist_mem ) ] ## asm prolog
             asm_lst += lst
             asm_lst += [ ASM_end( self.asmlist_mem ) ] ## asm epilog
-            for item in asm_lst: item.stackconfig( self.asmlist_mem)
+            for item in asm_lst: item.stackconfig( self.asmlist_mem )
             return asm_lst
 
         elif isinstance( nd, compiler.ast.Add ):
@@ -601,6 +637,15 @@ class Engine( object ):
             self.DEBUG( "*** ELSE ***" )
             return []
 
+#    def liveness( self, v_reg_list ):
+#        v_reg_live
+#        v_reg_use
+#        v_reg_def
+#        v_reg_live(i) = (v_reg_live(i+1) - v_reg_dev) + v_reg_use
+#        for i in range(v_reg_list.length, 0, -1):
+#            if isinstance( v_reg_list[i].use, ASM_v_register ):
+#                v_reg_use.append( v_reg_list[i].use )
+             
 
     ## debug
     def DEBUG__print_ast( self ):
