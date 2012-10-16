@@ -31,9 +31,23 @@ def usage():
     print "or"
     print "    %s <inputfile> DEBUG" % sys.argv[0]
 
-## ASM vat types
+
+## ASM descriptor
+class ASM_label( object ):
+    def __init__( self, name ):
+        self.name = name
+    def __str__( self ):
+        return self.name + ":"
 
 
+class ASM_text( object ):
+    def __init__( self, text ):
+        self.text = text
+    def __str__( self ):
+        return "        ." + self.text
+
+
+## ASM operands
 class ASM_register( object ):
     def __init__( self, name, caller=True ):
         self.name = name
@@ -69,6 +83,7 @@ class ASM_immedeate( object ):
         return '$%d' % self.val
 
 
+## function names and labels
 class ASM_name( object ):
     def __init__(self, name ):
         self.name = name
@@ -76,9 +91,8 @@ class ASM_name( object ):
         return self.name
 
 
-## ASM Expression
-
-class ASM_BASE( object ):
+## ASM Instructions
+class ASM_instruction( object ):
     def __init__( self ):
         self.DEBUG_type = ""
         self.inst_ident = "        "
@@ -100,7 +114,7 @@ class ASM_BASE( object ):
 #         return self.asm
 
 
-class ASM_movl( ASM_BASE ):
+class ASM_movl( ASM_instruction ):
     def __init__( self, left, right ):
         self.DEBUG_type = "ASM_movl"
         self.left = left
@@ -111,7 +125,7 @@ class ASM_movl( ASM_BASE ):
         return self.inst_ident + "movl " + str(self.left) + ", " + str(self.right)
 
 
-class ASM_addl( ASM_BASE ):
+class ASM_addl( ASM_instruction ):
     def __init__( self, left, right ):
         self.DEBUG_type = "ASM_addl"
         self.left = left
@@ -123,7 +137,7 @@ class ASM_addl( ASM_BASE ):
         return self.inst_ident + "addl " + str(self.left) + ", " + str(self.right)
 
 
-class ASM_subl( ASM_BASE ):
+class ASM_subl( ASM_instruction ):
     def __init__( self, left, right ):
         self.DEBUG_type = "ASM_subl"
         self.left = left
@@ -135,7 +149,7 @@ class ASM_subl( ASM_BASE ):
         return self.inst_ident + "subl " + str(self.left) + ", " + str(self.right)
 
 
-class ASM_negl( ASM_BASE ):
+class ASM_negl( ASM_instruction ):
     def __init__( self, op ):
         self.DEBUG_type = "ASM_negl"
         self.op = op
@@ -145,7 +159,7 @@ class ASM_negl( ASM_BASE ):
         return self.inst_ident + "negl " + str(self.op)
 
 
-class ASM_andl( ASM_BASE ):
+class ASM_andl( ASM_instruction ):
     def __init__( self, left, right ):
         self.DEBUG_type = "ASM_andl"
         self.left = left
@@ -157,7 +171,7 @@ class ASM_andl( ASM_BASE ):
         return self.inst_ident + "andl " + str(self.left) + ", " + str(self.right)
 
 
-class ASM_orl( ASM_BASE ):
+class ASM_orl( ASM_instruction ):
     def __init__( self, left, right ):
         self.DEBUG_type = "ASM_orl"
         self.left = left
@@ -169,7 +183,7 @@ class ASM_orl( ASM_BASE ):
         return self.inst_ident + "orl " + str(self.left) + ", " + str(self.right)
 
 
-class ASM_xorl( ASM_BASE ):
+class ASM_xorl( ASM_instruction ):
     def __init__( self, left, right ):
         self.DEBUG_type = "ASM_xorl"
         self.left = left
@@ -181,7 +195,7 @@ class ASM_xorl( ASM_BASE ):
         return self.inst_ident + "xorl " + str(self.left) + ", " + str(self.right)
 
 
-class ASM_imull( ASM_BASE ):
+class ASM_imull( ASM_instruction ):
     def __init__( self, left, right ):
         self.DEBUG_type = "ASM_imull"
         self.left = left
@@ -193,13 +207,37 @@ class ASM_imull( ASM_BASE ):
         return self.inst_ident + "imull " + str(self.left) + ", " + str(self.right)
 
 
-class ASM_call( ASM_BASE ):
+class ASM_call( ASM_instruction ):
     def __init__( self, name ):
         self.DEBUG_type = "ASM_call"
         self.name = name
         self.set_r_def( ASM_register('eax') )
     def __str__( self ):
         return self.inst_ident + "call " + str(self.name)
+
+
+class ASM_shll( ASM_instruction ):
+    def __init__( self, left, right ):
+        self.DEBUG_type = "ASM_shll"
+        self.left = left
+        self.right = right
+        slef.set_r_def( left )
+        self.set_r_use( left )
+        self.set_r_use( right )
+    def __str__( self ):
+        return self.inst_ident + "shll " + str(self.left) + ", " + str(self.right)
+
+
+class ASM_shrl( ASM_instruction ):
+    def __init__( self, left, right ):
+        self.DEBUG_type = "ASM_shrl"
+        self.left = left
+        self.right = right
+        slef.set_r_def( left )
+        self.set_r_use( left )
+        self.set_r_use( right )
+    def __str__( self ):
+        return self.inst_ident + "shrl " + str(self.left) + ", " + str(self.right)
 
 
 # class ASM_start( ASM_BASE ):
