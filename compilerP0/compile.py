@@ -223,6 +223,17 @@ class ASM_xorl( ASM_instruction ):
         return self.inst_ident + "xorl " + str(self.left) + ", " + str(self.right)
 
 
+class ASM_notl( ASM_instruction ):
+    def __init__( self, op ):
+        super(ASM_notl, self).__init__() 
+        self.DEBUG_type = "ASM_notl"
+        self.op = op
+        self.set_r_def( op )
+        self.set_r_use( op )
+    def __str__( self ):
+        return self.inst_ident + "notl " + str(self.op)
+
+
 class ASM_imull( ASM_instruction ):
     def __init__( self, left, right ):
         super(ASM_imull, self).__init__() 
@@ -519,6 +530,12 @@ class Engine( object ):
                 cnt += 1
             return compiler.ast.Name(new_varname)
 
+        elif isinstance (node, compiler.ast.Invert ):
+            self.DEBUG("Invert")
+            expr = compiler.ast.Invert(self.flatten_ast(node.expr))
+            new_varname = self.flatten_ast_add_assign(expr)    
+            return compiler.ast.Name(new_varname)
+
         else:
             die( "unknown AST node" )
 
@@ -529,10 +546,8 @@ class Engine( object ):
     def flatten_ast_2_list( self, nd, asm_lst ):
         if isinstance( nd, compiler.ast.Module ):
             self.DEBUG( "Module" )
-#            asm_lst += self.flatten_ast_2_list( nd.node, [] )
             self.flatten_ast_2_list( nd.node, [] )
             return self.expr_list
-            #return asm_lst
 
         elif isinstance( nd, compiler.ast.Stmt ):
             self.DEBUG( "Stmt" )
@@ -642,6 +657,20 @@ class Engine( object ):
             else:
                 ret = right
                 self.expr_list.append( ASM_xorl( left, ret ) )
+            return ret
+
+        elif isinstance( nd, compiler.ast.Invert ):
+            self.DEBUG( "Invert" )
+            for chld in nd.getChildren():
+                self.flatten_ast_2_list( chld, [] )
+            op = self.lookup(nd.expr.name)
+            if not self.PSEUDO:
+                self.expr_list.append( ASM_movl( op, self.reg_list['eax'] ) )
+                ret = self.reg_list['eax']
+                self.expr_list.append( ASM_notl( ret ) )
+            else:
+                ret = op
+                self.expr_list.append( ASM_notl( ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.UnarySub ):
