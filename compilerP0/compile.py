@@ -52,6 +52,8 @@ class ASM_register( object ):
     def __init__( self, name, caller=True ):
         self.name = name
         self.caller = caller
+    def get_name( self ):
+        return self.name
     def is_caller(self):
         return self.caller
     def __str__( self ):
@@ -59,8 +61,13 @@ class ASM_register( object ):
 
 
 class ASM_v_register( object ):
-    def __init__( self, name ):
+    def __init__( self, name, spilled=False ):
         self.name = name
+        self.spilled = spilled
+    def get_name( self ):
+        return self.name
+    def is_spilled( self ):
+        return self.spilled
     def __str__( self ):
         return self.name;
 
@@ -69,9 +76,11 @@ class ASM_stack( object ):
     def __init__( self, pos, stackptr ):
         self.pos = pos
         self.stackptr = stackptr
+    def get_pos( self ):
+        return self.pos
     def __str__( self ):
         pos_str = ''
-        if pos != 0:
+        if self.pos != 0:
             pos_str = str(self.pos)
         return  pos_str + "(" + str(self.stackptr) + ")"
 
@@ -79,6 +88,8 @@ class ASM_stack( object ):
 class ASM_immedeate( object ):
     def __init__(self, val ):
         self.val = val
+    def get_val( self ):
+        return self.val
     def __str__( self ):
         return '$%d' % self.val
 
@@ -87,6 +98,8 @@ class ASM_immedeate( object ):
 class ASM_name( object ):
     def __init__(self, name ):
         self.name = name
+    def get_name( self ):
+        return self.name
     def __str__( self ):
         return self.name
 
@@ -116,6 +129,7 @@ class ASM_instruction( object ):
 
 class ASM_movl( ASM_instruction ):
     def __init__( self, left, right ):
+        super(ASM_movl, self).__init__() 
         self.DEBUG_type = "ASM_movl"
         self.left = left
         self.right = right
@@ -125,12 +139,22 @@ class ASM_movl( ASM_instruction ):
         return self.inst_ident + "movl " + str(self.left) + ", " + str(self.right)
 
 
+class ASM_pushl( ASM_instruction ):
+    def __init__( self, op ):
+        super(ASM_pushl, self).__init__() 
+        self.DEBUG_type = "ASM_pushl"
+        self.op = op
+    def __str__( self ):
+        return self.inst_ident + "pushl " + str(self.op)
+
+
 class ASM_addl( ASM_instruction ):
     def __init__( self, left, right ):
+        super(ASM_addl, self).__init__() 
         self.DEBUG_type = "ASM_addl"
         self.left = left
         self.right = right
-        slef.set_r_def( left )
+        self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
     def __str__( self ):
@@ -139,10 +163,11 @@ class ASM_addl( ASM_instruction ):
 
 class ASM_subl( ASM_instruction ):
     def __init__( self, left, right ):
+        super(ASM_subl, self).__init__() 
         self.DEBUG_type = "ASM_subl"
         self.left = left
         self.right = right
-        slef.set_r_def( left )
+        self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
     def __str__( self ):
@@ -151,9 +176,10 @@ class ASM_subl( ASM_instruction ):
 
 class ASM_negl( ASM_instruction ):
     def __init__( self, op ):
+        super(ASM_negl, self).__init__() 
         self.DEBUG_type = "ASM_negl"
         self.op = op
-        slef.set_r_def( op )
+        self.set_r_def( op )
         self.set_r_use( op )
     def __str__( self ):
         return self.inst_ident + "negl " + str(self.op)
@@ -161,10 +187,11 @@ class ASM_negl( ASM_instruction ):
 
 class ASM_andl( ASM_instruction ):
     def __init__( self, left, right ):
+        super(ASM_andl, self).__init__() 
         self.DEBUG_type = "ASM_andl"
         self.left = left
         self.right = right
-        slef.set_r_def( left )
+        self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
     def __str__( self ):
@@ -173,10 +200,12 @@ class ASM_andl( ASM_instruction ):
 
 class ASM_orl( ASM_instruction ):
     def __init__( self, left, right ):
+        super(ASM_orl, self).__init__() 
+        self.DEBUG_type = "ASM_andl"
         self.DEBUG_type = "ASM_orl"
         self.left = left
         self.right = right
-        slef.set_r_def( left )
+        self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
     def __str__( self ):
@@ -185,10 +214,11 @@ class ASM_orl( ASM_instruction ):
 
 class ASM_xorl( ASM_instruction ):
     def __init__( self, left, right ):
+        super(ASM_xorl, self).__init__() 
         self.DEBUG_type = "ASM_xorl"
         self.left = left
         self.right = right
-        slef.set_r_def( left )
+        self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
     def __str__( self ):
@@ -197,10 +227,11 @@ class ASM_xorl( ASM_instruction ):
 
 class ASM_imull( ASM_instruction ):
     def __init__( self, left, right ):
+        super(ASM_imull, self).__init__() 
         self.DEBUG_type = "ASM_imull"
         self.left = left
         self.right = right
-        slef.set_r_def( left )
+        self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
     def __str__( self ):
@@ -209,6 +240,7 @@ class ASM_imull( ASM_instruction ):
 
 class ASM_call( ASM_instruction ):
     def __init__( self, name ):
+        super(ASM_call, self).__init__() 
         self.DEBUG_type = "ASM_call"
         self.name = name
         self.set_r_def( ASM_register('eax') )
@@ -216,12 +248,29 @@ class ASM_call( ASM_instruction ):
         return self.inst_ident + "call " + str(self.name)
 
 
+class ASM_ret( ASM_instruction ):
+    def __init__( self ):
+        super(ASM_ret, self).__init__() 
+        self.DEBUG_type = "ASM_ret"
+    def __str__( self ):
+        return self.inst_ident + "ret"
+
+
+class ASM_leave( ASM_instruction ):
+    def __init__( self ):
+        super(ASM_leave, self).__init__() 
+        self.DEBUG_type = "ASM_leave"
+    def __str__( self ):
+        return self.inst_ident + "leave"
+
+
 class ASM_shll( ASM_instruction ):
     def __init__( self, left, right ):
+        super(ASM_shll, self).__init__() 
         self.DEBUG_type = "ASM_shll"
         self.left = left
         self.right = right
-        slef.set_r_def( left )
+        self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
     def __str__( self ):
@@ -230,171 +279,16 @@ class ASM_shll( ASM_instruction ):
 
 class ASM_shrl( ASM_instruction ):
     def __init__( self, left, right ):
+        super(ASM_shrl, self).__init__() 
         self.DEBUG_type = "ASM_shrl"
         self.left = left
         self.right = right
-        slef.set_r_def( left )
+        self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
     def __str__( self ):
         return self.inst_ident + "shrl " + str(self.left) + ", " + str(self.right)
 
-
-# class ASM_start( ASM_BASE ):
-#     def __init__( self, mem=0 ):
-#         self.DEBUG_type = "ASM_start"
-#         self.mem = 0 ## stack alloc
-#         if 0 < mem:
-#             if 16 < mem:
-#                 if 0 != (mem%16): self.mem = 16
-#                 self.mem += (mem / 16) * 16
-#             else: self.mem = 16
-#         else:
-#             self.mem = 16
-#     def stackconfig( self, stacksize ):
-#         self.asm = "        .text\n"
-#         self.asm += "LC0:\n"
-#         self.asm += '        .ascii "Hello, world!\10\0"\n'
-#         self.asm += ".globl main\n"
-#         self.asm += "main:\n"
-#         self.asm += "        pushl %ebp\n"
-#         self.asm += "        movl %esp, %ebp\n"
-#         self.asm += "        subl $%d, %%esp" % self.mem
-# 
-# 
-# class ASM_end( ASM_BASE ):
-#     def __init__( self, mem=0 ):
-#         self.DEBUG_type = "ASM_end"
-#         self.stackpos = mem
-#     def stackconfig( self, stacksize ):
-#         self.stackpos = stacksize + 4 - self.stackpos
-#         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.stackpos
-#         self.asm += "        leave\n"
-#         self.asm += "        ret\n"
-# 
-# 
-# class ASM_movl_to_stack( ASM_BASE ):
-#     def __init__( self, pos, val=None ):
-#         self.DEBUG_type = "ASM_movl_to_stack"
-#         self.stackpos = pos
-#         self.val = val
-#     def stackconfig( self, stacksize ):
-#         self.stackpos = stacksize + 4 - self.stackpos
-#         if self.val is not None:
-#             self.asm = "        movl $%d, -%d(%%ebp)" % (self.val, self.stackpos)
-#         else:
-#             self.asm = "        movl %%eax, -%d(%%ebp)" % self.stackpos
-# 
-# 
-# class ASM_movl_from_stack( ASM_BASE ):
-#     def __init__( self, srcpos ):
-#         self.DEBUG_type = "ASM_movl_to_stack"
-#         self.stackpos = srcpos
-#     def stackconfig( self, stacksize ):
-#         self.stackpos = stacksize + 4 - self.stackpos
-#         self.asm = "        movl -%d(%%ebp), %%eax" % self.stackpos
-# 
-# 
-# class ASM_addl( ASM_BASE ):
-#     def __init__( self, apos, bpos ):
-#         self.DEBUG_type = "ASM_addl"
-#         self.apos = apos
-#         self.bpos = bpos
-#     def stackconfig( self, stacksize ):
-#         self.apos = stacksize + 4 - self.apos
-#         self.bpos = stacksize + 4 - self.bpos
-#         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
-#         self.asm += "        addl -%d(%%ebp), %%eax" % self.bpos
-# 
-# 
-# class ASM_subl( ASM_BASE ):
-#     def __init__( self, apos, bpos ):
-#         self.DEBUG_type = "ASM_subl"
-#         self.apos = apos
-#         self.bpos = bpos
-#     def stackconfig( self, stacksize ):
-#         self.apos = stacksize + 4 - self.apos
-#         self.bpos = stacksize + 4 - self.bpos
-#         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
-#         self.asm += "        subl -%d(%%ebp), %%eax" % self.bpos
-# 
-# 
-# class ASM_mull( ASM_BASE ):
-#     def __init__( self, apos, bpos ):
-#         self.DEBUG_type = "ASM_mull"
-#         self.apos = apos
-#         self.bpos = bpos
-#     def stackconfig( self, stacksize ):
-#         self.apos = stacksize + 4 - self.apos
-#         self.bpos = stacksize + 4 - self.bpos
-#         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
-#         self.asm += "        movl -%d(%%ebp), %%ebx\n" % self.bpos
-#         self.asm += "        mull %ebx\n"
-# 
-# 
-# class ASM_bitand( ASM_BASE ):
-#     def __init__( self, apos, bpos ):
-#         self.DEBUG_type = "ASM_bitand"
-#         self.apos = apos
-#         self.bpos = bpos
-#     def stackconfig( self, stacksize ):
-#         self.apos = stacksize + 4 - self.apos
-#         self.bpos = stacksize + 4 - self.bpos
-#         self.asm = "        movl -%d(%%ebp), %%ebx\n" % self.bpos
-#         self.asm += "        movl -%d(%%ebp), %%eax\n" % self.apos
-#         self.asm += "        andl %ebx, %eax"
-# 
-# 
-# class ASM_bitor( ASM_BASE ):
-#     def __init__( self, apos, bpos ):
-#         self.DEBUG_type = "ASM_bitor"
-#         self.apos = apos
-#         self.bpos = bpos
-#     def stackconfig( self, stacksize ):
-#         self.apos = stacksize + 4 - self.apos
-#         self.bpos = stacksize + 4 - self.bpos
-#         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
-#         self.asm += "        movl -%d(%%ebp), %%edx\n"  % self.bpos
-#         self.asm += "        orl %edx, %eax"
-# 
-# 
-# class ASM_bitxor( ASM_BASE ):
-#     def __init__( self, apos, bpos ):
-#         self.DEBUG_type = "ASM_bitxor"
-#         self.apos = apos
-#         self.bpos = bpos
-#     def stackconfig( self, stacksize ):
-#         self.apos = stacksize + 4 - self.apos
-#         self.bpos = stacksize + 4 - self.bpos
-#         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.apos
-#         self.asm += "        movl -%d(%%ebp), %%edx\n"  % self.bpos
-#         self.asm += "        xorl %edx, %eax"
-# 
-# 
-# class ASM_negl( ASM_BASE ):
-#     def __init__( self, srcpos ):
-#         self.DEBUG_type = "ASM_negl"
-#         self.srcpos = srcpos
-#     def stackconfig( self, stacksize ):
-#         self.srcpos = stacksize + 4 - self.srcpos
-#         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.srcpos
-#         self.asm += "        negl %eax"
-# 
-# 
-# class ASM_call( ASM_BASE ):
-#     def __init__( self, nam, stackpos=None ):
-#         self.DEBUG_type = "ASM_call"
-#         self.stackpos = stackpos
-#         self.nam = nam
-#         self.asm = ""
-#     def stackconfig( self, stacksize ):
-#         if self.stackpos:
-#             self.stackpos = stacksize + 4 - self.stackpos
-#             self.asm = "        movl -%d(%%ebp), %%eax\n"  % self.stackpos
-#             self.asm += "        movl %eax, (%esp)\n"
-#         self.asm += "        call %s" % self.nam
-# 
-# 
 # class ASM_leftshift( ASM_BASE ):
 #     def __init__( self, srcpos, shiftpos ):
 #         self.DEBUG_type = "ASM_leftshift"
@@ -429,8 +323,9 @@ class ASM_shrl( ASM_instruction ):
 
 ## P0 compiler implementation
 class Engine( object ):
-    def __init__( self, filepath=None, DEBUG=False ):
+    def __init__( self, filepath=None, DEBUG=False, PSEUDO=False ):
         self.DEBUGMODE = DEBUG
+        self.PSEUDO = PSEUDO
         if filepath:
             if not os.path.exists( filepath ):
                 die( "ERROR: file '%s' does not exist" % filepath )
@@ -446,10 +341,20 @@ class Engine( object ):
         ## data structures
         self.flat_ast = []
         self.expr_list = []
-
+        self.reg_list = {
+            'eax':ASM_register('eax'),
+            'ebx':ASM_register('ebx', False),
+            'ecx':ASM_register('ecx'),
+            'edx':ASM_register('edx'),
+            'edi':ASM_register('edi', False),
+            'esi':ASM_register('esi', False),
+            'ebp':ASM_register('ebp'),
+            'esp':ASM_register('esp')
+        }
         ## list handling
         self.asmlist_mem = 0
         self.asmlist_vartable = {}
+        self.asmlist_stack = {}
 
     def compileme( self, expression=None ):
         if expression:
@@ -458,13 +363,31 @@ class Engine( object ):
         self.flat_ast = self.flatten_ast( self.ast )
         self.expr_list = self.flatten_ast_2_list( self.flat_ast, [] )
 
+
+    def stack_lookup( self, nam ):
+        if nam not in self.asmlist_stack:
+            ## var is new - add, then return pos
+            new_elem = ASM_stack(0 - self.asmlist_mem, self.reg_list['ebp'])
+            self.asmlist_mem += 4
+            self.asmlist_stack.update({nam:new_elem})
+        ## return stack object containing the stack pos
+        return self.asmlist_stack[nam]
+
+
     def vartable_lookup( self, nam ):
         if nam not in self.asmlist_vartable:
             ## var is new - add, then return pos
-            self.asmlist_mem += 4
-            self.asmlist_vartable.update({nam:self.asmlist_mem})
-        ## return value, which is stack pos
+            new_elem = ASM_v_register( nam )
+            self.asmlist_vartable.update({nam:new_elem})
+        ## return stack object containing the stack pos
         return self.asmlist_vartable[nam]
+
+    def lookup( self, nam ):
+        if not self.PSEUDO:
+            elem = self.stack_lookup( nam )
+        else:
+            elem = self.vartable_lookup( nam )
+        return elem
 
     def check_plain_integer( self, val ):
         if type( val ) is not int:
@@ -639,136 +562,190 @@ class Engine( object ):
     def flatten_ast_2_list( self, nd, asm_lst ):
         if isinstance( nd, compiler.ast.Module ):
             self.DEBUG( "Module" )
-            asm_lst += self.flatten_ast_2_list( nd.node, [] )
-            return asm_lst
+#            asm_lst += self.flatten_ast_2_list( nd.node, [] )
+            self.flatten_ast_2_list( nd.node, [] )
+            return self.expr_list
+            #return asm_lst
 
         elif isinstance( nd, compiler.ast.Stmt ):
             self.DEBUG( "Stmt" )
-            lst = []
-            self.asmlist_op = None
+            ## asm prolog
+            self.expr_list.append( ASM_text("text") )
+            self.expr_list.append( ASM_label("LC0") )
+            self.expr_list.append( ASM_text("ascii \"Hello World!\"") )
+            self.expr_list.append( ASM_text("globl main") )
+            self.expr_list.append( ASM_label("main") )
+            self.expr_list.append( ASM_pushl( self.reg_list['ebp'] ) )
+            self.expr_list.append( ASM_movl( self.reg_list['esp'], self.reg_list['ebp'] ) )
+            self.expr_list.append( ASM_subl( ASM_immedeate( self.init_stack_mem(0) ), self.reg_list['esp'] ) )
+            ## program
             for chld in nd.getChildren():
-                lst += self.flatten_ast_2_list( chld, [] )
-            asm_lst += [ ASM_start( self.asmlist_mem ) ] ## asm prolog
-            asm_lst += lst
-            asm_lst += [ ASM_end( self.asmlist_mem ) ] ## asm epilog
-            for item in asm_lst: item.stackconfig( self.asmlist_mem )
-            return asm_lst
+                self.flatten_ast_2_list( chld, [] )
+            ## asm epilog
+            self.expr_list.append( ASM_movl( ASM_stack( 0, self.reg_list['ebp'] ), self.reg_list['eax'] ) )
+            self.expr_list.append( ASM_leave() )
+            self.expr_list.append( ASM_ret() )
+            return
 
         elif isinstance( nd, compiler.ast.Add ):
             self.DEBUG( "Add" )
-            lst = []
             for chld in nd.getChildren():
-                lst += self.flatten_ast_2_list( chld, [] )
-            asm_lst += lst
-            asm_lst += [ ASM_addl( self.vartable_lookup( nd.left.name ), self.vartable_lookup( nd.right.name ) ) ]
-            return asm_lst
+                self.flatten_ast_2_list( chld, [] )
+            left = self.lookup( nd.left.name )
+            right = self.lookup( nd.right.name )
+            if not self.PSEUDO:
+                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
+                ret = self.reg_list['eax']
+                self.expr_list.append( ASM_addl( right, ret ) )
+            else:
+                ret = right
+                self.expr_list.append( ASM_addl( left, ret ) )
+            return ret
 
         elif isinstance( nd, compiler.ast.Sub ):
             self.DEBUG( "Sub" )
-            lst = []
             for chld in nd.getChildren():
-                lst += self.flatten_ast_2_list( chld, [] )
-            asm_lst += lst
-            asm_lst += [ ASM_subl( self.vartable_lookup( nd.left.name ), self.vartable_lookup( nd.right.name ) ) ]
-            return asm_lst
+                self.flatten_ast_2_list( chld, [] )
+            left = self.lookup( nd.left.name )
+            right = self.lookup( nd.right.name )
+            if not self.PSEUDO:
+                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
+                ret = self.reg_list['eax']
+                self.expr_list.append( ASM_subl( right, ret ) )
+            else:
+                ret = right
+                self.expr_list.append( ASM_subl( left, ret ) )
+            return ret
 
         elif isinstance( nd, compiler.ast.Mul ):
             self.DEBUG( "Mul" )
-            lst = []
             for chld in nd.getChildren():
-                lst += self.flatten_ast_2_list( chld, [] )
-            asm_lst += lst
-            asm_lst += [ ASM_mull( self.vartable_lookup( nd.left.name ), self.vartable_lookup( nd.right.name ) ) ]
-            return asm_lst
+                self.flatten_ast_2_list( chld, [] )
+            left = self.lookup( nd.left.name )
+            right = self.lookup( nd.right.name )
+            if not self.PSEUDO:
+                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
+                ret = self.reg_list['eax']
+                self.expr_list.append( ASM_imull( right, ret ) )
+            else:
+                ret = right
+                self.expr_list.append( ASM_imull( left, ret ) )
+            return ret
 
         elif isinstance( nd, compiler.ast.Bitand ):
             self.DEBUG( "Bitand" )
-            lst = []
             for chld in nd.getChildren():
-                lst += self.flatten_ast_2_list( chld, [] )
-            asm_lst += lst
-            asm_lst += [ ASM_bitand( self.vartable_lookup( nd.getChildren()[0].name ), self.vartable_lookup( nd.getChildren()[1].name ) ) ]
-            return asm_lst
+                self.flatten_ast_2_list( chld, [] )
+            left = self.lookup( nd.nodes[0].name )
+            right = self.lookup( nd.nodes[1].name )
+            if not self.PSEUDO:
+                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
+                ret = self.reg_list['eax']
+                self.expr_list.append( ASM_andl( right, ret ) )
+            else:
+                ret = right
+                self.expr_list.append( ASM_andl( left, ret ) )
+            return ret
 
         elif isinstance( nd, compiler.ast.Bitor ):
             self.DEBUG( "Bitor" )
-            lst = []
             for chld in nd.getChildren():
-                lst += self.flatten_ast_2_list( chld, [] )
-            asm_lst += lst
-            asm_lst += [ ASM_bitor( self.vartable_lookup( nd.getChildren()[0].name ), self.vartable_lookup( nd.getChildren()[1].name ) ) ]
-            return asm_lst
+                self.flatten_ast_2_list( chld, [] )
+            left = self.lookup( nd.nodes[0].name )
+            right = self.lookup( nd.nodes[1].name )
+            if not self.PSEUDO:
+                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
+                ret = self.reg_list['eax']
+                self.expr_list.append( ASM_orl( right, ret ) )
+            else:
+                ret = right
+                self.expr_list.append( ASM_orl( left, ret ) )
+            return ret
 
         elif isinstance( nd, compiler.ast.Bitxor ):
             self.DEBUG( "Bitxor" )
-            lst = []
             for chld in nd.getChildren():
-                lst += self.flatten_ast_2_list( chld, [] )
-            asm_lst += lst
-            asm_lst += [ ASM_bitxor( self.vartable_lookup( nd.getChildren()[0].name ), self.vartable_lookup( nd.getChildren()[1].name ) ) ]
-            return asm_lst
+                self.flatten_ast_2_list( chld, [] )
+            left = self.lookup( nd.nodes[0].name )
+            right = self.lookup( nd.nodes[1].name )
+            if not self.PSEUDO:
+                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
+                ret = self.reg_list['eax']
+                self.expr_list.append( ASM_xorl( right, ret ) )
+            else:
+                ret = right
+                self.expr_list.append( ASM_xorl( left, ret ) )
+            return ret
 
         elif isinstance( nd, compiler.ast.UnarySub ):
             self.DEBUG( "UnarySub" )
-            lst = []
             for chld in nd.getChildren():
-                lst += self.flatten_ast_2_list( chld, [] )
-            asm_lst += lst
-            asm_lst += [ ASM_negl( self.vartable_lookup( nd.getChildren()[0].name ) ) ]
-            return asm_lst
-
-        elif isinstance( nd, compiler.ast.LeftShift ):
-            self.DEBUG( "LeftShift" )
-            lst = []
-            for chld in nd.getChildren():
-                lst += self.flatten_ast_2_list( chld, [] )
-            asm_lst += lst
-            asm_lst += [ ASM_leftshift( self.vartable_lookup( nd.getChildren()[0].name ), self.vartable_lookup( nd.getChildren()[1].name ) ) ]
-            return asm_lst
-
-        elif isinstance( nd, compiler.ast.RightShift ):
-            self.DEBUG( "RightShift" )
-            lst = []
-            for chld in nd.getChildren():
-                lst += self.flatten_ast_2_list( chld, [] )
-            asm_lst += lst
-            asm_lst += [ ASM_rightshift( self.vartable_lookup( nd.getChildren()[0].name ), self.vartable_lookup( nd.getChildren()[1].name ) ) ]
-            return asm_lst
-
+                self.flatten_ast_2_list( chld, [] )
+            op = self.lookup(nd.expr.name)
+            if not self.PSEUDO:
+                self.expr_list.append( ASM_movl( op, self.reg_list['eax'] ) )
+                ret = self.reg_list['eax']
+                self.expr_list.append( ASM_negl( ret ) )
+            else:
+                ret = op
+                self.expr_list.append( ASM_negl( ret ) )
+            return ret
+# 
+#         elif isinstance( nd, compiler.ast.LeftShift ):
+#             self.DEBUG( "LeftShift" )
+#             lst = []
+#             for chld in nd.getChildren():
+#                 lst += self.flatten_ast_2_list( chld, [] )
+#             asm_lst += lst
+#             asm_lst += [ ASM_leftshift( self.stack_lookup( nd.getChildren()[0].name ), self.stack_lookup( nd.getChildren()[1].name ) ) ]
+#             return asm_lst
+# 
+#         elif isinstance( nd, compiler.ast.RightShift ):
+#             self.DEBUG( "RightShift" )
+#             lst = []
+#             for chld in nd.getChildren():
+#                 lst += self.flatten_ast_2_list( chld, [] )
+#             asm_lst += lst
+#             asm_lst += [ ASM_rightshift( self.stack_lookup( nd.getChildren()[0].name ), self.stack_lookup( nd.getChildren()[1].name ) ) ]
+#             return asm_lst
+# 
         elif isinstance( nd, compiler.ast.Assign ):
             self.DEBUG( "Assign" )
 
             ## lhs is var
-            nam = nd.getChildren()[0].name
+            nam = nd.nodes[0].name ## just consider the first assignement variable
             lst = []
 
             ## rhs is const
-            if isinstance( nd.getChildren()[1], compiler.ast.Const ):
-                val = nd.getChildren()[1].value
-                stackpos = self.vartable_lookup( nam )
-                lst = [ ASM_movl_to_stack( stackpos, val ) ]
+            if isinstance( nd.expr, compiler.ast.Const ):
+                self.expr_list.append( ASM_movl( ASM_immedeate(nd.expr.value), self.lookup( nam ) ) )
 
-            elif isinstance( nd.getChildren()[1], compiler.ast.Name ):
+            elif isinstance( nd.expr, compiler.ast.Name ):
                 ## rhs is a var, in list
-                lst = [ ASM_movl_from_stack( self.vartable_lookup( nd.getChildren()[1].name ) ), ASM_movl_to_stack( self.vartable_lookup( nam ) ) ]
+                if not self.PSEUDO:
+                    self.expr_list.append( ASM_movl( self.stack_lookup( nd.expr.name ), self.reg_list['eax'] ) )
+                    self.expr_list.append( ASM_movl( self.reg_list['eax'], self.stack_lookup( nam ) ) )
+                else:
+                    self.expr_list.append( ASM_movl( self.vartable_lookup( nd.expr.name ), self.vartable_lookup( nam ) ) )
             else:
                 ## rhs is not const
                 ## else take %eax as default reg
-                lst = self.flatten_ast_2_list( nd.getChildren()[1], [] )
-                stackpos = self.vartable_lookup( nam )
-                lst += [ ASM_movl_to_stack( stackpos ) ]
-            asm_lst += lst
-            return asm_lst
+                op = self.flatten_ast_2_list( nd.expr, [] )
+                self.expr_list.append( ASM_movl( op, self.lookup( nam ) ) )
+            return
 
         elif isinstance( nd, compiler.ast.CallFunc ):
             self.DEBUG( "CallFunc" )
             ## lhs is name of the function
             ## rhs is name of the temp var for the param tree
-            if nd.getChildren()[1]:
-                asm_lst += [ ASM_call( nd.getChildren()[0].name, self.vartable_lookup( nd.getChildren()[1].name ) ) ]
-            else:
-                asm_lst += [ ASM_call( nd.getChildren()[0].name ) ]
-            return asm_lst
+            if nd.args:
+                if not self.PSEUDO:
+                    self.expr_list.append( ASM_movl( self.lookup( nd.args[0].name ), self.reg_list['eax'] ) )
+                    self.expr_list.append( ASM_movl( self.reg_list['eax'], ASM_stack(0, self.reg_list['esp']) ) )
+                else:
+                    self.expr_list.append( ASM_movl( self.lookup( nd.args[0].name), ASM_stack(0, self.reg_list['esp']) ) )
+            self.expr_list.append( ASM_call(nd.node.name) )
+            return self.reg_list['eax']
 
         elif isinstance( nd, compiler.ast.Discard ):
             self.DEBUG( "Discard" )
@@ -779,12 +756,12 @@ class Engine( object ):
             self.DEBUG( "Name" )
             ## handled by higher node
             return []
-
-        elif isinstance( nd, compiler.ast.UnaryAdd ):
-            self.DEBUG( "UnaryAdd" )
-            ## treat as transparent
-            return self.flatten_ast_2_list( nd.getChildren()[0], [] )
-
+# 
+#         elif isinstance( nd, compiler.ast.UnaryAdd ):
+#             self.DEBUG( "UnaryAdd" )
+#             ## treat as transparent
+#             return self.flatten_ast_2_list( nd.getChildren()[0], [] )
+# 
         elif isinstance( nd, compiler.ast.Const ):
             ## handled by higher node
             self.DEBUG( "Const" )
@@ -798,6 +775,17 @@ class Engine( object ):
         else:
             self.DEBUG( "*** ELSE ***" )
             return []
+
+    def init_stack_mem( self, mem ):
+        ret_mem = 0 ## stack alloc
+        if 0 < mem:
+            if 16 < mem:
+                if 0 != (mem%16): ret_mem = 16
+                ret_mem += (mem / 16) * 16
+            else: ret_mem = 16
+        else:
+            ret_mem = 16
+        return ret_mem
 
 #    def liveness( self, v_reg_list ):
 #        v_reg_live
@@ -833,8 +821,9 @@ class Engine( object ):
 
 if 1 <= len( sys.argv[1:] ):
     DEBUG = True if 1 < len( sys.argv[1:]) and  sys.argv[2] == "DEBUG" else False
+    PSEUDO = True if 1 < len( sys.argv[1:]) and "-pseudo" in sys.argv else False
 
-    compl = Engine( sys.argv[1], DEBUG )
+    compl = Engine( sys.argv[1], DEBUG, PSEUDO )
     compl.compileme()
 
     if DEBUG == True:
@@ -852,6 +841,9 @@ if 1 <= len( sys.argv[1:] ):
 
         print "len of asmlist_vartable '%d'" % len(compl.asmlist_vartable)
         print compl.asmlist_vartable
+
+        print "len of asmlist_stack '%d'" % len(compl.asmlist_stack)
+        print compl.asmlist_stack
 
         print "asmlist_mem '%d'" % compl.asmlist_mem
 
