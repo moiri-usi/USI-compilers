@@ -123,8 +123,6 @@ class ASM_instruction( object ):
             self.r_def.append( var )
     def print_debug( self ):
         return self.DEBUG_type
-#     def __str__( self ):
-#         return self.asm
 
 
 class ASM_movl( ASM_instruction ):
@@ -289,37 +287,6 @@ class ASM_shrl( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "shrl " + str(self.left) + ", " + str(self.right)
 
-# class ASM_leftshift( ASM_BASE ):
-#     def __init__( self, srcpos, shiftpos ):
-#         self.DEBUG_type = "ASM_leftshift"
-#         self.srcpos = srcpos
-#         self.shiftpos = shiftpos
-#     def stackconfig( self, stacksize ):
-#         self.srcpos = stacksize + 4 - self.srcpos
-#         self.shiftpos = stacksize + 4 - self.shiftpos
-#         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.shiftpos
-#         self.asm += "        movl -%d(%%ebp), %%edx\n" % self.srcpos
-#         self.asm += "        movl %edx, %ebx\n"
-#         self.asm += "        movl %eax, %ecx\n"
-#         self.asm += "        shll %cl, %ebx\n"
-#         self.asm += "        movl %ebx, %eax"
-# 
-# 
-# class ASM_rightshift( ASM_BASE ):
-#     def __init__( self, srcpos, shiftpos ):
-#         self.DEBUG_type = "ASM_rightshift"
-#         self.srcpos = srcpos
-#         self.shiftpos = shiftpos
-#     def stackconfig( self, stacksize ):
-#         self.srcpos = stacksize + 4 - self.srcpos
-#         self.shiftpos = stacksize + 4 - self.shiftpos
-#         self.asm = "        movl -%d(%%ebp), %%eax\n" % self.shiftpos
-#         self.asm += "        movl -%d(%%ebp), %%edx\n" % self.srcpos
-#         self.asm += "        movl %edx, %ebx\n"
-#         self.asm += "        movl %eax, %ecx\n"
-#         self.asm += "        shrl %cl, %ebx\n"
-#         self.asm += "        movl %ebx, %eax"
-# 
 
 ## P0 compiler implementation
 class Engine( object ):
@@ -690,25 +657,45 @@ class Engine( object ):
                 ret = op
                 self.expr_list.append( ASM_negl( ret ) )
             return ret
-# 
-#         elif isinstance( nd, compiler.ast.LeftShift ):
-#             self.DEBUG( "LeftShift" )
-#             lst = []
-#             for chld in nd.getChildren():
-#                 lst += self.flatten_ast_2_list( chld, [] )
-#             asm_lst += lst
-#             asm_lst += [ ASM_leftshift( self.stack_lookup( nd.getChildren()[0].name ), self.stack_lookup( nd.getChildren()[1].name ) ) ]
-#             return asm_lst
-# 
-#         elif isinstance( nd, compiler.ast.RightShift ):
-#             self.DEBUG( "RightShift" )
-#             lst = []
-#             for chld in nd.getChildren():
-#                 lst += self.flatten_ast_2_list( chld, [] )
-#             asm_lst += lst
-#             asm_lst += [ ASM_rightshift( self.stack_lookup( nd.getChildren()[0].name ), self.stack_lookup( nd.getChildren()[1].name ) ) ]
-#             return asm_lst
-# 
+
+        elif isinstance( nd, compiler.ast.LeftShift ):
+            self.DEBUG( "LeftShift" )
+            for chld in nd.getChildren():
+                self.flatten_ast_2_list( chld, [] )
+            left = self.lookup( nd.left.name )
+            right = self.lookup( nd.right.name )
+            ## shift needs the shifting value in the register ecx
+            ## and is called with %cl
+            if not self.PSEUDO:
+                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
+                self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
+                ret = self.reg_list['eax']
+                self.expr_list.append( ASM_shll( ASM_register('cl'), ret ) )
+            else:
+                self.expr_list.append( ASM_movl( left, self.reg_list['ecx'] ) )
+                ret = right
+                self.expr_list.append( ASM_shll( ASM_register('cl'), ret ) )
+            return ret
+
+        elif isinstance( nd, compiler.ast.RightShift ):
+            self.DEBUG( "LeftRight" )
+            for chld in nd.getChildren():
+                self.flatten_ast_2_list( chld, [] )
+            left = self.lookup( nd.left.name )
+            right = self.lookup( nd.right.name )
+            ## shift needs the shifting value in the register ecx
+            ## and is called with %cl
+            if not self.PSEUDO:
+                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
+                self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
+                ret = self.reg_list['eax']
+                self.expr_list.append( ASM_shrl( ASM_register('cl'), ret ) )
+            else:
+                self.expr_list.append( ASM_movl( left, self.reg_list['ecx'] ) )
+                ret = right
+                self.expr_list.append( ASM_shrl( ASM_register('cl'), ret ) )
+            return ret
+
         elif isinstance( nd, compiler.ast.Assign ):
             self.DEBUG( "Assign" )
 
@@ -719,7 +706,6 @@ class Engine( object ):
             ## rhs is const
             if isinstance( nd.expr, compiler.ast.Const ):
                 self.expr_list.append( ASM_movl( ASM_immedeate(nd.expr.value), self.lookup( nam ) ) )
-
             elif isinstance( nd.expr, compiler.ast.Name ):
                 ## rhs is a var, in list
                 if not self.PSEUDO:
