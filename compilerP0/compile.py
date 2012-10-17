@@ -720,18 +720,18 @@ class Engine( object ):
             nam = nd.nodes[0].name ## just consider the first assignement variable
 
             if isinstance( nd.expr, compiler.ast.Const ):
-                self.expr_list.append( ASM_movl( ASM_immedeate(nd.expr.value), self.lookup( nam ) ) )
+                self.expr_list.append( ASM_movl( ASM_immedeate(nd.expr.value), self.lookup( nam, False ) ) )
             elif isinstance( nd.expr, compiler.ast.Name ):
                 ## expr is a var, in list
                 if not self.PSEUDO:
                     self.expr_list.append( ASM_movl( self.stack_lookup( nd.expr.name ), self.reg_list['eax'] ) )
-                    self.expr_list.append( ASM_movl( self.reg_list['eax'], self.stack_lookup( nam ) ) )
+                    self.expr_list.append( ASM_movl( self.reg_list['eax'], self.stack_lookup( nam, False ) ) )
                 else:
-                    self.expr_list.append( ASM_movl( self.vartable_lookup( nd.expr.name ), self.vartable_lookup( nam ) ) )
+                    self.expr_list.append( ASM_movl( self.vartable_lookup( nd.expr.name ), self.vartable_lookup( nam, False ) ) )
             else:
                 ## expr is not const
                 op = self.flatten_ast_2_list( nd.expr, [] )
-                self.expr_list.append( ASM_movl( op, self.lookup( nam ) ) )
+                self.expr_list.append( ASM_movl( op, self.lookup( nam, False ) ) )
             return
 
         elif isinstance( nd, compiler.ast.CallFunc ):
@@ -788,8 +788,10 @@ class Engine( object ):
             ret_mem = 16
         return ret_mem
 
-    def stack_lookup( self, nam ):
+    def stack_lookup( self, nam, defined=True ):
         if nam not in self.asmlist_stack:
+            if defined:
+                die( "ERROR: variable %s was not defined" %nam )
             ## var is new -> add a new stack object to the dict
             new_elem = ASM_stack(0 - self.asmlist_mem, self.reg_list['ebp'])
             self.asmlist_mem += 4
@@ -797,19 +799,21 @@ class Engine( object ):
         ## return stack object containing the stack pos
         return self.asmlist_stack[nam]
 
-    def vartable_lookup( self, nam ):
+    def vartable_lookup( self, nam, defined=True ):
         if nam not in self.asmlist_vartable:
+            if defined:
+                die( "ERROR: variable %s was not defined" %nam )
             ## var is new -> add a new virtual register object to the dict
             new_elem = ASM_v_register( nam )
             self.asmlist_vartable.update({nam:new_elem})
         ## return vartable object
         return self.asmlist_vartable[nam]
 
-    def lookup( self, nam ):
+    def lookup( self, nam, defined=True ):
         if not self.PSEUDO:
-            elem = self.stack_lookup( nam )
+            elem = self.stack_lookup( nam, defined )
         else:
-            elem = self.vartable_lookup( nam )
+            elem = self.vartable_lookup( nam, defined )
         return elem
 
 
@@ -893,10 +897,15 @@ class Engine( object ):
 
 ## start
 if 1 <= len( sys.argv[1:] ):
-    DEBUG = True if 1 < len( sys.argv[1:]) and "DEBUG" in sys.argv else False
-    PSEUDO = True if 1 < len( sys.argv[1:]) and "-pseudo" in sys.argv else False
-    LIVENESS = True if 1 < len( sys.argv[1:]) and "-liveness" in sys.argv else False
-    if LIVENESS is True:
+    DEBUG = False
+    PSEUDO = False
+    LIVENESS = False
+    if 1 < len( sys.argv[1:]) and "DEBUG" in sys.argv:
+        DEBUG = True 
+    if 1 < len( sys.argv[1:]) and "-pseudo" in sys.argv:
+        PSEUDO = True
+    if 1 < len( sys.argv[1:]) and "-liveness" in sys.argv:
+        LIVENESS = True
         PSEUDO = True
         
     compl = Engine( sys.argv[1], DEBUG, PSEUDO )
