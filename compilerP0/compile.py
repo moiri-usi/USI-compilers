@@ -401,17 +401,21 @@ class Engine( object ):
 
         elif isinstance(node, compiler.ast.Add):
             self.DEBUG( "Add" )
-            expr = compiler.ast.Add((self.flatten_ast(node.left), self.flatten_ast(node.right)))
+            expr = compiler.ast.Add( (self.flatten_ast(node.left), self.flatten_ast(node.right)) )
             new_varname = self.flatten_ast_add_assign( expr )
             return compiler.ast.Name( new_varname )
 
         elif isinstance(node, compiler.ast.Mul ):
             self.DEBUG( "Mul" )
-            return compiler.ast.Name( self.flatten_ast_add_assign( compiler.ast.Mul((self.flatten_ast(node.left), self.flatten_ast(node.right))) ) )
+            expr = compiler.ast.Mul( (self.flatten_ast( node.left ), self.flatten_ast( node.right )) )
+            new_varname = self.flatten_ast_add_assign( expr )
+            return compiler.ast.Name( new_varname )
 
         elif isinstance(node, compiler.ast.Sub ):
             self.DEBUG( "Sub" )
-            return compiler.ast.Name( self.flatten_ast_add_assign( compiler.ast.Sub((self.flatten_ast(node.left), self.flatten_ast(node.right))) ) )
+            expr = compiler.ast.Sub( (self.flatten_ast( node.left ), self.flatten_ast( node.right )) )
+            new_varname = self.flatten_ast_add_assign( expr )
+            return compiler.ast.Name( new_varname )
 
         elif isinstance(node, compiler.ast.Const):
             self.DEBUG( "Const" )
@@ -419,6 +423,8 @@ class Engine( object ):
 
         elif isinstance(node, compiler.ast.Discard):
             self.DEBUG( "Discard" )
+            expr = self.flatten_ast( node.expr )
+            new_varname = self.flatten_ast_add_assign( expr )
             return
 
         elif isinstance(node, compiler.ast.AssName ):
