@@ -105,4 +105,3 @@ done
 echo
 echo
 echo "Ok. DATAZAAAD cannot OkuR! - WhAaaaaaaiIIYYY??!!!"
-echo

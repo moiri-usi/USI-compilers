@@ -1,4 +1,10 @@
 #!/bin/bash
+##
+## Josafat Piraquive
+## Simon Maurer
+##
+## testcases to test generated pseudo assembler code
+## using the script x86interp.py
 
 lst=(
 ## add

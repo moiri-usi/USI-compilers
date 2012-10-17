@@ -1,4 +1,10 @@
 #!/bin/bash
+##
+## Josafat Piraquive
+## Simon Maurer
+## (Lothar Rubusch) contributer for prior steps of the project
+##
+## testcases to test generated assembler code
 
 lst=(
 ## add
