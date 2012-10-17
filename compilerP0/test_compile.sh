@@ -13,6 +13,13 @@
 ## generates .s
 ## compiles .s to .exe
 ## executes .exe
+##
+## usage: ./test_compile.sh [-pseudo]
+##  no param:   run testbench with x86 assembler
+##              - use in_x86.sh
+##  -pseudo:    run testbench with pseudo assembler
+##              - uses script x86interp.py and in_pseude.sh
+
 
 PSEUDO=0
 SRC=in_x86.sh
