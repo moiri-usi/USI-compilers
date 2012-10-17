@@ -2,8 +2,8 @@
 # -*- coding: iso-8859-1 -*-
 #
 # Simon Maurer
-# Lothar Rubusch
 # Josafat Piraquive
+# (Lothar Rubusch) contributer for prior steps of the projects
 
 """
 USAGE:
@@ -17,10 +17,7 @@ import sys
 import os.path
 import compiler
 
-
-
 ## auxiliary
-
 def die( meng ):
     print meng
     sys.exit( -1 )
@@ -32,7 +29,10 @@ def usage():
     print "    %s <inputfile> DEBUG" % sys.argv[0]
 
 
-## ASM descriptor
+## ASM descriptor classes
+#########################
+
+# label element (i.e main:)
 class ASM_label( object ):
     def __init__( self, name ):
         self.DEBUG_type = "ASM_label"
@@ -40,7 +40,7 @@ class ASM_label( object ):
     def __str__( self ):
         return self.name + ":"
 
-
+# text description used for the header
 class ASM_text( object ):
     def __init__( self, text ):
         self.DEBUG_type = "ASM_text"
@@ -49,7 +49,10 @@ class ASM_text( object ):
         return "        ." + self.text
 
 
-## ASM operands
+## ASM operand classes
+######################
+
+# register of X86 (%eax, %ebx, etc...)
 class ASM_register( object ):
     def __init__( self, name, caller=True ):
         self.name = name
@@ -61,7 +64,7 @@ class ASM_register( object ):
     def __str__( self ):
         return "%" + self.name
 
-
+# virtual registers used for pseudo assembly
 class ASM_v_register( object ):
     def __init__( self, name, spilled=False ):
         self.name = name
@@ -73,7 +76,7 @@ class ASM_v_register( object ):
     def __str__( self ):
         return self.name;
 
-
+# object indicating the stack position
 class ASM_stack( object ):
     def __init__( self, pos, stackptr ):
         self.pos = pos
@@ -86,7 +89,7 @@ class ASM_stack( object ):
             pos_str = str(self.pos)
         return  pos_str + "(" + str(self.stackptr) + ")"
 
-
+# constant (i.e. $3)
 class ASM_immedeate( object ):
     def __init__(self, val ):
         self.val = val
@@ -96,7 +99,7 @@ class ASM_immedeate( object ):
         return '$%d' % self.val
 
 
-## function names and labels
+# function names and goto labels
 class ASM_name( object ):
     def __init__(self, name ):
         self.name = name
@@ -106,7 +109,10 @@ class ASM_name( object ):
         return self.name
 
 
-## ASM Instructions
+## ASM Instruction classes
+##########################
+
+# parent class of all instructions
 class ASM_instruction( object ):
     def __init__( self ):
         self.DEBUG_type = ""
@@ -126,7 +132,7 @@ class ASM_instruction( object ):
     def print_debug( self ):
         return self.DEBUG_type
 
-
+# move 
 class ASM_movl( ASM_instruction ):
     def __init__( self, left, right ):
         super(ASM_movl, self).__init__() 
@@ -138,7 +144,7 @@ class ASM_movl( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "movl " + str(self.left) + ", " + str(self.right)
 
-
+# push
 class ASM_pushl( ASM_instruction ):
     def __init__( self, op ):
         super(ASM_pushl, self).__init__() 
@@ -147,7 +153,7 @@ class ASM_pushl( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "pushl " + str(self.op)
 
-
+# add 
 class ASM_addl( ASM_instruction ):
     def __init__( self, left, right ):
         super(ASM_addl, self).__init__() 
@@ -160,7 +166,7 @@ class ASM_addl( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "addl " + str(self.left) + ", " + str(self.right)
 
-
+# subtract
 class ASM_subl( ASM_instruction ):
     def __init__( self, left, right ):
         super(ASM_subl, self).__init__() 
@@ -173,7 +179,7 @@ class ASM_subl( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "subl " + str(self.left) + ", " + str(self.right)
 
-
+# unary sub
 class ASM_negl( ASM_instruction ):
     def __init__( self, op ):
         super(ASM_negl, self).__init__() 
@@ -184,7 +190,7 @@ class ASM_negl( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "negl " + str(self.op)
 
-
+# bitand
 class ASM_andl( ASM_instruction ):
     def __init__( self, left, right ):
         super(ASM_andl, self).__init__() 
@@ -197,7 +203,7 @@ class ASM_andl( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "andl " + str(self.left) + ", " + str(self.right)
 
-
+# bitor
 class ASM_orl( ASM_instruction ):
     def __init__( self, left, right ):
         super(ASM_orl, self).__init__() 
@@ -210,7 +216,7 @@ class ASM_orl( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "orl " + str(self.left) + ", " + str(self.right)
 
-
+# bitxor
 class ASM_xorl( ASM_instruction ):
     def __init__( self, left, right ):
         super(ASM_xorl, self).__init__() 
@@ -223,7 +229,7 @@ class ASM_xorl( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "xorl " + str(self.left) + ", " + str(self.right)
 
-
+# bitinvert
 class ASM_notl( ASM_instruction ):
     def __init__( self, op ):
         super(ASM_notl, self).__init__() 
@@ -234,7 +240,7 @@ class ASM_notl( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "notl " + str(self.op)
 
-
+# multiplication
 class ASM_imull( ASM_instruction ):
     def __init__( self, left, right ):
         super(ASM_imull, self).__init__() 
@@ -247,7 +253,7 @@ class ASM_imull( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "imull " + str(self.left) + ", " + str(self.right)
 
-
+# function call
 class ASM_call( ASM_instruction ):
     def __init__( self, name ):
         super(ASM_call, self).__init__() 
@@ -257,7 +263,7 @@ class ASM_call( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "call " + str(self.name)
 
-
+# return
 class ASM_ret( ASM_instruction ):
     def __init__( self ):
         super(ASM_ret, self).__init__() 
@@ -265,7 +271,7 @@ class ASM_ret( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "ret"
 
-
+# leave
 class ASM_leave( ASM_instruction ):
     def __init__( self ):
         super(ASM_leave, self).__init__() 
@@ -273,7 +279,7 @@ class ASM_leave( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "leave"
 
-
+# shift left
 class ASM_shll( ASM_instruction ):
     def __init__( self, left, right ):
         super(ASM_shll, self).__init__() 
@@ -286,7 +292,7 @@ class ASM_shll( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "shll " + str(self.left) + ", " + str(self.right)
 
-
+# shift right
 class ASM_shrl( ASM_instruction ):
     def __init__( self, left, right ):
         super(ASM_shrl, self).__init__() 
@@ -301,6 +307,7 @@ class ASM_shrl( ASM_instruction ):
 
 
 ## P0 compiler implementation
+#############################
 class Engine( object ):
     def __init__( self, filepath=None, DEBUG=False, PSEUDO=False ):
         self.DEBUGMODE = DEBUG
@@ -342,52 +349,14 @@ class Engine( object ):
         self.flat_ast = self.flatten_ast( self.ast )
         self.expr_list = self.flatten_ast_2_list( self.flat_ast, [] )
 
-
-    def stack_lookup( self, nam ):
-        if nam not in self.asmlist_stack:
-            ## var is new - add, then return pos
-            new_elem = ASM_stack(0 - self.asmlist_mem, self.reg_list['ebp'])
-            self.asmlist_mem += 4
-            self.asmlist_stack.update({nam:new_elem})
-        ## return stack object containing the stack pos
-        return self.asmlist_stack[nam]
-
-
-    def vartable_lookup( self, nam ):
-        if nam not in self.asmlist_vartable:
-            ## var is new - add, then return pos
-            new_elem = ASM_v_register( nam )
-            self.asmlist_vartable.update({nam:new_elem})
-        ## return stack object containing the stack pos
-        return self.asmlist_vartable[nam]
-
-    def lookup( self, nam ):
-        if not self.PSEUDO:
-            elem = self.stack_lookup( nam )
-        else:
-            elem = self.vartable_lookup( nam )
-        return elem
-
     def check_plain_integer( self, val ):
         if type( val ) is not int:
             die( "ERROR: syntax error, no plain integer allowed" )
         return val
 
-    def print_asm( self, expr_lst ):
-        self.DEBUG('\n\n\n')
-        for expr in expr_lst:
-            print str( expr )
 
-    def flatten_ast_add_assign( self, expr ):
-        self.var_counter += 1
-        name = self.tempvar + str(self.var_counter)
-        nodes = compiler.ast.AssName(name, 'OP_ASSIGN')
-        self.flat_ast.append(compiler.ast.Assign([nodes], expr))
-        self.DEBUG( "\t\t\tnew statement node: append Assign" + str( name ) )
-        return name
-
-
-    ## part 1: flatten AST
+    ## generate flatten AST
+    #######################
     def flatten_ast( self, node ):
         if isinstance( node, compiler.ast.Module):
             self.DEBUG( "Module" )
@@ -546,10 +515,18 @@ class Engine( object ):
         else:
             die( "unknown AST node" )
 
+    ## helper for flatten_ast
+    def flatten_ast_add_assign( self, expr ):
+        self.var_counter += 1
+        name = self.tempvar + str(self.var_counter)
+        nodes = compiler.ast.AssName(name, 'OP_ASSIGN')
+        self.flat_ast.append(compiler.ast.Assign([nodes], expr))
+        self.DEBUG( "\t\t\tnew statement node: append Assign" + str( name ) )
+        return name
 
 
-
-    ## part 2: convert the flattened AST into a list of ASM expressions
+    ## convert the flattened AST into a list of ASM expressions
+    ###########################################################
     def flatten_ast_2_list( self, nd, asm_lst ):
         if isinstance( nd, compiler.ast.Module ):
             self.DEBUG( "Module" )
@@ -736,24 +713,19 @@ class Engine( object ):
 
         elif isinstance( nd, compiler.ast.Assign ):
             self.DEBUG( "Assign" )
-
-            ## lhs is var
             nam = nd.nodes[0].name ## just consider the first assignement variable
-            lst = []
 
-            ## rhs is const
             if isinstance( nd.expr, compiler.ast.Const ):
                 self.expr_list.append( ASM_movl( ASM_immedeate(nd.expr.value), self.lookup( nam ) ) )
             elif isinstance( nd.expr, compiler.ast.Name ):
-                ## rhs is a var, in list
+                ## expr is a var, in list
                 if not self.PSEUDO:
                     self.expr_list.append( ASM_movl( self.stack_lookup( nd.expr.name ), self.reg_list['eax'] ) )
                     self.expr_list.append( ASM_movl( self.reg_list['eax'], self.stack_lookup( nam ) ) )
                 else:
                     self.expr_list.append( ASM_movl( self.vartable_lookup( nd.expr.name ), self.vartable_lookup( nam ) ) )
             else:
-                ## rhs is not const
-                ## else take %eax as default reg
+                ## expr is not const
                 op = self.flatten_ast_2_list( nd.expr, [] )
                 self.expr_list.append( ASM_movl( op, self.lookup( nam ) ) )
             return
@@ -800,6 +772,7 @@ class Engine( object ):
             self.DEBUG( "*** ELSE ***" )
             return []
 
+    ## helper for flatten_ast_2_list
     def init_stack_mem( self, mem ):
         ret_mem = 0 ## stack alloc
         if 0 < mem:
@@ -811,6 +784,32 @@ class Engine( object ):
             ret_mem = 16
         return ret_mem
 
+    def stack_lookup( self, nam ):
+        if nam not in self.asmlist_stack:
+            ## var is new -> add a new stack object to the dict
+            new_elem = ASM_stack(0 - self.asmlist_mem, self.reg_list['ebp'])
+            self.asmlist_mem += 4
+            self.asmlist_stack.update({nam:new_elem})
+        ## return stack object containing the stack pos
+        return self.asmlist_stack[nam]
+
+    def vartable_lookup( self, nam ):
+        if nam not in self.asmlist_vartable:
+            ## var is new -> add a new virtual register object to the dict
+            new_elem = ASM_v_register( nam )
+            self.asmlist_vartable.update({nam:new_elem})
+        ## return vartable object
+        return self.asmlist_vartable[nam]
+
+    def lookup( self, nam ):
+        if not self.PSEUDO:
+            elem = self.stack_lookup( nam )
+        else:
+            elem = self.vartable_lookup( nam )
+        return elem
+
+    ## liveness analysis
+    ####################
     def liveness (self):
         live = [[self.reg_list['eax']]]
         j = 0
@@ -822,18 +821,8 @@ class Engine( object ):
             j += 1
 
         return live
-    
-    def print_liveness ( self, live ):
-        j = len( self.expr_list )
-        for element in self.expr_list:
-            myStr = ""            
-            for item in live[j]:
-                myStr += str( item ) + " "
-            print "#live: " + myStr
-            print str( element )
-            j -= 1
-            
-            
+
+    ## helper for liveness   
     def sub_def_live( self, defi, live ):
         for oper1 in defi:
             for oper2 in live:  
@@ -851,8 +840,26 @@ class Engine( object ):
                 live.append( oper1 )
         return live
 
-    
+    ## print
+    ########
+    def print_asm( self, expr_lst ):
+        self.DEBUG('\n\n\n')
+        for expr in expr_lst:
+            print str( expr )
+
+    def print_liveness ( self, live ):
+        j = len( self.expr_list )
+        for element in self.expr_list:
+            myStr = ""            
+            for item in live[j]:
+                myStr += str( item ) + " "
+            print "#live: " + myStr
+            print str( element )
+            j -= 1
+
+ 
     ## debug
+    ########
     def DEBUG__print_ast( self ):
         return str( self.ast )
 
