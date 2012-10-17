@@ -322,7 +322,7 @@ class Engine( object ):
                 except SyntaxError:
                     die( "ERROR: invalid syntax in file '%s'" %filepath )
         self.var_counter = 0
-        self.tempvar = ".temp"
+        self.tempvar = "$temp"
 
         ## data structures
         self.flat_ast = []
