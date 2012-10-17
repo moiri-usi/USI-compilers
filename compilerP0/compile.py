@@ -571,8 +571,8 @@ class Engine( object ):
                 ret = self.reg_list['eax']
                 self.expr_list.append( ASM_addl( right, ret ) )
             else:
-                ret = right
-                self.expr_list.append( ASM_addl( left, ret ) )
+                ret = left
+                self.expr_list.append( ASM_addl( right, ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.Sub ):
@@ -586,8 +586,8 @@ class Engine( object ):
                 ret = self.reg_list['eax']
                 self.expr_list.append( ASM_subl( right, ret ) )
             else:
-                ret = right
-                self.expr_list.append( ASM_subl( left, ret ) )
+                ret = left
+                self.expr_list.append( ASM_subl( right, ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.Mul ):
@@ -601,8 +601,8 @@ class Engine( object ):
                 ret = self.reg_list['eax']
                 self.expr_list.append( ASM_imull( right, ret ) )
             else:
-                ret = right
-                self.expr_list.append( ASM_imull( left, ret ) )
+                ret = left
+                self.expr_list.append( ASM_imull( right, ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.Bitand ):
@@ -616,8 +616,8 @@ class Engine( object ):
                 ret = self.reg_list['eax']
                 self.expr_list.append( ASM_andl( right, ret ) )
             else:
-                ret = right
-                self.expr_list.append( ASM_andl( left, ret ) )
+                ret = left
+                self.expr_list.append( ASM_andl( right, ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.Bitor ):
@@ -631,8 +631,8 @@ class Engine( object ):
                 ret = self.reg_list['eax']
                 self.expr_list.append( ASM_orl( right, ret ) )
             else:
-                ret = right
-                self.expr_list.append( ASM_orl( left, ret ) )
+                ret = left
+                self.expr_list.append( ASM_orl( right, ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.Bitxor ):
@@ -646,8 +646,8 @@ class Engine( object ):
                 ret = self.reg_list['eax']
                 self.expr_list.append( ASM_xorl( right, ret ) )
             else:
-                ret = right
-                self.expr_list.append( ASM_xorl( left, ret ) )
+                ret = left
+                self.expr_list.append( ASM_xorl( right, ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.Invert ):
@@ -692,8 +692,8 @@ class Engine( object ):
                 ret = self.reg_list['eax']
                 self.expr_list.append( ASM_shll( ASM_register('cl'), ret ) )
             else:
-                self.expr_list.append( ASM_movl( left, self.reg_list['ecx'] ) )
-                ret = right
+                self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
+                ret = left
                 self.expr_list.append( ASM_shll( ASM_register('cl'), ret ) )
             return ret
 
@@ -711,8 +711,8 @@ class Engine( object ):
                 ret = self.reg_list['eax']
                 self.expr_list.append( ASM_shrl( ASM_register('cl'), ret ) )
             else:
-                self.expr_list.append( ASM_movl( left, self.reg_list['ecx'] ) )
-                ret = right
+                self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
+                ret = left
                 self.expr_list.append( ASM_shrl( ASM_register('cl'), ret ) )
             return ret
 

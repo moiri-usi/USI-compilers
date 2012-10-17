@@ -14,10 +14,24 @@
 ## compiles .s to .exe
 ## executes .exe
 
+PSEUDO=0
+SRC=in_x86.sh
+if [[ $1 == "-pseudo" ]]; then
+    PSEUDO=1
+    SRC=in_pseudo.sh
+fi
+
+source $SRC
+
 die(){ echo $@ && exit 1; }
 generate(){
     RES=0
-    python ./compile.py "./${1}.p0" > "./${1}.s" || RES=1
+    if [[ $PSEUDO -eq 1 ]]; then
+        echo main: > "./${1}.s"
+        python ./compile.py "./${1}.p0" -pseudo >> "./${1}.s" || RES=1
+    else
+        python ./compile.py "./${1}.p0" > "./${1}.s" || RES=1
+    fi
 }
 
 compile(){
@@ -30,8 +44,11 @@ execute()
     local tgt=$1
     local expected=$2
     RES=0
-    ret="$(./${tgt}.exe)"
-#    printf "${ret}\t\t"   
+    if [[ $PSEUDO -eq 1 ]]; then
+        ret="$(./x86interp.py ${tgt}.s)"
+    else
+        ret="$(./${tgt}.exe)"
+    fi
     if [[ "${ret}" == "${expected}" ]]; then
         return
     fi
@@ -55,15 +72,17 @@ tst()
             break
         fi
 
-        compile "${fnam}"
-        if [[ "${RES}" -eq 1 ]]; then
-            res="KAPUTT - compile"
-            break
+        if [[ $PSEUDO -ne 1 ]]; then
+            compile "${fnam}"
+            if [[ "${RES}" -eq 1 ]]; then
+                res="KAPUTT - compile"
+                break
+            fi
         fi
 
         execute "${fnam}" "${expect}" || res="KAPUTT - execute"
         if [[ "${RES}" -eq 1 ]]; then
-            res="KAPUTT - execute"
+            res="(${ret}/${expect}) KAPUTT - execute"
             break
         fi
         break
@@ -73,81 +92,6 @@ tst()
         [[ -f "./${item}" ]] && rm "./${item}"
     done
 }
-
-
-##
-
-
-lst=(
-## add
-    "x=0+0#0"
-    "x=2+0#2"
-    "x=2+3#5"
-    "x=2+3+4#9"
-    "x=2+3+4+5#14"
-
-## sub
-    "x=0-0#0"
-    "x=3-0#3"
-    "x=3-2#1"
-    "x=7-2-2#3"
-    "x=7-2-3-4#-2"
-
-## negl
-    "x=-1#-1"
-
-## unaryAdd
-    "x=+2#2"
-
-## mul
-    "x=0*0#0"
-    "x=1*0#0"
-    "x=2*3#6"
-    "x=2*3*4#24"
-    "x=2*3*4*5#120"
-
-## bitand
-    "x=0&0#0"
-    "x=1&0#0"
-    "x=1&1&0#0"
-    "x=1&1&1&0#0"
-    "x=1&1&1&1#1"
-    "x=1&0&1#0"
-    "x=1&0&1&1#0"
-
-## bitor
-    "x=1|0#1"
-    "x=1|1|0#1"
-    "x=1|1|1|0#1"
-    "x=0|0|0|0#0"
-    "x=0|1#1"
-    "x=0|0|1#1"
-    "x=0|0|0|1#1"
-
-## bitxor
-    "x=1^0#1"
-    "x=1^1#0"
-    "x=1^1^1#1"
-    "x=1^1^1^1#0"
-    "x=1^1^1^0#1"
-
-## invert
-    "x=~1#-2"
-
-## leftshift
-    "x=16<<2#64"
-    "x=7<<3#56"
-    "x=123<<7#15744"
-    "x=0<<5#0"
-    "x=1<<16#65536"
-
-## rightshift
-    "x=64>>2#16"
-    "x=64>>0#64"
-    "x=123>>7#0"
-    "x=123>>2#30"
-    "x=65536>>16#1"
-)
 
 #set -x   
 NUM=0
