@@ -35,6 +35,7 @@ def usage():
 ## ASM descriptor
 class ASM_label( object ):
     def __init__( self, name ):
+        self.DEBUG_type = "ASM_label"
         self.name = name
     def __str__( self ):
         return self.name + ":"
@@ -42,6 +43,7 @@ class ASM_label( object ):
 
 class ASM_text( object ):
     def __init__( self, text ):
+        self.DEBUG_type = "ASM_text"
         self.text = text
     def __str__( self ):
         return "        ." + self.text
@@ -199,7 +201,6 @@ class ASM_andl( ASM_instruction ):
 class ASM_orl( ASM_instruction ):
     def __init__( self, left, right ):
         super(ASM_orl, self).__init__() 
-        self.DEBUG_type = "ASM_andl"
         self.DEBUG_type = "ASM_orl"
         self.left = left
         self.right = right
@@ -810,51 +811,44 @@ class Engine( object ):
             ret_mem = 16
         return ret_mem
 
-#    def liveness( self, v_reg_list ):
-#        v_reg_live
-#        v_reg_use
-#        v_reg_def
-#        v_reg_live(i) = (v_reg_live(i+1) - v_reg_dev) + v_reg_use
-#        for i in range(v_reg_list.length, 0, -1):
-#            if isinstance( v_reg_list[i].use, ASM_v_register ):
-#                v_reg_use.append( v_reg_list[i].use )
-             
     def liveness (self):
-        live = [[]]
-        j=0
-        for i in range(len(self.expr_list)-1, 0, -1):
-            element = self.expr_list[i]
-            temp_live= self.sub_def_live(element.get_r_def(), live[j])
-            live.append(self.add_use_live(element.get_r_use(),temp_live))
+        live = [[self.reg_list['eax']]]
+        j = 0
+        for i in range( len(self.expr_list), 0, -1 ):
+            element = self.expr_list[i-1]
+            temp_live = self.sub_def_live( element.get_r_def(), list(live[j]) )
+            temp_live = self.add_use_live( element.get_r_use(), temp_live )
+            live.append( temp_live )
             j += 1
+
         return live
     
-    def print_liveness (self,live):
-        j=0
+    def print_liveness ( self, live ):
+        j = len( self.expr_list )
         for element in self.expr_list:
-            myStr=""            
+            myStr = ""            
             for item in live[j]:
-                myStr += str(item)+ " "
+                myStr += str( item ) + " "
             print "#live: " + myStr
-            print str(element)
-            j += 1
+            print str( element )
+            j -= 1
             
             
-    def sub_def_live(self,defi,live):
+    def sub_def_live( self, defi, live ):
         for oper1 in defi:
             for oper2 in live:  
                 if oper1.get_name() == oper2.get_name():
-                    live.remove(oper2)
+                    live.remove( oper2 )
         return live
 
-    def add_use_live (self, use,live):
+    def add_use_live (self, use, live ):
         save = True
         for oper1 in use:
             for oper2 in live:
                 if oper1.get_name() == oper2.get_name():
                     save = False
-            if save == True : 
-                live.append(oper1)
+            if save: 
+                live.append( oper1 )
         return live
 
     
@@ -869,7 +863,10 @@ class Engine( object ):
         tmp = ""
         for expr in self.expr_list:
             if 0 != len( tmp ): tmp += " "
-            tmp += str( expr.print_debug() )
+            try:
+                tmp += expr.DEBUG_type
+            except:
+                tmp += " Elem"
         return tmp
 
     def DEBUG( self, text ):
