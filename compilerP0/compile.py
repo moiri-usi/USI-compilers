@@ -322,7 +322,7 @@ class Engine( object ):
                 except SyntaxError:
                     die( "ERROR: invalid syntax in file '%s'" %filepath )
         self.var_counter = 0
-        self.tempvar = "$temp"
+        self.tempvar = ".temp"
 
         ## data structures
         self.flat_ast = []
@@ -389,7 +389,8 @@ class Engine( object ):
 
         elif isinstance(node, compiler.ast.Const):
             self.DEBUG( "Const" )
-            return compiler.ast.Name( self.flatten_ast_add_assign( compiler.ast.Const(node.value) ) )
+            val = self.check_plain_integer(node.value)
+            return compiler.ast.Name( self.flatten_ast_add_assign( compiler.ast.Const(val) ) )
 
         elif isinstance(node, compiler.ast.Discard):
             self.DEBUG( "Discard" )
@@ -423,7 +424,10 @@ class Engine( object ):
         elif isinstance( node, compiler.ast.Printnl ):
             self.DEBUG( "Printnl" )
             ## create a CallFunc AST with name 'print'
-            expr = compiler.ast.CallFunc(compiler.ast.Name('print_int_nl'), [self.flatten_ast( node.nodes[0] ) ])
+            attr = []
+            if len(node.nodes) is not 0:
+                attr = [self.flatten_ast( node.nodes[0] )]
+            expr = compiler.ast.CallFunc(compiler.ast.Name('print_int_nl'), attr )
             self.flatten_ast_add_assign( expr )
             ## returns nothing because print has no return value
             return
@@ -808,10 +812,12 @@ class Engine( object ):
             elem = self.vartable_lookup( nam )
         return elem
 
+
     ## liveness analysis
     ####################
     def liveness (self):
-        live = [[self.reg_list['eax']]]
+        # live = [[self.reg_list['eax']]]
+        live = [[]]
         j = 0
         for i in range( len(self.expr_list), 0, -1 ):
             element = self.expr_list[i-1]
@@ -839,6 +845,13 @@ class Engine( object ):
             if save: 
                 live.append( oper1 )
         return live
+    
+    def concat_live( self, live_elems ):
+        my_live_str = "#live: "
+        for item in live_elems:
+            my_live_str += str( item ) + " "
+        return my_live_str
+
 
     ## print
     ########
@@ -850,12 +863,10 @@ class Engine( object ):
     def print_liveness ( self, live ):
         j = len( self.expr_list )
         for element in self.expr_list:
-            myStr = ""            
-            for item in live[j]:
-                myStr += str( item ) + " "
-            print "#live: " + myStr
+            print self.concat_live( live[j] )
             print str( element )
             j -= 1
+        print self.concat_live( live[j] )
 
  
     ## debug
@@ -880,21 +891,16 @@ class Engine( object ):
         if self.DEBUGMODE: print "\t\t%s" % str( text )
 
 
-
 ## start
-
-
 if 1 <= len( sys.argv[1:] ):
-    DEBUG = True if 1 < len( sys.argv[1:]) and  sys.argv[2] == "DEBUG" else False
+    DEBUG = True if 1 < len( sys.argv[1:]) and "DEBUG" in sys.argv else False
     PSEUDO = True if 1 < len( sys.argv[1:]) and "-pseudo" in sys.argv else False
     LIVENESS = True if 1 < len( sys.argv[1:]) and "-liveness" in sys.argv else False
     if LIVENESS is True:
         PSEUDO = True
         
-    
     compl = Engine( sys.argv[1], DEBUG, PSEUDO )
     compl.compileme()
-        
     
     if DEBUG == True:
         print "AST:"
