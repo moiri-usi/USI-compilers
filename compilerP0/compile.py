@@ -557,22 +557,24 @@ class Engine( object ):
 
         elif isinstance( nd, compiler.ast.Stmt ):
             self.DEBUG( "Stmt" )
-            ## asm prolog
-            self.expr_list.append( ASM_text("text") )
-            self.expr_list.append( ASM_label("LC0") )
-            self.expr_list.append( ASM_text("ascii \"Hello World!\"") )
-            self.expr_list.append( ASM_text("globl main") )
-            self.expr_list.append( ASM_label("main") )
-            self.expr_list.append( ASM_pushl( self.reg_list['ebp'] ) )
-            self.expr_list.append( ASM_movl( self.reg_list['esp'], self.reg_list['ebp'] ) )
-            self.expr_list.append( ASM_subl( ASM_immedeate( self.init_stack_mem(0) ), self.reg_list['esp'] ) )
+            if not self.PSEUDO:
+                ## asm prolog
+                self.expr_list.append( ASM_text("text") )
+                self.expr_list.append( ASM_label("LC0") )
+                self.expr_list.append( ASM_text("ascii \"Hello World!\"") )
+                self.expr_list.append( ASM_text("globl main") )
+                self.expr_list.append( ASM_label("main") )
+                self.expr_list.append( ASM_pushl( self.reg_list['ebp'] ) )
+                self.expr_list.append( ASM_movl( self.reg_list['esp'], self.reg_list['ebp'] ) )
+                self.expr_list.append( ASM_subl( ASM_immedeate( self.init_stack_mem(0) ), self.reg_list['esp'] ) )
             ## program
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, [] )
-            ## asm epilog
-            self.expr_list.append( ASM_movl( ASM_stack( 0, self.reg_list['ebp'] ), self.reg_list['eax'] ) )
-            self.expr_list.append( ASM_leave() )
-            self.expr_list.append( ASM_ret() )
+            if not self.PSEUDO:
+                ## asm epilog
+                self.expr_list.append( ASM_movl( ASM_stack( 0, self.reg_list['ebp'] ), self.reg_list['eax'] ) )
+                self.expr_list.append( ASM_leave() )
+                self.expr_list.append( ASM_ret() )
             return
 
         elif isinstance( nd, compiler.ast.Add ):
@@ -817,7 +819,45 @@ class Engine( object ):
 #            if isinstance( v_reg_list[i].use, ASM_v_register ):
 #                v_reg_use.append( v_reg_list[i].use )
              
+    def liveness (self):
+        live = [[]]
+        j=0
+        for i in range(len(self.expr_list)-1, 0, -1):
+            element = self.expr_list[i]
+            temp_live= self.sub_def_live(element.get_r_def(), live[j])
+            live.append(self.add_use_live(element.get_r_use(),temp_live))
+            j += 1
+        return live
+    
+    def print_liveness (self,live):
+        j=0
+        for element in self.expr_list:
+            myStr=""            
+            for item in live[j]:
+                myStr += str(item)+ " "
+            print "#live: " + myStr
+            print str(element)
+            j += 1
+            
+            
+    def sub_def_live(self,defi,live):
+        for oper1 in defi:
+            for oper2 in live:  
+                if oper1.get_name() == oper2.get_name():
+                    live.remove(oper2)
+        return live
 
+    def add_use_live (self, use,live):
+        save = True
+        for oper1 in use:
+            for oper2 in live:
+                if oper1.get_name() == oper2.get_name():
+                    save = False
+            if save == True : 
+                live.append(oper1)
+        return live
+
+    
     ## debug
     def DEBUG__print_ast( self ):
         return str( self.ast )
@@ -843,10 +883,15 @@ class Engine( object ):
 if 1 <= len( sys.argv[1:] ):
     DEBUG = True if 1 < len( sys.argv[1:]) and  sys.argv[2] == "DEBUG" else False
     PSEUDO = True if 1 < len( sys.argv[1:]) and "-pseudo" in sys.argv else False
-
+    LIVENESS = True if 1 < len( sys.argv[1:]) and "-liveness" in sys.argv else False
+    if LIVENESS is True:
+        PSEUDO = True
+        
+    
     compl = Engine( sys.argv[1], DEBUG, PSEUDO )
     compl.compileme()
-
+        
+    
     if DEBUG == True:
         print "AST:"
         print compl.DEBUG__print_ast( )
@@ -868,7 +913,9 @@ if 1 <= len( sys.argv[1:] ):
 
         print "asmlist_mem '%d'" % compl.asmlist_mem
 
-##
-    compl.print_asm( compl.expr_list )
+    if LIVENESS:
+        compl.print_liveness(compl.liveness())
+    else:
+        compl.print_asm( compl.expr_list )
 else:
     usage()
