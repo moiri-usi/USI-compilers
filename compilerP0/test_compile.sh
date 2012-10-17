@@ -1,8 +1,8 @@
 #!/bin/bash
 ##
-## Lothar Rubusch
-## Simon Maurer
 ## Josafat Piraquive
+## Simon Maurer
+## (Lothar Rubusch) contributer for prior steps of the project
 ##
 ##
 ##

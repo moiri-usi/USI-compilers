@@ -3,7 +3,7 @@
 #
 # Josafat Piraquive
 # Simon Maurer
-# Lothar Rubusch
+# (Lothar Rubusch) contributer for prior steps of the project
 
 """
 USAGE:
