@@ -440,7 +440,8 @@ class Engine( object ):
 
         elif isinstance( node, compiler.ast.UnaryAdd ):
             self.DEBUG( "UnaryAdd" )
-            expr = compiler.ast.UnaryAdd(self.flatten_ast(node.expr))
+            ## ignore UnaryAdd node and use only its content
+            expr = self.flatten_ast(node.expr)
             new_varname = self.flatten_ast_add_assign( expr )
             return compiler.ast.Name(new_varname)
 
@@ -756,12 +757,7 @@ class Engine( object ):
             self.DEBUG( "Name" )
             ## handled by higher node
             return []
-# 
-#         elif isinstance( nd, compiler.ast.UnaryAdd ):
-#             self.DEBUG( "UnaryAdd" )
-#             ## treat as transparent
-#             return self.flatten_ast_2_list( nd.getChildren()[0], [] )
-# 
+ 
         elif isinstance( nd, compiler.ast.Const ):
             ## handled by higher node
             self.DEBUG( "Const" )
