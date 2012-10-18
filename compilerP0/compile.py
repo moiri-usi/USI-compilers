@@ -915,22 +915,9 @@ class Engine( object ):
         return my_live_str
 
 
-    ## print
-    ########
-    def print_asm( self, expr_lst ):
-        self.DEBUG('\n\n\n')
-        for expr in expr_lst:
-            print str( expr )
-
-    def print_liveness( self, live ):
-        j = len( self.expr_list )
-        for element in self.expr_list:
-            print self.concat_live( live[j] )
-            print str( element )
-            j -= 1
-        print self.concat_live( live[j] )
-
-    def print_ig( self, live ):
+    ## coloring
+    ###########
+    def create_ig( self, live ):
         ig = Graph()
         node_list = {}
         edge_list = []
@@ -947,6 +934,25 @@ class Engine( object ):
                         edge = Edge( _edge )
                         edge_list.append( _edge )
                         ig.add_edge( edge )
+        return ig
+
+
+    ## print
+    ########
+    def print_asm( self, expr_lst ):
+        self.DEBUG('\n\n\n')
+        for expr in expr_lst:
+            print str( expr )
+
+    def print_liveness( self, live ):
+        j = len( self.expr_list )
+        for element in self.expr_list:
+            print self.concat_live( live[j] )
+            print str( element )
+            j -= 1
+        print self.concat_live( live[j] )
+
+    def print_ig( self, ig ):
         print str(ig)
 
 
@@ -1014,9 +1020,9 @@ if 1 <= len( sys.argv[1:] ):
         print "asmlist_mem '%d'" % compl.asmlist_mem
 
     if LIVENESS:
-        compl.print_liveness(compl.liveness())
+        compl.print_liveness( compl.liveness() )
     elif IG:
-        compl.print_ig(compl.liveness())
+        compl.print_ig( compl.create_ig( compl.liveness() ) )
     else:
         compl.print_asm( compl.expr_list )
 else:
