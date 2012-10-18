@@ -308,6 +308,7 @@ class ASM_shrl( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "shrl " + str(self.left) + ", " + str(self.right)
 
+
 ## interference graph classes
 #############################
 class Graph( object ):
@@ -326,12 +327,21 @@ class Graph( object ):
     def __str__( self ):
         ident = "    "
         dot = "graph ig {\n"
-        for edge in self.edges:
-            dot += ident + str(edge)
         for node in self.nodes:
+            ## print nodes that are not connected
+            print_node = True
+            for edge in self.edges:
+                if node in edge.get_content():
+                    print_node = False
+            if print_node:
+                dot += ident + str(node)
+            ## print node attributes
             node_attr = node.get_dot_attr()
             if node_attr is not "":
                 dot += ident + node.get_dot_attr()
+        ## print edges
+        for edge in self.edges:
+            dot += ident + str(edge)
         dot += "}"
         return dot
 
@@ -343,29 +353,33 @@ class Node( object ):
         return self.content
     def get_color( self ):
         return self.color
+    def get_name( self ):
+        node_name = self.content.get_name()
+        return node_name.replace( '$', '' )
     def set_color( self, color ):
-        self.reg = color
-    def __str__( self ):
-        return self.content.get_name()
+        self.color = color
     def get_dot_attr( self ):
         ret = ""
         if (self.color is not None) and isinstance( self.content, ASM_v_register ):
-            ret = self.content.get_name() + " [label=\"" + self.content.get_name() + " [" + self.color.get_name() + "]\", color=\"" + self.color.get_color() + "\"]\n"
+            ret = self.get_name() + " [label=\"" + self.get_name() + " [" + self.color.get_name() + "]\", color=\"" + self.color.get_color() + "\"];\n"
         elif (self.color is not None) and isinstance( self.content, ASM_register ):
-            ret = self.content.get_name() + " [color=\"" + self.color.get_color() + "\"]\n"
+            ret = self.get_name() + " [color=\"" + self.color.get_color() + "\"];\n"
         return ret
+    def __str__( self ):
+        return self.get_name() + ";\n"
 
 class Edge( object ):
     def __init__( self, content ):
         self.content = content
+    def get_content( self ):
+        return self.content
     def __str__( self ):
         edge_str = ""
         for node in self.content:
-            edge_str += "- " + str(node) + " -"
+            edge_str += "- " + node.get_name() + " -"
         edge_str = edge_str.strip("- ")
         edge_str += ";\n"
-        return edge_str
-    
+        return edge_str 
 
 
 ## P0 compiler implementation
@@ -384,7 +398,7 @@ class Engine( object ):
                 except SyntaxError:
                     die( "ERROR: invalid syntax in file '%s'" %filepath )
         self.var_counter = 0
-        self.tempvar = "temp"
+        self.tempvar = "temp$"
 
         ## data structures
         self.flat_ast = []
@@ -922,15 +936,17 @@ class Engine( object ):
         node_list = {}
         edge_list = []
         for _nodes in live:
+            ## create nodes
             for _node in _nodes:
                 if _node.get_name() not in node_list:
                     node = Node( _node )
                     node_list.update( {_node.get_name():node} )
                     ig.add_node( node )
+            ## create edges
             for _node in _nodes:
                 for __node in _nodes:
                     _edge = set([node_list[_node.get_name()], node_list[__node.get_name()]])
-                    if _edge not in edge_list:
+                    if (len(_edge) is 2) and (_edge not in edge_list):
                         edge = Edge( _edge )
                         edge_list.append( _edge )
                         ig.add_edge( edge )
