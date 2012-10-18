@@ -54,12 +54,15 @@ class ASM_text( object ):
 
 # register of X86 (%eax, %ebx, etc...)
 class ASM_register( object ):
-    def __init__( self, name, caller=True ):
+    def __init__( self, name, caller=True, color='white' ):
         self.name = name
+        self.color = color
         self.caller = caller
     def get_name( self ):
         return self.name
-    def is_caller(self):
+    def get_color( self ):
+        return self.color
+    def is_caller( self ):
         return self.caller
     def __str__( self ):
         return "%" + self.name
@@ -305,6 +308,65 @@ class ASM_shrl( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "shrl " + str(self.left) + ", " + str(self.right)
 
+## interference graph classes
+#############################
+class Graph( object ):
+    def __init__( self ):
+        self.nodes = set([])
+        self.edges = set([])
+    def add_node( self, node ):
+        self.nodes.add( node )
+    def rm_node( self, node ):
+        self.nodes.remove( node )
+        for edge in self.edges:
+            if node in edge:
+                self.edges.remove( edge )
+    def add_edge( self, edge ):
+        self.edges.add( edge )
+    def __str__( self ):
+        ident = "    "
+        dot = "graph ig {\n"
+        for edge in self.edges:
+            dot += ident + str(edge)
+        for node in self.nodes:
+            node_attr = node.get_dot_attr()
+            if node_attr is not "":
+                dot += ident + node.get_dot_attr()
+        dot += "}"
+        return dot
+
+class Node( object ):
+    def __init__( self, content, color=None ):
+        self.content = content
+        self.color = color
+    def get_content( self ):
+        return self.content
+    def get_color( self ):
+        return self.color
+    def set_color( self, color ):
+        self.reg = color
+    def __str__( self ):
+        return self.content.get_name()
+    def get_dot_attr( self ):
+        ret = ""
+        if (self.color is not None) and isinstance( self.content, ASM_v_register ):
+            ret = self.content.get_name() + " [label=\"" + self.content.get_name() + " [" + self.color.get_name() + "]\", color=\"" + self.color.get_color() + "\"]\n"
+        elif (self.color is not None) and isinstance( self.content, ASM_register ):
+            ret = self.content.get_name() + " [color=\"" + self.color.get_color() + "\"]\n"
+        return ret
+
+class Edge( object ):
+    def __init__( self, content ):
+        self.content = content
+    def __str__( self ):
+        edge_str = ""
+        for node in self.content:
+            edge_str += "- " + str(node) + " -"
+        edge_str = edge_str.strip("- ")
+        edge_str += ";\n"
+        return edge_str
+    
+
 
 ## P0 compiler implementation
 #############################
@@ -322,16 +384,16 @@ class Engine( object ):
                 except SyntaxError:
                     die( "ERROR: invalid syntax in file '%s'" %filepath )
         self.var_counter = 0
-        self.tempvar = "temp$"
+        self.tempvar = "temp"
 
         ## data structures
         self.flat_ast = []
         self.expr_list = []
         self.reg_list = {
-            'eax':ASM_register('eax'),
+            'eax':ASM_register('eax', True, 'red'),
             'ebx':ASM_register('ebx', False),
-            'ecx':ASM_register('ecx'),
-            'edx':ASM_register('edx'),
+            'ecx':ASM_register('ecx', True, 'blue'),
+            'edx':ASM_register('edx', True, 'green'),
             'edi':ASM_register('edi', False),
             'esi':ASM_register('esi', False),
             'ebp':ASM_register('ebp'),
@@ -845,7 +907,7 @@ class Engine( object ):
             if save: 
                 live.append( oper1 )
         return live
-    
+
     def concat_live( self, live_elems ):
         my_live_str = "#live: "
         for item in live_elems:
@@ -860,7 +922,7 @@ class Engine( object ):
         for expr in expr_lst:
             print str( expr )
 
-    def print_liveness ( self, live ):
+    def print_liveness( self, live ):
         j = len( self.expr_list )
         for element in self.expr_list:
             print self.concat_live( live[j] )
@@ -868,7 +930,26 @@ class Engine( object ):
             j -= 1
         print self.concat_live( live[j] )
 
- 
+    def print_ig( self, live ):
+        ig = Graph()
+        node_list = {}
+        edge_list = []
+        for _nodes in live:
+            for _node in _nodes:
+                if _node.get_name() not in node_list:
+                    node = Node( _node )
+                    node_list.update( {_node.get_name():node} )
+                    ig.add_node( node )
+            for _node in _nodes:
+                for __node in _nodes:
+                    _edge = set([node_list[_node.get_name()], node_list[__node.get_name()]])
+                    if _edge not in edge_list:
+                        edge = Edge( _edge )
+                        edge_list.append( _edge )
+                        ig.add_edge( edge )
+        print str(ig)
+
+
     ## debug
     ########
     def DEBUG__print_ast( self ):
@@ -896,17 +977,21 @@ if 1 <= len( sys.argv[1:] ):
     DEBUG = False
     PSEUDO = False
     LIVENESS = False
-    if 1 < len( sys.argv[1:]) and "DEBUG" in sys.argv:
+    IG = False
+    if 1 < len( sys.argv[1:] ) and "DEBUG" in sys.argv:
         DEBUG = True 
-    if 1 < len( sys.argv[1:]) and "-pseudo" in sys.argv:
+    if 1 < len( sys.argv[1:] ) and "-pseudo" in sys.argv:
         PSEUDO = True
-    if 1 < len( sys.argv[1:]) and "-liveness" in sys.argv:
+    if 1 < len( sys.argv[1:] ) and "-liveness" in sys.argv:
         LIVENESS = True
         PSEUDO = True
-        
+    if 1 < len( sys.argv[1:] ) and "-ig" in sys.argv:
+        IG = True
+        PSEUDO = True
+ 
     compl = Engine( sys.argv[1], DEBUG, PSEUDO )
     compl.compileme()
-    
+
     if DEBUG == True:
         print "AST:"
         print compl.DEBUG__print_ast( )
@@ -930,6 +1015,8 @@ if 1 <= len( sys.argv[1:] ):
 
     if LIVENESS:
         compl.print_liveness(compl.liveness())
+    elif IG:
+        compl.print_ig(compl.liveness())
     else:
         compl.print_asm( compl.expr_list )
 else:
