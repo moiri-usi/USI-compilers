@@ -146,6 +146,15 @@ class X86Interpreter(object):
       elif r.opc == 'negl' or r.opc == 'neg':
         r.args[0].write(-r.args[0].read())
         return eip + 1
+      elif r.opc == 'andl':
+        r.args[1].write(r.args[1].read() & r.args[0].read())
+        return eip + 1
+      elif r.opc == 'orl':
+        r.args[1].write(r.args[1].read() | r.args[0].read())
+        return eip + 1
+      elif r.opc == 'xorl':
+        r.args[1].write(r.args[1].read() ^ r.args[0].read())
+        return eip + 1
       elif r.opc == 'subl' or r.opc == 'sub':
         r.args[1].write(r.args[1].read() - r.args[0].read())
         return eip + 1
