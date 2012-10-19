@@ -994,6 +994,10 @@ class Engine( object ):
                         ig.add_edge( edge )
         return ig
 
+    def color_ig( self, ig ):
+        pass
+        #node.ste_color( self.reg_list['eax'] )
+
 
     ## print
     ########
