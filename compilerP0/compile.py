@@ -122,16 +122,22 @@ class ASM_instruction( object ):
         self.inst_ident = "        "
         self.r_use = []
         self.r_def = []
+        self.r_ignore = []
     def get_r_use( self ):
         return self.r_use
     def get_r_def( self ):
         return self.r_def
+    def get_r_ignore( self ):
+        return self.r_ignore
     def set_r_use( self, var ):
         if isinstance( var, ASM_v_register ) or isinstance( var, ASM_register ):
-            self.r_use.append( var )
+            self.r_use.append( Live( var ) )
     def set_r_def( self, var ):
         if isinstance( var, ASM_v_register ) or isinstance( var, ASM_register ):
-            self.r_def.append( var )
+            self.r_def.append( Live( var ) )
+    def set_r_ignore( self, var ):
+        if isinstance( var, ASM_register ):
+            self.r_ignore.append( Live( var, True ) )
     def print_debug( self ):
         return self.DEBUG_type
 
@@ -262,7 +268,6 @@ class ASM_call( ASM_instruction ):
         super(ASM_call, self).__init__() 
         self.DEBUG_type = "ASM_call"
         self.name = name
-        self.set_r_def( ASM_register('eax') )
     def __str__( self ):
         return self.inst_ident + "call " + str(self.name)
 
@@ -307,6 +312,22 @@ class ASM_shrl( ASM_instruction ):
         self.set_r_use( right )
     def __str__( self ):
         return self.inst_ident + "shrl " + str(self.left) + ", " + str(self.right)
+
+## liveness object
+##################
+class Live( object ):
+    def __init__( self, content, ignore=False ):
+        self.content = content
+        self.ignore = ignore ## used for special handling of registers (i.e. call)
+    def get_content( self ):
+        return self.content
+    def is_ignore( self ):
+        return self.ignore
+    def __str__( self ):
+        ret = ""
+        if not self.ignore:
+            ret = str( self.content )
+        return ret
 
 
 ## interference graph classes
@@ -821,7 +842,12 @@ class Engine( object ):
                     self.expr_list.append( ASM_movl( self.reg_list['eax'], ASM_stack(0, self.reg_list['esp']) ) )
                 else:
                     self.expr_list.append( ASM_movl( self.lookup( nd.args[0].name), ASM_stack(0, self.reg_list['esp']) ) )
-            self.expr_list.append( ASM_call(nd.node.name) )
+            myCallObj = ASM_call( nd.node.name )
+            myCallObj.set_r_def( self.reg_list['eax'] )
+            myCallObj.set_r_ignore( self.reg_list['eax'] )
+            myCallObj.set_r_ignore( self.reg_list['ecx'] )
+            myCallObj.set_r_ignore( self.reg_list['edx'] )
+            self.expr_list.append( myCallObj )
             return self.reg_list['eax']
 
         elif isinstance( nd, compiler.ast.Discard ):
@@ -895,37 +921,50 @@ class Engine( object ):
         # live = [[self.reg_list['eax']]]
         live = [[]]
         j = 0
+        last_ignores = []
+        remove_ignores = False
         for i in range( len(self.expr_list), 0, -1 ):
             element = self.expr_list[i-1]
             temp_live = self.sub_def_live( element.get_r_def(), list(live[j]) )
             temp_live = self.add_use_live( element.get_r_use(), temp_live )
+            if remove_ignores: ## the iteration before added no ignore elements
+                temp_live = self.sub_def_live( last_ignores, temp_live )
+                remove_ignores = False
+            if ( len( temp_live ) > 0 and len( element.get_r_ignore() ) > 0 ):
+                ## the actual live element has live variables and the asm
+                ## instruction has some special register handling
+                temp_live = self.add_use_live( element.get_r_ignore(), temp_live )
+                remove_ignores = True
+                last_ignores = element.get_r_ignore()
             live.append( temp_live )
             j += 1
-
         return live
 
     ## helper for liveness   
     def sub_def_live( self, defi, live ):
         for oper1 in defi:
-            for oper2 in live:  
-                if oper1.get_name() == oper2.get_name():
+            for oper2 in live:
+                if oper1.get_content().get_name() == oper2.get_content().get_name():
                     live.remove( oper2 )
         return live
 
-    def add_use_live (self, use, live ):
+    def add_use_live ( self, use, live ):
         save = True
         for oper1 in use:
             for oper2 in live:
-                if oper1.get_name() == oper2.get_name():
+                if oper1.get_content().get_name() == oper2.get_content().get_name():
                     save = False
-            if save: 
+            if save:
                 live.append( oper1 )
         return live
 
     def concat_live( self, live_elems ):
         my_live_str = "#live: "
         for item in live_elems:
-            my_live_str += str( item ) + " "
+            if not item.is_ignore():
+                ## only print 'ususal' live elements
+                ## (ignore the special cases e.g. with call)
+                my_live_str += str( item ) + " "
         return my_live_str
 
 
@@ -935,20 +974,23 @@ class Engine( object ):
         ig = Graph()
         node_list = {}
         edge_list = []
-        for _nodes in live:
+        for registers in live:
             ## create nodes
-            for _node in _nodes:
-                if _node.get_name() not in node_list:
-                    node = Node( _node )
-                    node_list.update( {_node.get_name():node} )
+            for reg_live in registers:
+                reg = reg_live.get_content()
+                if reg.get_name() not in node_list:
+                    node = Node( reg )
+                    node_list.update( {reg.get_name():node} )
                     ig.add_node( node )
             ## create edges
-            for _node in _nodes:
-                for __node in _nodes:
-                    _edge = set([node_list[_node.get_name()], node_list[__node.get_name()]])
-                    if (len(_edge) is 2) and (_edge not in edge_list):
-                        edge = Edge( _edge )
-                        edge_list.append( _edge )
+            for reg_live1 in registers:
+                reg1 = reg_live1.get_content()
+                for reg_live2 in registers:
+                    reg2 = reg_live2.get_content()
+                    node_pair = set([node_list[reg1.get_name()], node_list[reg2.get_name()]])
+                    if (len(node_pair) is 2) and (node_pair not in edge_list):
+                        edge_list.append( node_pair )
+                        edge = Edge( node_pair )
                         ig.add_edge( edge )
         return ig
 
