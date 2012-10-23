@@ -16,6 +16,7 @@ $ python ./test_interp.py
 import sys
 import os.path
 import compiler
+import copy
 
 ## auxiliary
 def die( meng ):
@@ -72,12 +73,24 @@ class ASM_v_register( object ):
     def __init__( self, name, spilled=False ):
         self.name = name
         self.spilled = spilled
+        self.new = False
+        self.spilled_name = None
     def get_name( self ):
         return self.name
     def is_spilled( self ):
         return self.spilled
+    def set_spilled( self, spilled ):
+        self.spilled = spilled
+    def is_new( self ):
+        return self.new
+    def set_new( self, new_val ):
+        self.new = new_val
+    def get_spilled_name( self ):
+        return self.spilled_name
+    def set_spilled_name( self, name ):
+        self.spilled_name = name
     def __str__( self ):
-        return self.name;
+        return self.name
 
 # object indicating the stack position
 class ASM_stack( object ):
@@ -334,42 +347,80 @@ class Live( object ):
 #############################
 class Graph( object ):
     def __init__( self ):
-        self.nodes = set([])
+        self.nodes = {}
         self.edges = set([])
+        self.constraint_list = None
     def add_node( self, node ):
-        self.nodes.add( node )
+        if node.get_name() not in self.nodes:
+            self.nodes.update( {node.get_name():node} )
     def rm_node( self, node ):
-        self.nodes.remove( node )
-        for edge in self.edges:
-            if node in edge:
+        del self.nodes[node.get_name()]
+        for edge in list(self.edges):
+            if node in edge.get_content():
                 self.edges.remove( edge )
+        del self.constraint_list[node.get_name()]
+        return len(self.constraint_list)
+    def get_nodes( self ):
+        return self.nodes
+    def get_edges( self ):
+        return self.edges
+    def get_constraint_list( self ):
+        return self.constraint_list
+    def set_nodes( self, nodes ):
+        self.nodes = nodes
+    def set_edges( self, edges ):
+        self.edges = edges
     def add_edge( self, edge ):
         self.edges.add( edge )
+    def set_constraint_list( self, constraint_list ):
+        self.constraint_list = constraint_list
+    def get_most_constraint_node( self ):
+        highest_node_cnt = -1
+        most_constraint_node = None
+        for node_name in self.constraint_list:
+            #print "HIGHEST_NODE: " + str(highest_node_cnt) + " LIST: " + str(self.constraint_list[node_name])
+            if highest_node_cnt < self.constraint_list[node_name]:
+                highest_node_cnt = self.constraint_list[node_name]
+                most_constraint_node = node_name
+        #print "-HIGHEST_NODE: " + str(highest_node_cnt) + " LIST: " + str(most_constraint_node)
+        if most_constraint_node == None:
+            return None
+        del self.constraint_list[most_constraint_node]
+        return self.nodes[most_constraint_node]
+    def get_connected_nodes( self, compair_node ):
+        connected_nodes = []
+        for edge in self.edges:
+            if compair_node in edge.get_content():
+                for node in edge.get_content():
+                    if node != compair_node:
+                        connected_nodes.append(node)
+        return connected_nodes
     def __str__( self ):
         ident = "    "
         dot = "graph ig {\n"
-        for node in self.nodes:
+        for node_name in self.nodes:
             ## print nodes that are not connected
             print_node = True
             for edge in self.edges:
-                if node in edge.get_content():
+                if self.nodes[node_name] in edge.get_content():
                     print_node = False
             if print_node:
-                dot += ident + str(node)
+                dot += ident + str(self.nodes[node_name])
             ## print node attributes
-            node_attr = node.get_dot_attr()
+            node_attr = self.nodes[node_name].get_dot_attr()
             if node_attr is not "":
-                dot += ident + node.get_dot_attr()
+                dot += ident + self.nodes[node_name].get_dot_attr()
         ## print edges
         for edge in self.edges:
             dot += ident + str(edge)
-        dot += "}"
+        dot+= "}"
         return dot
 
 class Node( object ):
     def __init__( self, content, color=None ):
         self.content = content
         self.color = color
+        self.active = True
     def get_content( self ):
         return self.content
     def get_color( self ):
@@ -379,6 +430,10 @@ class Node( object ):
         return node_name.replace( '$', '' )
     def set_color( self, color ):
         self.color = color
+    def set_active( self, active ):
+        self.active = active
+    def is_active( self ):
+        return self.active
     def get_dot_attr( self ):
         ret = ""
         if (self.color is not None) and isinstance( self.content, ASM_v_register ):
@@ -431,19 +486,20 @@ class Engine( object ):
             'edx':ASM_register('edx', True, 'green'),
             'edi':ASM_register('edi', False),
             'esi':ASM_register('esi', False),
-            'ebp':ASM_register('ebp'),
-            'esp':ASM_register('esp')
+            'ebp':ASM_register('ebp', False),
+            'esp':ASM_register('esp', False)
         }
         ## list handling
         self.asmlist_mem = 0
         self.asmlist_vartable = {}
         self.asmlist_stack = {}
 
-    def compileme( self, expression=None ):
+    def compileme( self, expression=None, flatten=True ):
         if expression:
             self.ast = compiler.parse( expression )
 
-        self.flat_ast = self.flatten_ast( self.ast )
+        if flatten:
+            self.flat_ast = self.flatten_ast( self.ast )
         self.expr_list = self.flatten_ast_2_list( self.flat_ast, [] )
 
     def check_plain_integer( self, val ):
@@ -816,20 +872,23 @@ class Engine( object ):
         elif isinstance( nd, compiler.ast.Assign ):
             self.DEBUG( "Assign" )
             nam = nd.nodes[0].name ## just consider the first assignement variable
-
+            new_def_elem = self.lookup( nam, False )
             if isinstance( nd.expr, compiler.ast.Const ):
-                self.expr_list.append( ASM_movl( ASM_immedeate(nd.expr.value), self.lookup( nam, False ) ) )
+                self.expr_list.append( ASM_movl( ASM_immedeate(nd.expr.value), new_def_elem ) )
             elif isinstance( nd.expr, compiler.ast.Name ):
                 ## expr is a var, in list
                 if not self.PSEUDO:
                     self.expr_list.append( ASM_movl( self.stack_lookup( nd.expr.name ), self.reg_list['eax'] ) )
-                    self.expr_list.append( ASM_movl( self.reg_list['eax'], self.stack_lookup( nam, False ) ) )
+                    self.expr_list.append( ASM_movl( self.reg_list['eax'], new_def_elem ) )
                 else:
-                    self.expr_list.append( ASM_movl( self.vartable_lookup( nd.expr.name ), self.vartable_lookup( nam, False ) ) )
+                    self.expr_list.append( ASM_movl( self.vartable_lookup( nd.expr.name ), new_def_elem ) )
             else:
                 ## expr is not const
                 op = self.flatten_ast_2_list( nd.expr, [] )
-                self.expr_list.append( ASM_movl( op, self.lookup( nam, False ) ) )
+                self.expr_list.append( ASM_movl( op, new_def_elem ) )
+            if new_def_elem.is_new():
+                self.expr_list.append( ASM_movl( new_def_elem, self.stack_lookup( new_def_elem.get_name(), False ) ) )
+                new_def_elem.set_new( False )
             return
 
         elif isinstance( nd, compiler.ast.CallFunc ):
@@ -905,7 +964,25 @@ class Engine( object ):
             new_elem = ASM_v_register( nam )
             self.asmlist_vartable.update({nam:new_elem})
         ## return vartable object
-        return self.asmlist_vartable[nam]
+        v_reg = self.asmlist_vartable[nam]
+        if v_reg.is_spilled() and defined:
+            ## instruction call using the spilled v_reg (not defining)
+            stack_pos = self.stack_lookup( v_reg.get_spilled_name() )
+            new_name = self.tempvar + str(self.var_counter)
+            new_elem = ASM_v_register( new_name ) ## new v_register
+            self.var_counter += 1
+            self.asmlist_vartable.update({new_name:new_elem})
+            self.expr_list.append( ASM_movl( stack_pos, new_elem ) )
+            v_reg = new_elem
+        elif v_reg.is_spilled and not defined:
+            ## instruction call defining the spilled v_reg
+            new_name = self.tempvar + str(self.var_counter)
+            v_reg.set_spilled_name( new_name ) ## indicate to the old v_reg the name of the new v_reg
+            new_elem = ASM_v_register( new_name )
+            self.var_counter += 1
+            new_elem.set_new( True )
+            v_reg = new_elem
+        return v_reg
 
     def lookup( self, nam, defined=True ):
         if not self.PSEUDO:
@@ -975,45 +1052,63 @@ class Engine( object ):
         d = {}    
         node_list = {}
         edge_list = []
-        cuenta_lista = []
+        node_cnt_list = {}
         for registers in live: ## register are define here, and reg_live
             ## create nodes del graph
             for reg_live in registers:
-                reg = reg_live.get_content()###method get_conten,object reg_live.method get_content()ENVIAR AHI VARIOS GET_CONTENT??
+                reg = reg_live.get_content()###method get_conten,object reg_live.method get_content()
                 if reg.get_name() not in node_list:###method get_name ->reg_live.get_content.get_name??
                     node = Node( reg )      
                     node_list.update( {reg.get_name():node} ) ### update the list with the new node
                     ig.add_node( node ) ### object ig . method add_node graph class
+                    node_cnt_list.update( {node.get_name():0} )
             ## create edges
             for reg_live1 in registers: ## reg_live1 defin here
-                reg1 = reg_live1.get_content() ###method get_conten,object reg_live1.method get_content()ENVIAR AHI VARIOS GET_CONTENT?
+                reg1 = reg_live1.get_content() ###method get_conten,object reg_live1.method get_content()
                 for reg_live2 in registers:
                     reg2 = reg_live2.get_content()
                     node_pair = set([node_list[reg1.get_name()], node_list[reg2.get_name()]]) ##traverse all the live to do the node pair
                     if (len(node_pair) is 2) and (node_pair not in edge_list):
-##                        cuenta_list.append(node_list[reg1.get_name()])
-##                        cuenta_list.append(node_list[reg2.get_name()])
-##                        cuenta = node_pair.count(reg1.get_name())
-##                        cuenta2 = node_pair.count(reg2.get_name())
-                        
+                        for edge_node in node_pair:
+                            if( edge_node.get_name() in node_cnt_list ):
+                                node_cnt_list[edge_node.get_name()] += 1
                         edge_list.append( node_pair )
                         edge = Edge( node_pair )
                         ig.add_edge( edge ) ##SENDING DATA TO THE METHOD ADD.EDGE OF THE GRAPG CLASS
-  
-##        for palabra in cuenta_list:
-##            if palabra in d:
-##                d[palabra] = d[palabra] + 1
-##            else:
-##                d[palabra] = 1
-##        # sort the dictionary	
-##        res = sorted(d, key=d.get, reverse=True) 
-        
+        ig.set_constraint_list( node_cnt_list )
         return ig
 
     def color_ig( self, ig ):
-        color = ig.count('x')
-        #node.ste_color( self.reg_list['eax'] )
-
+        picked_node = ig.get_most_constraint_node()
+        if picked_node == None:
+            return True
+        picked_node.set_active( False )
+        if not self.color_ig( ig ):
+            return False
+        picked_node.set_active( True )
+        picked = False
+        if isinstance(picked_node.get_content(), ASM_register):
+            picked_node.set_color( picked_node.get_content() )
+            picked = True
+        if not picked:
+            for reg_name in self.reg_list:
+                color = self.reg_list[reg_name]
+                if color.is_caller():
+                    pick = True
+                    for connected_node in ig.get_connected_nodes( picked_node ):
+                        if connected_node.is_active() and color == connected_node.get_color():
+                            pick = False
+                            break
+                    if pick:
+                        picked_node.set_color(color)
+                        picked = True
+                        break
+        if not picked:
+            ## spill this node
+            print "Spilled " + str(picked_node)
+            picked_node.get_content().set_spilled( True )
+            return False
+        return ig
 
     ## print
     ########
@@ -1064,6 +1159,7 @@ if 1 <= len( sys.argv[1:] ):
     PSEUDO = False
     LIVENESS = False
     IG = False
+    IG_COLOR = False
     if 1 < len( sys.argv[1:] ) and "DEBUG" in sys.argv:
         DEBUG = True 
     if 1 < len( sys.argv[1:] ) and "-pseudo" in sys.argv:
@@ -1074,9 +1170,12 @@ if 1 <= len( sys.argv[1:] ):
     if 1 < len( sys.argv[1:] ) and "-ig" in sys.argv:
         IG = True
         PSEUDO = True
- 
+    if 1 < len( sys.argv[1:] ) and "-ig-color" in sys.argv:
+        IG = True
+        PSEUDO = True
+        IG_COLOR = True
+
     compl = Engine( sys.argv[1], DEBUG, PSEUDO )
-    compl.compileme()
 
     if DEBUG == True:
         print "AST:"
@@ -1100,10 +1199,21 @@ if 1 <= len( sys.argv[1:] ):
         print "asmlist_mem '%d'" % compl.asmlist_mem
 
     if LIVENESS:
+        compl.compileme()
         compl.print_liveness( compl.liveness() )
+    elif IG_COLOR:
+        ig = False
+        while True:
+            compl.compileme( None, False )
+            ig = compl.color_ig( compl.create_ig( compl.liveness() ) )
+            if ig != False:
+                break
+        compl.print_ig( ig )
     elif IG:
+        compl.compileme()
         compl.print_ig( compl.create_ig( compl.liveness() ) )
     else:
+        compl.compileme()
         compl.print_asm( compl.expr_list ) ## object that call the method, print_asm, with the argument compl.expr_list OF THE CLASS ENGINE
 else:
     usage()
