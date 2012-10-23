@@ -29,6 +29,7 @@ def usage():
     print "or"
     print "    %s <inputfile> DEBUG" % sys.argv[0]
 
+GLOBAL_ALLOC = False
 
 ## ASM descriptor classes
 #########################
@@ -70,11 +71,13 @@ class ASM_register( object ):
 
 # virtual registers used for pseudo assembly
 class ASM_v_register( object ):
-    def __init__( self, name, spilled=False ):
+    def __init__( self, name ):
         self.name = name
-        self.spilled = spilled
+        self.spilled = False
         self.new = False
         self.spilled_name = None
+        self.color = None
+        self.alloc = False
     def get_name( self ):
         return self.name
     def is_spilled( self ):
@@ -89,8 +92,21 @@ class ASM_v_register( object ):
         return self.spilled_name
     def set_spilled_name( self, name ):
         self.spilled_name = name
+    def get_color( self ):
+        return self.color
+    def set_color( self, color ):
+        self.color = color
+    def is_alloc( self ):
+        return self.alloc
+    def set_alloc( self, alloc ):
+        self.alloc = alloc
     def __str__( self ):
-        return self.name
+        ret = ""
+        if GLOBAL_ALLOC:
+            ret = str(self.color)
+        else:
+            ret = self.name
+        return ret
 
 # object indicating the stack position
 class ASM_stack( object ):
@@ -136,12 +152,17 @@ class ASM_instruction( object ):
         self.r_use = []
         self.r_def = []
         self.r_ignore = []
+        self.alloc = False
     def get_r_use( self ):
         return self.r_use
     def get_r_def( self ):
         return self.r_def
     def get_r_ignore( self ):
         return self.r_ignore
+    def is_alloc( self ):
+        return self.alloc
+    def set_alloc( self, alloc ):
+        self.alloc = alloc
     def set_r_use( self, var ):
         if isinstance( var, ASM_v_register ) or isinstance( var, ASM_register ):
             self.r_use.append( Live( var ) )
@@ -164,6 +185,13 @@ class ASM_movl( ASM_instruction ):
         self.set_r_use( left )
         self.set_r_def( right )
     def __str__( self ):
+        #if self.is_alloc() and isinstance( self.left, ASM_v_register ):
+        #    self.left.set_alloc( True )
+        #if self.is_alloc() and isinstance( self.right, ASM_v_register ):
+        #    self.right.set_alloc( True )
+        if GLOBAL_ALLOC and isinstance( self.right, ASM_v_register ) and self.right.get_color() == None:
+            ## unused variable -> no need to print
+            return ""
         return self.inst_ident + "movl " + str(self.left) + ", " + str(self.right)
 
 # push
@@ -428,8 +456,12 @@ class Node( object ):
     def get_name( self ):
         node_name = self.content.get_name()
         return node_name.replace( '$', '' )
-    def set_color( self, color ):
-        self.color = color
+    def set_color( self, new_color ):
+        self.color = new_color
+        # print "\t\t BEFORE"
+        if isinstance( self.content, ASM_v_register ):
+            # print "\t\t AFTER"
+            self.content.set_color( new_color )
     def set_active( self, active ):
         self.active = active
     def is_active( self ):
@@ -461,9 +493,10 @@ class Edge( object ):
 ## P0 compiler implementation
 #############################
 class Engine( object ):
-    def __init__( self, filepath=None, DEBUG=False, PSEUDO=False ):
+    def __init__( self, filepath=None, DEBUG=False, PSEUDO=False, ALLOC=False ):
         self.DEBUGMODE = DEBUG
         self.PSEUDO = PSEUDO
+        self.ALLOC = ALLOC
         if filepath:
             if not os.path.exists( filepath ):
                 die( "ERROR: file '%s' does not exist" % filepath )
@@ -479,6 +512,8 @@ class Engine( object ):
         ## data structures
         self.flat_ast = []
         self.expr_list = []
+        self.prolog = []
+        self.epilog = []
         self.reg_list = {
             'eax':ASM_register('eax', True, 'red'),
             'ebx':ASM_register('ebx', False),
@@ -500,6 +535,9 @@ class Engine( object ):
 
         if flatten:
             self.flat_ast = self.flatten_ast( self.ast )
+        self.expr_list = []
+        self.prolog = []
+        self.epilog = []
         self.expr_list = self.flatten_ast_2_list( self.flat_ast, [] )
 
     def check_plain_integer( self, val ):
@@ -693,24 +731,24 @@ class Engine( object ):
 
         elif isinstance( nd, compiler.ast.Stmt ):
             self.DEBUG( "Stmt" )
-            if not self.PSEUDO:
+            #if not self.PSEUDO:
                 ## asm prolog
-                self.expr_list.append( ASM_text("text") )
-                self.expr_list.append( ASM_label("LC0") )
-                self.expr_list.append( ASM_text("ascii \"Hello World!\"") )
-                self.expr_list.append( ASM_text("globl main") )
-                self.expr_list.append( ASM_label("main") )
-                self.expr_list.append( ASM_pushl( self.reg_list['ebp'] ) )
-                self.expr_list.append( ASM_movl( self.reg_list['esp'], self.reg_list['ebp'] ) )
-                self.expr_list.append( ASM_subl( ASM_immedeate( self.init_stack_mem(0) ), self.reg_list['esp'] ) )
+            self.prolog.append( ASM_text("text") )
+            self.prolog.append( ASM_label("LC0") )
+            self.prolog.append( ASM_text("ascii \"Compiled with JPSM!\"") )
+            self.prolog.append( ASM_text("globl main") )
+            self.prolog.append( ASM_label("main") )
+            self.prolog.append( ASM_pushl( self.reg_list['ebp'] ) )
+            self.prolog.append( ASM_movl( self.reg_list['esp'], self.reg_list['ebp'] ) )
+            self.prolog.append( ASM_subl( ASM_immedeate( self.init_stack_mem(0) ), self.reg_list['esp'] ) )
             ## program
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, [] )
-            if not self.PSEUDO:
+            #if not self.PSEUDO:
                 ## asm epilog
-                self.expr_list.append( ASM_movl( ASM_stack( 0, self.reg_list['ebp'] ), self.reg_list['eax'] ) )
-                self.expr_list.append( ASM_leave() )
-                self.expr_list.append( ASM_ret() )
+            self.epilog.append( ASM_movl( ASM_stack( 0, self.reg_list['ebp'] ), self.reg_list['eax'] ) )
+            self.epilog.append( ASM_leave() )
+            self.epilog.append( ASM_ret() )
             return
 
         elif isinstance( nd, compiler.ast.Add ):
@@ -886,7 +924,7 @@ class Engine( object ):
                 ## expr is not const
                 op = self.flatten_ast_2_list( nd.expr, [] )
                 self.expr_list.append( ASM_movl( op, new_def_elem ) )
-            if new_def_elem.is_new():
+            if isinstance( new_def_elem, ASM_v_register ) and new_def_elem.is_new():
                 self.expr_list.append( ASM_movl( new_def_elem, self.stack_lookup( new_def_elem.get_name(), False ) ) )
                 new_def_elem.set_new( False )
             return
@@ -947,8 +985,8 @@ class Engine( object ):
 
     def stack_lookup( self, nam, defined=True ):
         if nam not in self.asmlist_stack:
-            if defined:
-                die( "ERROR: variable %s was not defined" %nam )
+            #if defined:
+            #    die( "ERROR: variable %s was not defined" %nam )
             ## var is new -> add a new stack object to the dict
             new_elem = ASM_stack(0 - self.asmlist_mem, self.reg_list['ebp'])
             self.asmlist_mem += 4
@@ -958,28 +996,31 @@ class Engine( object ):
 
     def vartable_lookup( self, nam, defined=True ):
         if nam not in self.asmlist_vartable:
-            if defined:
-                die( "ERROR: variable %s was not defined" %nam )
+            #if defined:
+            #    die( "ERROR: variable %s was not defined" %nam )
             ## var is new -> add a new virtual register object to the dict
             new_elem = ASM_v_register( nam )
             self.asmlist_vartable.update({nam:new_elem})
         ## return vartable object
         v_reg = self.asmlist_vartable[nam]
+        #if self.ALLOC and isinstance( v_reg, ASM_v_register ):
+        #    v_reg = v_reg.get_color()
         if v_reg.is_spilled() and defined:
             ## instruction call using the spilled v_reg (not defining)
             stack_pos = self.stack_lookup( v_reg.get_spilled_name() )
+            self.var_counter += 1
             new_name = self.tempvar + str(self.var_counter)
             new_elem = ASM_v_register( new_name ) ## new v_register
-            self.var_counter += 1
             self.asmlist_vartable.update({new_name:new_elem})
             self.expr_list.append( ASM_movl( stack_pos, new_elem ) )
             v_reg = new_elem
-        elif v_reg.is_spilled and not defined:
+        elif v_reg.is_spilled() and not defined:
             ## instruction call defining the spilled v_reg
+            self.var_counter += 1
             new_name = self.tempvar + str(self.var_counter)
             v_reg.set_spilled_name( new_name ) ## indicate to the old v_reg the name of the new v_reg
             new_elem = ASM_v_register( new_name )
-            self.var_counter += 1
+            self.asmlist_vartable.update({new_name:new_elem})
             new_elem.set_new( True )
             v_reg = new_elem
         return v_reg
@@ -1105,7 +1146,7 @@ class Engine( object ):
                         break
         if not picked:
             ## spill this node
-            print "Spilled " + str(picked_node)
+            self.DEBUG( "Spilled " + str(picked_node) )
             picked_node.get_content().set_spilled( True )
             return False
         return ig
@@ -1115,7 +1156,8 @@ class Engine( object ):
     def print_asm( self, expr_lst ):
         self.DEBUG('\n\n\n')
         for expr in expr_lst:
-            print str( expr )
+            if str(expr) != "":
+                print str( expr )
 
     def print_liveness( self, live ):
         j = len( self.expr_list )
@@ -1127,8 +1169,6 @@ class Engine( object ):
 
     def print_ig( self, ig ): ## print the dot file
         print str(ig)
-        
-        
 
 
     ## debug
@@ -1156,26 +1196,50 @@ class Engine( object ):
 ## start
 if 1 <= len( sys.argv[1:] ):
     DEBUG = False
-    PSEUDO = False
-    LIVENESS = False
-    IG = False
-    IG_COLOR = False
+    PRINT_PSEUDO = False
+    GEN_PSEUDO = False
+    PRINT_LIVENESS = False
+    GEN_LIVENESS = False
+    PRINT_IG = False
+    GEN_IG = False
+    PRINT_IG_COLOR = False
+    GEN_IG_COLOR = False
+    PRINT_ALLOC = False
+    GEN_ALLOC = False
     if 1 < len( sys.argv[1:] ) and "DEBUG" in sys.argv:
         DEBUG = True 
+    if "-help" in sys.argv:
+        usage()
+        sys.exit( 0 ) 
     if 1 < len( sys.argv[1:] ) and "-pseudo" in sys.argv:
-        PSEUDO = True
+        GEN_PSEUDO = True
+        PRINT_PSEUDO = True
     if 1 < len( sys.argv[1:] ) and "-liveness" in sys.argv:
-        LIVENESS = True
-        PSEUDO = True
+        GEN_PSEUDO = True
+        GEN_LIVENESS = True
+        PRINT_LIVENESS = True
     if 1 < len( sys.argv[1:] ) and "-ig" in sys.argv:
-        IG = True
-        PSEUDO = True
+        GEN_PSEUDO = True
+        GEN_LIVENESS = True
+        GEN_IG = True
+        PRINT_IG = True
     if 1 < len( sys.argv[1:] ) and "-ig-color" in sys.argv:
-        IG = True
-        PSEUDO = True
-        IG_COLOR = True
+        GEN_PSEUDO = True
+        GEN_LIVENESS = True
+        GEN_IG = True
+        GEN_IG_COLOR = True
+        PRINT_IG_COLOR = True
+    if 1 < len( sys.argv[1:] ) and "-alloc" in sys.argv:
+        GEN_PSEUDO = True
+        GEN_LIVENESS = True
+        GEN_IG = True
+        GEN_IG_COLOR = True
+        GEN_ALLOC = True
+        PRINT_ALLOC = True
+        
 
-    compl = Engine( sys.argv[1], DEBUG, PSEUDO )
+    compl = Engine( sys.argv[1], DEBUG, GEN_PSEUDO )
+    compl.compileme()
 
     if DEBUG == True:
         print "AST:"
@@ -1198,22 +1262,44 @@ if 1 <= len( sys.argv[1:] ):
 
         print "asmlist_mem '%d'" % compl.asmlist_mem
 
-    if LIVENESS:
-        compl.compileme()
-        compl.print_liveness( compl.liveness() )
-    elif IG_COLOR:
-        ig = False
+
+    liveness = None
+    ig = None
+    ig_color = None
+    if GEN_IG_COLOR:
+        ig_color = False
         while True:
             compl.compileme( None, False )
-            ig = compl.color_ig( compl.create_ig( compl.liveness() ) )
-            if ig != False:
+            liveness = compl.liveness()
+            ig = compl.create_ig( liveness )
+            ig_color = compl.color_ig( ig )
+            if ig_color != False:
                 break
+        #compl.print_asm( compl.expr_list )
+        #print "====================" 
+        if GEN_ALLOC:
+            #compl.ALLOC = True
+            #compl.compileme( None, False )
+            GLOBAL_ALLOC = True
+    elif GEN_IG:
+        ig = compl.create_ig( compl.liveness() )
+    elif GEN_LIVENESS:
+        liveness = compl.liveness()
+
+    if PRINT_IG:
         compl.print_ig( ig )
-    elif IG:
-        compl.compileme()
-        compl.print_ig( compl.create_ig( compl.liveness() ) )
-    else:
-        compl.compileme()
-        compl.print_asm( compl.expr_list ) ## object that call the method, print_asm, with the argument compl.expr_list OF THE CLASS ENGINE
-else:
+    elif PRINT_IG_COLOR:
+        compl.print_ig( ig_color )
+    elif PRINT_LIVENESS:
+        compl.print_liveness( liveness )
+    elif PRINT_PSEUDO:
+        compl.print_asm( compl.expr_list )
+    else: 
+        ## object that call the method, print_asm, with the argument compl.expr_list OF THE CLASS ENGINE
+        ## PRINT_PSEUDO and PRINT_ALLOC is handled in the flatten_ast_2_list method
+        compl.print_asm( compl.prolog ) 
+        compl.print_asm( compl.expr_list ) 
+        compl.print_asm( compl.epilog ) 
+
+else:        
     usage()
