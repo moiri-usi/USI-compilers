@@ -970,32 +970,48 @@ class Engine( object ):
 
     ## coloring
     ###########
-    def create_ig( self, live ):
-        ig = Graph()
+    def create_ig( self, live ): ##lives is define as argument
+        ig = Graph()    ## OJO ig OBJECT = GRAPH CLASS 
+        d = {}    
         node_list = {}
         edge_list = []
-        for registers in live:
-            ## create nodes
+        cuenta_lista = []
+        for registers in live: ## register are define here, and reg_live
+            ## create nodes del graph
             for reg_live in registers:
-                reg = reg_live.get_content()
-                if reg.get_name() not in node_list:
-                    node = Node( reg )
-                    node_list.update( {reg.get_name():node} )
-                    ig.add_node( node )
+                reg = reg_live.get_content()###method get_conten,object reg_live.method get_content()ENVIAR AHI VARIOS GET_CONTENT??
+                if reg.get_name() not in node_list:###method get_name ->reg_live.get_content.get_name??
+                    node = Node( reg )      
+                    node_list.update( {reg.get_name():node} ) ### update the list with the new node
+                    ig.add_node( node ) ### object ig . method add_node graph class
             ## create edges
-            for reg_live1 in registers:
-                reg1 = reg_live1.get_content()
+            for reg_live1 in registers: ## reg_live1 defin here
+                reg1 = reg_live1.get_content() ###method get_conten,object reg_live1.method get_content()ENVIAR AHI VARIOS GET_CONTENT?
                 for reg_live2 in registers:
                     reg2 = reg_live2.get_content()
-                    node_pair = set([node_list[reg1.get_name()], node_list[reg2.get_name()]])
+                    node_pair = set([node_list[reg1.get_name()], node_list[reg2.get_name()]]) ##traverse all the live to do the node pair
                     if (len(node_pair) is 2) and (node_pair not in edge_list):
+##                        cuenta_list.append(node_list[reg1.get_name()])
+##                        cuenta_list.append(node_list[reg2.get_name()])
+##                        cuenta = node_pair.count(reg1.get_name())
+##                        cuenta2 = node_pair.count(reg2.get_name())
+                        
                         edge_list.append( node_pair )
                         edge = Edge( node_pair )
-                        ig.add_edge( edge )
+                        ig.add_edge( edge ) ##SENDING DATA TO THE METHOD ADD.EDGE OF THE GRAPG CLASS
+  
+##        for palabra in cuenta_list:
+##            if palabra in d:
+##                d[palabra] = d[palabra] + 1
+##            else:
+##                d[palabra] = 1
+##        # sort the dictionary	
+##        res = sorted(d, key=d.get, reverse=True) 
+        
         return ig
 
     def color_ig( self, ig ):
-        pass
+        color = ig.count('x')
         #node.ste_color( self.reg_list['eax'] )
 
 
@@ -1014,8 +1030,10 @@ class Engine( object ):
             j -= 1
         print self.concat_live( live[j] )
 
-    def print_ig( self, ig ):
+    def print_ig( self, ig ): ## print the dot file
         print str(ig)
+        
+        
 
 
     ## debug
@@ -1086,6 +1104,6 @@ if 1 <= len( sys.argv[1:] ):
     elif IG:
         compl.print_ig( compl.create_ig( compl.liveness() ) )
     else:
-        compl.print_asm( compl.expr_list )
+        compl.print_asm( compl.expr_list ) ## object that call the method, print_asm, with the argument compl.expr_list OF THE CLASS ENGINE
 else:
     usage()
