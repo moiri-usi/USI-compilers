@@ -5,14 +5,6 @@
 # Josafat Piraquive
 # (Lothar Rubusch) contributer for prior steps of the project
 
-"""
-USAGE:
-$ python ./interp.py ./input.txt
-
-TEST:
-$ python ./test_interp.py
-"""
-
 import sys
 import os.path
 import compiler
@@ -37,7 +29,6 @@ def usage():
     print "FILE:"
     print "    A file containing valid P0 code. This file is mandatory for the script to run\n"
 
-GLOBAL_ALLOC = False
 
 ## ASM descriptor classes
 #########################
@@ -61,10 +52,16 @@ class ASM_text( object ):
 
 ## ASM operand classes
 ######################
+class ASM_operand( object ):
+    def __init__( self, child ):
+        self.child = child
+    def print_alloc( self ):
+        return str( self.child )
 
 # register of X86 (%eax, %ebx, etc...)
-class ASM_register( object ):
+class ASM_register( ASM_operand ):
     def __init__( self, name, caller=True, color='white' ):
+        super(ASM_register, self).__init__( self ) 
         self.name = name
         self.color = color
         self.caller = caller
@@ -78,8 +75,9 @@ class ASM_register( object ):
         return "%" + self.name
 
 # virtual registers used for pseudo assembly
-class ASM_v_register( object ):
+class ASM_v_register( ASM_operand ):
     def __init__( self, name ):
+        super(ASM_v_register, self).__init__( self ) 
         self.name = name
         self.spilled = False
         self.new = False
@@ -103,17 +101,15 @@ class ASM_v_register( object ):
         return self.color
     def set_color( self, color ):
         self.color = color
+    def print_alloc( self ):
+        return str( self.color )
     def __str__( self ):
-        ret = ""
-        if GLOBAL_ALLOC:
-            ret = str(self.color)
-        else:
-            ret = self.name
-        return ret
+        return self.name
 
 # object indicating the stack position
-class ASM_stack( object ):
+class ASM_stack( ASM_operand ):
     def __init__( self, pos, stackptr ):
+        super(ASM_stack, self).__init__( self ) 
         self.pos = pos
         self.stackptr = stackptr
     def get_pos( self ):
@@ -125,8 +121,9 @@ class ASM_stack( object ):
         return  pos_str + "(" + str(self.stackptr) + ")"
 
 # constant (i.e. $3)
-class ASM_immedeate( object ):
+class ASM_immedeate( ASM_operand ):
     def __init__(self, val ):
+        super(ASM_immedeate, self).__init__( self ) 
         self.val = val
     def get_val( self ):
         return self.val
@@ -135,8 +132,9 @@ class ASM_immedeate( object ):
 
 
 # function names and goto labels
-class ASM_name( object ):
+class ASM_name( ASM_operand ):
     def __init__(self, name ):
+        super(ASM_name, self).__init__( self ) 
         self.name = name
     def get_name( self ):
         return self.name
@@ -149,12 +147,13 @@ class ASM_name( object ):
 
 # parent class of all instructions
 class ASM_instruction( object ):
-    def __init__( self ):
+    def __init__( self, child ):
         self.DEBUG_type = ""
         self.inst_ident = "        "
         self.r_use = []
         self.r_def = []
         self.r_ignore = []
+        self.child = child
     def get_r_use( self ):
         return self.r_use
     def get_r_def( self ):
@@ -170,137 +169,156 @@ class ASM_instruction( object ):
     def set_r_ignore( self, var ):
         if isinstance( var, ASM_register ):
             self.r_ignore.append( Live( var, True ) )
+    def print_alloc( self ):
+        return str( self.child )
     def print_debug( self ):
         return self.DEBUG_type
 
 # move 
 class ASM_movl( ASM_instruction ):
     def __init__( self, left, right ):
-        super(ASM_movl, self).__init__() 
+        super(ASM_movl, self).__init__( self )
         self.DEBUG_type = "ASM_movl"
         self.left = left
         self.right = right
         self.set_r_use( left )
         self.set_r_def( right )
+    def print_alloc( self ):
+        return self.inst_ident + "movl " + self.left.print_alloc() + ", " + self.right.print_alloc()
     def __str__( self ):
-#        if GLOBAL_ALLOC and isinstance( self.right, ASM_v_register ) and self.right.get_color() == None:
-            ## unused variable -> no need to print
-#            return ""
         return self.inst_ident + "movl " + str(self.left) + ", " + str(self.right)
 
 # push
 class ASM_pushl( ASM_instruction ):
     def __init__( self, op ):
-        super(ASM_pushl, self).__init__() 
+        super(ASM_pushl, self).__init__( self )
         self.DEBUG_type = "ASM_pushl"
         self.op = op
+    def print_alloc( self ):
+        return self.inst_ident + "pushl " + self.op.print_alloc()
     def __str__( self ):
         return self.inst_ident + "pushl " + str(self.op)
 
 # add 
 class ASM_addl( ASM_instruction ):
     def __init__( self, left, right ):
-        super(ASM_addl, self).__init__() 
+        super(ASM_addl, self).__init__( self )
         self.DEBUG_type = "ASM_addl"
         self.left = left
         self.right = right
         self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
+    def print_alloc( self ):
+        return self.inst_ident + "addl " + self.left.print_alloc() + ", " + self.right.print_alloc()
     def __str__( self ):
         return self.inst_ident + "addl " + str(self.left) + ", " + str(self.right)
 
 # subtract
 class ASM_subl( ASM_instruction ):
     def __init__( self, left, right ):
-        super(ASM_subl, self).__init__() 
+        super(ASM_subl, self).__init__( self )
         self.DEBUG_type = "ASM_subl"
         self.left = left
         self.right = right
         self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
+    def print_alloc( self ):
+        return self.inst_ident + "subl " + self.left.print_alloc() + ", " + self.right.print_alloc()
     def __str__( self ):
         return self.inst_ident + "subl " + str(self.left) + ", " + str(self.right)
 
 # unary sub
 class ASM_negl( ASM_instruction ):
     def __init__( self, op ):
-        super(ASM_negl, self).__init__() 
+        super(ASM_negl, self).__init__( self )
         self.DEBUG_type = "ASM_negl"
         self.op = op
         self.set_r_def( op )
         self.set_r_use( op )
+    def print_alloc( self ):
+        return self.inst_ident + "negl " + self.op.print_alloc()
     def __str__( self ):
         return self.inst_ident + "negl " + str(self.op)
 
 # bitand
 class ASM_andl( ASM_instruction ):
     def __init__( self, left, right ):
-        super(ASM_andl, self).__init__() 
+        super(ASM_andl, self).__init__( self )
         self.DEBUG_type = "ASM_andl"
         self.left = left
         self.right = right
         self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
+    def print_alloc( self ):
+        return self.inst_ident + "andl " + self.left.print_alloc() + ", " + self.right.print_alloc()
     def __str__( self ):
         return self.inst_ident + "andl " + str(self.left) + ", " + str(self.right)
 
 # bitor
 class ASM_orl( ASM_instruction ):
     def __init__( self, left, right ):
-        super(ASM_orl, self).__init__() 
+        super(ASM_orl, self).__init__( self )
         self.DEBUG_type = "ASM_orl"
         self.left = left
         self.right = right
         self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
+    def print_alloc( self ):
+        return self.inst_ident + "orl " + self.left.print_alloc() + ", " + self.right.print_alloc()
     def __str__( self ):
         return self.inst_ident + "orl " + str(self.left) + ", " + str(self.right)
 
 # bitxor
 class ASM_xorl( ASM_instruction ):
     def __init__( self, left, right ):
-        super(ASM_xorl, self).__init__() 
+        super(ASM_xorl, self).__init__( self )
         self.DEBUG_type = "ASM_xorl"
         self.left = left
         self.right = right
         self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
+    def print_alloc( self ):
+        return self.inst_ident + "xorl " + self.left.print_alloc() + ", " + self.right.print_alloc()
     def __str__( self ):
         return self.inst_ident + "xorl " + str(self.left) + ", " + str(self.right)
 
 # bitinvert
 class ASM_notl( ASM_instruction ):
     def __init__( self, op ):
-        super(ASM_notl, self).__init__() 
+        super(ASM_notl, self).__init__( self )
         self.DEBUG_type = "ASM_notl"
         self.op = op
         self.set_r_def( op )
         self.set_r_use( op )
+    def print_alloc( self ):
+        return self.inst_ident + "notl " + self.op.print_alloc()
     def __str__( self ):
         return self.inst_ident + "notl " + str(self.op)
 
 # multiplication
 class ASM_imull( ASM_instruction ):
     def __init__( self, left, right ):
-        super(ASM_imull, self).__init__() 
+        super(ASM_imull, self).__init__( self )
         self.DEBUG_type = "ASM_imull"
         self.left = left
         self.right = right
         self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
+    def print_alloc( self ):
+        return self.inst_ident + "imull " + self.left.print_alloc() + ", " + self.right.print_alloc()
     def __str__( self ):
         return self.inst_ident + "imull " + str(self.left) + ", " + str(self.right)
 
 # function call
 class ASM_call( ASM_instruction ):
     def __init__( self, name ):
-        super(ASM_call, self).__init__() 
+        super(ASM_call, self).__init__( self )
         self.DEBUG_type = "ASM_call"
         self.name = name
     def __str__( self ):
@@ -309,7 +327,7 @@ class ASM_call( ASM_instruction ):
 # return
 class ASM_ret( ASM_instruction ):
     def __init__( self ):
-        super(ASM_ret, self).__init__() 
+        super(ASM_ret, self).__init__( self )
         self.DEBUG_type = "ASM_ret"
     def __str__( self ):
         return self.inst_ident + "ret"
@@ -317,7 +335,7 @@ class ASM_ret( ASM_instruction ):
 # leave
 class ASM_leave( ASM_instruction ):
     def __init__( self ):
-        super(ASM_leave, self).__init__() 
+        super(ASM_leave, self).__init__( self )
         self.DEBUG_type = "ASM_leave"
     def __str__( self ):
         return self.inst_ident + "leave"
@@ -325,26 +343,30 @@ class ASM_leave( ASM_instruction ):
 # shift left
 class ASM_shll( ASM_instruction ):
     def __init__( self, left, right ):
-        super(ASM_shll, self).__init__() 
+        super(ASM_shll, self).__init__( self )
         self.DEBUG_type = "ASM_shll"
         self.left = left
         self.right = right
         self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
+    def print_alloc( self ):
+        return self.inst_ident + "shll " + self.left.print_alloc() + ", " + self.right.print_alloc()
     def __str__( self ):
         return self.inst_ident + "shll " + str(self.left) + ", " + str(self.right)
 
 # shift right
 class ASM_shrl( ASM_instruction ):
     def __init__( self, left, right ):
-        super(ASM_shrl, self).__init__() 
+        super(ASM_shrl, self).__init__( self )
         self.DEBUG_type = "ASM_shrl"
         self.left = left
         self.right = right
         self.set_r_def( left )
         self.set_r_use( left )
         self.set_r_use( right )
+    def print_alloc( self ):
+        return self.inst_ident + "shrl " + self.left.print_alloc() + ", " + self.right.print_alloc()
     def __str__( self ):
         return self.inst_ident + "shrl " + str(self.left) + ", " + str(self.right)
 
@@ -1143,10 +1165,12 @@ class Engine( object ):
 
     ## print
     ########
-    def print_asm( self, expr_lst ):
+    def print_asm( self, expr_lst, alloc=False ):
         self.DEBUG('\n\n\n')
         for expr in expr_lst:
-            if str(expr) != "":
+            if alloc:
+                print expr.print_alloc()
+            else:
                 print str( expr )
 
     def print_liveness( self, live ):
@@ -1266,8 +1290,6 @@ if 1 <= len( sys.argv[1:] ):
             ig_color = compl.color_ig( ig )
             if ig_color != False:
                 break
-        if GEN_ALLOC:
-            GLOBAL_ALLOC = True
     elif GEN_IG:
         ig = compl.create_ig( compl.liveness() )
     elif GEN_LIVENESS:
@@ -1281,11 +1303,14 @@ if 1 <= len( sys.argv[1:] ):
         compl.print_liveness( liveness )
     elif PRINT_PSEUDO:
         compl.print_asm( compl.expr_list )
+    elif PRINT_ALLOC:
+        compl.print_asm( compl.get_prolog() ) 
+        compl.print_asm( compl.expr_list, True )
+        compl.print_asm( compl.get_epilog() ) 
     else: 
         ## object that call the method, print_asm, with the argument compl.expr_list OF THE CLASS ENGINE
-        ## PRINT_ALLOC is handled in the flatten_ast_2_list method
         compl.print_asm( compl.get_prolog() ) 
-        compl.print_asm( compl.expr_list ) 
+        compl.print_asm( compl.expr_list, False )
         compl.print_asm( compl.get_epilog() ) 
 
 else:        
