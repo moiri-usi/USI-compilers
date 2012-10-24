@@ -19,13 +19,22 @@
 ##              - use in_x86.sh
 ##  -pseudo:    run testbench with pseudo assembler
 ##              - uses script x86interp.py and in_pseude.sh
+##  -alloc:     run testbench with allocation assembler
+##              - use in_x86.sh
 
 
 PSEUDO=0
+ALLOC=0
 SRC=in_x86.sh
 if [[ $1 == "-pseudo" ]]; then
     PSEUDO=1
     SRC=in_pseudo.sh
+    echo "PSEUDO-code"
+elif [[ $1 == "-alloc" ]]; then
+    ALLOC=1
+    echo "ALLOC-code"
+else
+    echo "STACK-code"
 fi
 
 source $SRC
@@ -35,7 +44,9 @@ generate(){
     RES=0
     if [[ $PSEUDO -eq 1 ]]; then
         echo main: > "./${1}.s"
-        python ./compile.py "./${1}.p0" -pseudo >> "./${1}.s" || RES=1
+        python ./compile.py -pseudo "./${1}.p0" >> "./${1}.s" || RES=1
+    elif [[ $ALLOC -eq 1 ]]; then
+        python ./compile.py -alloc "./${1}.p0" > "./${1}.s" || RES=1
     else
         python ./compile.py "./${1}.p0" > "./${1}.s" || RES=1
     fi
