@@ -183,9 +183,9 @@ class ASM_movl( ASM_instruction ):
         self.set_r_use( left )
         self.set_r_def( right )
     def __str__( self ):
-        if GLOBAL_ALLOC and isinstance( self.right, ASM_v_register ) and self.right.get_color() == None:
+#        if GLOBAL_ALLOC and isinstance( self.right, ASM_v_register ) and self.right.get_color() == None:
             ## unused variable -> no need to print
-            return ""
+#            return ""
         return self.inst_ident + "movl " + str(self.left) + ", " + str(self.right)
 
 # push
@@ -356,6 +356,8 @@ class Live( object ):
         self.ignore = ignore ## used for special handling of registers (i.e. call)
     def get_content( self ):
         return self.content
+    def set_ignore( self, ignore ):
+        self.ignore = ignore
     def is_ignore( self ):
         return self.ignore
     def __str__( self ):
@@ -1021,7 +1023,7 @@ class Engine( object ):
         remove_ignores = False
         for i in range( len(self.expr_list), 0, -1 ):
             element = self.expr_list[i-1]
-            temp_live = self.sub_def_live( element.get_r_def(), list(live[j]) )
+            temp_live = self.sub_def_live( element.get_r_def(), list(live[j]), live[j] )
             temp_live = self.add_use_live( element.get_r_use(), temp_live )
             if remove_ignores: ## the iteration before added no ignore elements
                 temp_live = self.sub_def_live( last_ignores, temp_live )
@@ -1037,11 +1039,18 @@ class Engine( object ):
         return live
 
     ## helper for liveness   
-    def sub_def_live( self, defi, live ):
+    def sub_def_live( self, defi, live, live_ptr=None ):
+        is_live = False
         for oper1 in defi:
             for oper2 in live:
                 if oper1.get_content().get_name() == oper2.get_content().get_name():
                     live.remove( oper2 )
+                    is_live = True
+            if not is_live and live_ptr != None:
+                ## the variable was defined but never used
+                ## -> add edges in ig with all live vars just before the def
+                oper1.set_ignore( True )
+                live_ptr.append( oper1 )
         return live
 
     def add_use_live ( self, use, live ):
