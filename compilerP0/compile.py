@@ -582,13 +582,18 @@ class Engine( object ):
             new_varname = self.flatten_ast_add_assign( expr )
             return compiler.ast.Name(new_varname)
 
-        elif isinstance( node, compiler.ast.Printnl ):
-            self.DEBUG( "Printnl" )
+        elif isinstance( node, compiler.ast.Printnl ) or isinstance( node, compiler.ast.Print ):
+            if isinstance( node, compiler.ast.Printnl ):
+                fct_name = "print_int_nl"
+                self.DEBUG( "Printnl" )
+            elif isinstance( node, compiler.ast.Print ):
+                fct_name = "print_int"
+                self.DEBUG( "Print" )
             ## create a CallFunc AST with name 'print'
             attr = []
             if len(node.nodes) is not 0:
                 attr = [self.flatten_ast( node.nodes[0] )]
-            expr = compiler.ast.CallFunc(compiler.ast.Name('print_int_nl'), attr )
+            expr = compiler.ast.CallFunc(compiler.ast.Name( fct_name ), attr )
             self.flatten_ast_add_assign( expr )
             ## returns nothing because print has no return value
             return
@@ -679,7 +684,7 @@ class Engine( object ):
             return compiler.ast.Name(new_varname)
 
         else:
-            die( "unknown AST node" )
+            die( "unknown AST node" + str( node ) )
 
     ## helper for flatten_ast
     def flatten_ast_add_assign( self, expr ):
