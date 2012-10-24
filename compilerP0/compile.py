@@ -24,9 +24,18 @@ def die( meng ):
 
 def usage():
     print "USAGE:"
-    print "    %s <inputfile>" % sys.argv[0]
-    print "or"
-    print "    %s <inputfile> DEBUG" % sys.argv[0]
+    print "    %s [OPERATION] [ARGUMENT] FILE" % sys.argv[0]
+    print "OPERATION:"
+    print "    -stack:    prints ASM-code using only stack-operations (default)"
+    print "    -pseudo:   prints ASM-pseudo-code using virtual registers"
+    print "    -liveness: prints the liveness analysis of the -stack ASM"
+    print "    -ig:       prints dot syntax of the interference graph"
+    print "    -ig-color: prints dot syntax of the colored interference graph"
+    print "    -alloc:    prints ASM-code using register allocation (eax, ecx and edx)"
+    print "ARGUMENT:"
+    print "    -debug:    prints additional debug information"
+    print "FILE:"
+    print "    A file containing valid P0 code. This file is mandatory for the script to run\n"
 
 GLOBAL_ALLOC = False
 
@@ -1173,39 +1182,40 @@ if 1 <= len( sys.argv[1:] ):
     GEN_IG_COLOR = False
     PRINT_ALLOC = False
     GEN_ALLOC = False
-    if 1 < len( sys.argv[1:] ) and "DEBUG" in sys.argv:
-        DEBUG = True 
     if "-help" in sys.argv:
         usage()
         sys.exit( 0 ) 
-    if 1 < len( sys.argv[1:] ) and "-pseudo" in sys.argv:
+    if 1 < len( sys.argv[1:] ) and "-debug" in sys.argv:
+        DEBUG = True
+    if 1 < len( sys.argv[1:] ) and "-stack" in sys.argv:
+        pass
+    elif 1 < len( sys.argv[1:] ) and "-pseudo" in sys.argv:
         GEN_PSEUDO = True
         PRINT_PSEUDO = True
-    if 1 < len( sys.argv[1:] ) and "-liveness" in sys.argv:
+    elif 1 < len( sys.argv[1:] ) and "-liveness" in sys.argv:
         GEN_PSEUDO = True
         GEN_LIVENESS = True
         PRINT_LIVENESS = True
-    if 1 < len( sys.argv[1:] ) and "-ig" in sys.argv:
+    elif 1 < len( sys.argv[1:] ) and "-ig" in sys.argv:
         GEN_PSEUDO = True
         GEN_LIVENESS = True
         GEN_IG = True
         PRINT_IG = True
-    if 1 < len( sys.argv[1:] ) and "-ig-color" in sys.argv:
+    elif 1 < len( sys.argv[1:] ) and "-ig-color" in sys.argv:
         GEN_PSEUDO = True
         GEN_LIVENESS = True
         GEN_IG = True
         GEN_IG_COLOR = True
         PRINT_IG_COLOR = True
-    if 1 < len( sys.argv[1:] ) and "-alloc" in sys.argv:
+    elif 1 < len( sys.argv[1:] ) and "-alloc" in sys.argv:
         GEN_PSEUDO = True
         GEN_LIVENESS = True
         GEN_IG = True
         GEN_IG_COLOR = True
         GEN_ALLOC = True
         PRINT_ALLOC = True
-        
 
-    compl = Engine( sys.argv[1], DEBUG, GEN_PSEUDO )
+    compl = Engine( sys.argv[-1], DEBUG, GEN_PSEUDO )
     compl.compileme()
 
     if DEBUG == True:
