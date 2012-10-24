@@ -948,7 +948,7 @@ class Engine( object ):
         prolog.append( ASM_label("main") )
         prolog.append( ASM_pushl( self.reg_list['ebp'] ) )
         prolog.append( ASM_movl( self.reg_list['esp'], self.reg_list['ebp'] ) )
-        prolog.append( ASM_subl( ASM_immedeate( self.init_stack_mem(0) ), self.reg_list['esp'] ) )
+        prolog.append( ASM_subl( ASM_immedeate( self.init_stack_mem(self.asmlist_mem) ), self.reg_list['esp'] ) )
         return prolog
 
     def get_epilog( self ):
