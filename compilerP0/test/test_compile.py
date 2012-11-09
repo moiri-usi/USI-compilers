@@ -15,7 +15,9 @@ $ python ./test_compile.py
 
 import compiler
 import unittest
-
+import sys
+sys.path.append('../')
+print sys.path
 from compile import *
 
 ## unittest test suite

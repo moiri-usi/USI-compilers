@@ -44,11 +44,11 @@ generate(){
     RES=0
     if [[ $PSEUDO -eq 1 ]]; then
         echo main: > "./${1}.s"
-        python ./compile.py -pseudo "./${1}.p0" >> "./${1}.s" || RES=1
+        python ./../compile.py -pseudo "./${1}.p0" >> "./${1}.s" || RES=1
     elif [[ $ALLOC -eq 1 ]]; then
-        python ./compile.py -alloc "./${1}.p0" > "./${1}.s" || RES=1
+        python ./../compile.py -alloc "./${1}.p0" > "./${1}.s" || RES=1
     else
-        python ./compile.py "./${1}.p0" > "./${1}.s" || RES=1
+        python ./../compile.py "./${1}.p0" > "./${1}.s" || RES=1
     fi
 }
 
