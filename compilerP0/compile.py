@@ -28,6 +28,7 @@ def usage():
     print "    -alloc:    prints ASM-code using register allocation (default)"
     print "ARGUMENT:"
     print "    -debug:    prints additional debug information"
+    print "    -o:        optimize the assembler code"
     print "FILE:"
     print "    A file containing valid P0 code. This file is mandatory for the script to run\n"
 
