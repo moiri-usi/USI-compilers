@@ -20,12 +20,12 @@ def usage():
     print "USAGE:"
     print "    %s [OPERATION] [ARGUMENT] FILE" % sys.argv[0]
     print "OPERATION:"
-    print "    -stack:    prints ASM-code using only stack-operations (default)"
+    print "    -stack:    prints ASM-code using only stack-operations"
     print "    -pseudo:   prints ASM-pseudo-code using virtual registers"
     print "    -liveness: prints the liveness analysis of the -stack ASM"
     print "    -ig:       prints dot syntax of the interference graph"
     print "    -ig-color: prints dot syntax of the colored interference graph"
-    print "    -alloc:    prints ASM-code using register allocation (eax, ecx and edx)"
+    print "    -alloc:    prints ASM-code using register allocation (default)"
     print "ARGUMENT:"
     print "    -debug:    prints additional debug information"
     print "FILE:"
@@ -575,6 +575,26 @@ class Engine( object ):
             elem = self.vartable_lookup( nam, defined )
         return elem
 
+    def cleanup_asm( self ):
+        iter_list = self.expr_list
+        self.expr_list = []
+        for expr in iter_list:
+            if hasattr(expr, 'left') and hasattr(expr, 'right'):
+                left_color = None
+                right_color = None
+                if isinstance(expr.left, ASM_v_register):
+                    left_color = expr.left.get_color()
+                elif isinstance(expr.left, ASM_register):
+                    left_color = expr.left
+                if isinstance(expr.right, ASM_v_register):
+                    right_color = expr.right.get_color()
+                elif isinstance(expr.right, ASM_register):
+                    right_color = expr.right
+                if left_color == None or right_color == None or left_color != right_color:
+                    self.expr_list.append(expr)
+            else:
+                self.expr_list.append(expr)
+                
 
     ## liveness analysis
     ####################
@@ -753,6 +773,8 @@ class Engine( object ):
 ## start
 if 1 <= len( sys.argv[1:] ):
     DEBUG = False
+    CLEANUP_ASM = False
+    PRINT_STACK = False
     PRINT_PSEUDO = False
     GEN_PSEUDO = False
     PRINT_LIVENESS = False
@@ -768,8 +790,10 @@ if 1 <= len( sys.argv[1:] ):
         sys.exit( 0 ) 
     if 1 < len( sys.argv[1:] ) and "-debug" in sys.argv:
         DEBUG = True
+    if 1 < len( sys.argv[1:] ) and "-o" in sys.argv:
+        CLEANUP_ASM = True
     if 1 < len( sys.argv[1:] ) and "-stack" in sys.argv:
-        pass
+        PRINT_STACK = True
     elif 1 < len( sys.argv[1:] ) and "-pseudo" in sys.argv:
         GEN_PSEUDO = True
         PRINT_PSEUDO = True
@@ -795,10 +819,41 @@ if 1 <= len( sys.argv[1:] ):
         GEN_IG_COLOR = True
         GEN_ALLOC = True
         PRINT_ALLOC = True
+    else:
+        ## use alloc as default
+        GEN_PSEUDO = True
+        GEN_LIVENESS = True
+        GEN_IG = True
+        GEN_IG_COLOR = True
+        GEN_ALLOC = True
+        PRINT_ALLOC = True
 
+    ## generate assembler
     compl = Engine( sys.argv[-1], DEBUG, GEN_PSEUDO )
     compl.compileme()
 
+    ## perform liveness/coloring/spilling and generate ig
+    liveness = None
+    ig = None
+    ig_color = None
+    if GEN_IG_COLOR:
+        ig_color = False
+        while True:
+            compl.compileme( None, False )
+            liveness = compl.liveness()
+            ig = compl.create_ig( liveness )
+            ig_color = compl.color_ig( ig )
+            if ig_color != False:
+                break
+    elif GEN_IG:
+        ig = compl.create_ig( compl.liveness() )
+    elif GEN_LIVENESS:
+        liveness = compl.liveness()
+
+    if CLEANUP_ASM:
+        compl.cleanup_asm()
+
+    ## print results
     if DEBUG == True:
         print "AST:"
         print compl.DEBUG__print_ast( )
@@ -820,24 +875,6 @@ if 1 <= len( sys.argv[1:] ):
 
         print "asmlist_mem '%d'" % compl.asmlist_mem
 
-
-    liveness = None
-    ig = None
-    ig_color = None
-    if GEN_IG_COLOR:
-        ig_color = False
-        while True:
-            compl.compileme( None, False )
-            liveness = compl.liveness()
-            ig = compl.create_ig( liveness )
-            ig_color = compl.color_ig( ig )
-            if ig_color != False:
-                break
-    elif GEN_IG:
-        ig = compl.create_ig( compl.liveness() )
-    elif GEN_LIVENESS:
-        liveness = compl.liveness()
-
     if PRINT_IG:
         compl.print_ig( ig )
     elif PRINT_IG_COLOR:
@@ -849,12 +886,18 @@ if 1 <= len( sys.argv[1:] ):
     elif PRINT_ALLOC:
         compl.print_asm( compl.get_prolog() ) 
         compl.print_asm( compl.expr_list, True )
-        compl.print_asm( compl.get_epilog() ) 
-    else: 
-        ## object that call the method, print_asm, with the argument compl.expr_list OF THE CLASS ENGINE
+        compl.print_asm( compl.get_epilog() )
+    elif PRINT_STACK:
         compl.print_asm( compl.get_prolog() ) 
         compl.print_asm( compl.expr_list, False )
-        compl.print_asm( compl.get_epilog() ) 
+        compl.print_asm( compl.get_epilog() )
+    else:
+        die( "ERROR: wrong parametrisation" ) 
+        ## object that call the method, print_asm, with the argument compl.expr_list OF THE CLASS ENGINE
+        ## by default, print alloc
+        #compl.print_asm( compl.get_prolog() ) 
+        #compl.print_asm( compl.expr_list, True )
+        #compl.print_asm( compl.get_epilog() ) 
 
 else:        
     usage()
