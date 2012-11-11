@@ -4,7 +4,24 @@
 # Simon Maurer
 # Josafat Piraquive
 
-from ig import Live
+# liveness object
+##################
+class Live( object ):
+    def __init__( self, content, ignore=False ):
+        self.content = content
+        self.ignore = ignore ## used for special handling of registers (i.e. call)
+    def get_content( self ):
+        return self.content
+    def set_ignore( self, ignore ):
+        self.ignore = ignore
+    def is_ignore( self ):
+        return self.ignore
+    def __str__( self ):
+        ret = ""
+        if not self.ignore:
+            ret = str( self.content )
+        return ret
+
 
 ## ASM descriptor classes
 #########################
