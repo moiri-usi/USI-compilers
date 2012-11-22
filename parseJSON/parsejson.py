@@ -32,7 +32,7 @@ def t_STRING(t):
     return t
 
 def t_FLOAT(t):
-    r'(0|(\+|-)?[0-9]*)?(\.|(e|E)(\+|-)?)[0-9]*((e|E)(\+|-)?[1-9][0-9]*)?'    
+    r'(-?(0|[1-9][0-9]*))(((\.[0-9]+)((e|E)(-|\+)?[0-9]*)?)|((e|E)(-|\+)?[0-9]+))'
     t.value = float(t.value)
     return t
 
@@ -87,32 +87,14 @@ def t_error(t):
 def p_error(p):
     raise SyntaxError("Unexpected Token: " + str(p))
 
-def p_term_object(p):
-    """ TERM : OBJ """
-    p[0] = p[1]
-
-def p_term_array(p):
-    """ TERM : ARRAY """
-    p[0] = p[1]
-
-def p_term_string(p):
-    """ TERM : STRING """
-    p[0] = p[1]
-
-def p_term_float(p):
-    """ TERM : FLOAT """
-    p[0] = p[1]
-
-def p_term_int(p):
-    """ TERM : INT """
-    p[0] = p[1]
-
-def p_term_boolean(p):
-    """ TERM : BOOLEAN """
-    p[0] = p[1]
-
-def p_term_null(p):
-    """ TERM : NULL """
+def p_term(p):
+    """ TERM    : OBJ
+                | ARRAY
+                | STRING
+                | FLOAT
+                | INT
+                | BOOLEAN
+                | NULL """
     p[0] = p[1]
 
 def p_object_start(p):
