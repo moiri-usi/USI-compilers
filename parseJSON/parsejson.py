@@ -5,15 +5,15 @@
 # Josafat Piraquive
 # used the "PLY example" proposed by Nate Nystrom as template
 
-import sys, re
+import sys, re, json
 from ply import lex, yacc
 
 # error reporting
 def die(msg, lineno=None):
   if lineno:
-    sys.stderr.write('interpreter error: line ' + str(lineno) + ': ' + msg + '\n')
+    sys.stderr.write('ERROR: line ' + str(lineno) + ': ' + msg + '\n')
   else:
-    sys.stderr.write('interpreter error: ' + msg + '\n')
+    sys.stderr.write('ERROR: ' + msg + '\n')
   sys.exit(1)
 
   def __init__(self, left, op, right):
@@ -37,12 +37,12 @@ def t_STRING(t):
     return t
 
 def t_FLOAT(t):
-    r'(0|[1-9][0-9]*)?(\.|(e|E)(\+|-)?)[0-9]*((e|E)(\+|-)?[1-9][0-9]*)?'    
+    r'(0|(\+|-)?[1-9][0-9]*)?(\.|(e|E)(\+|-)?)[0-9]*((e|E)(\+|-)?[1-9][0-9]*)?'    
     t.value = float(t.value)
     return t
 
 def t_INT(t):
-    r'[1-9][0-9]*'
+    r'(\+|-)?[1-9][0-9]*'
     t.value = int(t.value)
     return t
 
@@ -52,7 +52,7 @@ def t_BOOLEAN(t):
         t.value = True
     else:
         t.value = False
-   return t
+    return t
 
 def t_NULL(t):
     r'null'
@@ -188,13 +188,18 @@ def p_array1_end(p):
     p[0] = None
 
 def main():
-
     input_text = sys.stdin.read()
-    lex.lex()
-    lex.input(input_text)
-    parser = yacc.yacc()
-
-    print parser.parse(lexer=lex)
+    try:
+        lex.lex()
+        lex.input(input_text)
+    except:
+        die("Scanner error")
+    try:
+        parser = yacc.yacc()
+        json_obj = parser.parse(lexer=lex)
+    except:
+        die("Parser error")
+    print json.dumps(json_obj, sort_keys=True, indent=4)
 
 main()
 
