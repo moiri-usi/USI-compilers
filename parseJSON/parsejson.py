@@ -16,38 +16,17 @@ def die(msg, lineno=None):
     sys.stderr.write('interpreter error: ' + msg + '\n')
   sys.exit(1)
 
-# AST classes
-##class Exp(object): pass
-##class Const(Exp):
-##  def __init__(self, value):
-##    self.value = value
-##class Bin(Exp):
-
-
   def __init__(self, left, op, right):
     self.left = left
     self.op = op
     self.right = right
     
-##OBJ  -> {STR:TERM OBJ'
-##OBJ' -> ,STR:TERM
-##OBJ' -> }
-##TERM  -> [TERM TERM'
-##TERM' -> ,TERM
-##TERM' -> ]
-##TERM  -> STR
-##TERM  -> NUM
-##TERM  -> BOOL
-##TERM  -> NULL
-
 #OSB -> [
 #CSB ->  ]
 #OCB -> {
 #CCB ->  }
 #COMA -> ,
 #DP -> :
-
- 
 tokens = ( 'OSB', 'CSB', 'OCB', 'CCB', 'COMA', 'DP', 'NUMBER', 'BOOLEAN', 'STRING', 'NULL' )
 
 #### Regular expressions for token!!!!! we are young!!!....
@@ -87,6 +66,18 @@ ARRAY : OSB ELEMT CSB
 ELEMT : TERM ELEMNT1 
 ELEMT1 : COMA TERM ELEMT1 
 ELEMT1 : EMPTY
+
+##OBJ -> {STR:TERM OBJ'
+##OBJ' -> ,STR:TERM OBJ'
+##OBJ' -> }
+##TERM -> [TERM TERM'
+##TERM' -> ,TERM TERM'
+##TERM' -> ]
+##TERM -> STR
+##TERM -> NUM
+##TERM -> BOOL
+##TERM -> NULL
+##TERM -> OBJ
 """
 
 ## TERM : OBJ
@@ -102,33 +93,8 @@ ELEMT1 : EMPTY
 ## ARRAY1 : ,TERM ARRAY1
 ## ARRAY1 : ]
 
-##OBJ -> {STR:TERM OBJ'
-##OBJ' -> ,STR:TERM OBJ'
-##OBJ' -> }
-##TERM -> [TERM TERM'
-##TERM' -> ,TERM TERM'
-##TERM' -> ]
-##TERM -> STR
-##TERM -> NUM
-##TERM -> BOOL
-##TERM -> NULL
-##TERM -> OBJ
-
 def p_error(p):
     raise SyntaxError(p)
-
-## TERM : OBJ
-## TERM : ARRAY
-## TERM : STRING
-## TERM : NUMBER
-## TERM : BOOLEAN
-## TERM : NULL
-## OBJ : {STR:TERM OBJ1
-## OBJ1 : ,STR:TERM OBJ1
-## OBJ1 : }
-## ARRAY : [TERM ARRAY1
-## ARRAY1 : ,TERM ARRAY1
-## ARRAY1 : ]
 
 def p_term_object(p):
     """ TERM : OBJ """
@@ -156,27 +122,37 @@ def p_term_null(p):
 
 def p_object_start(p):
     """ OBJ : OCB STRING DP TERM OBJ1 """
-    p[0] = dict(p[2])
+    p[0] = dict()
+    p[0].update({p[2]:p[4]})
+    if p[5] != None:
+        p[0].update(p[5])
 
 def p_object1_content(p):
     """ OBJ1 : COMA STRING DP TERM OBJ1 """
+    p[0] = dict()
     p[0].update({p[2]:p[4]})
+    if p[5] != None:
+        p[0].update(p[5])
 
 def p_object1_end(p):
     """ OBJ1 : CCB """
-    pass
+    p[0] = None
 
 def p_array_start(p):
     """ ARRAY : OSB TERM ARRAY1 """
     p[0] = list(p[2])
+    if p[3] != None:
+        p[0] += p[3]
 
 def p_array1_content(p):
-    """ ARRAY1 : COMA TERM """
-    p[0].append(p[2])
+    """ ARRAY1 : COMA TERM ARRAY1 """
+    p[0] = list(p[2])
+    if p[3] != None:
+        p[0] += p[3]
     
 def p_array1_end(p):
     """ ARRAY1 : CSB """
-    pass
+    p[0] = None
 
 def main():
 
@@ -187,60 +163,5 @@ def main():
 
     print parser.parse(lexer=lex)
 
- 
-
-##def main():
-##  try:
-##    if len(sys.argv) == 3 and sys.argv[1] and sys.argv[1] == '-e':
-##      x = sys.argv[2]
-##      Interpreter().eval(x)
-##    else:
-##      for arg in sys.argv[1:]:
-##        f = open(arg)
-##        if f:
-##            x = f.read()
-##            interp = Interpreter()
-##            interp.eval(x)   ##   Interpreter().eval(x)
-##        else:
-##          die('file not found: ' + f)
-##  except SyntaxError as ex:
-##    die(str(ex))
-
-##class Interpreter(object):
-##
-##
-##
-##  def eval(self, text):
-##    lex.lex()
-##    lex.input(text)
-##
-##    # for tok in iter(lex.token, None):
-##      # print repr(tok.type), repr(tok.value)
-##
-##    parser = yacc.yacc(start="Program", debug=1)
-##    t = parser.parse(lexer = lex)
-##
-##    value = self.interp(t)
-##    print value
-##
-##  def interp(self, n):
-##    def interp(n): return self.interp(n)
-##
-##    if isinstance(n, Const):
-##      return n.value
-##    elif isinstance(n, Bin):
-##      x = interp(n.left)
-##      y = interp(n.right)
-##      if n.op == '+':
-##        return x + y
-##      elif n.op == '-':
-##        return x - y
-##      elif n.op == '*':
-##        return x * y
-##      elif n.op == '/':
-##        return x / y
-##
-##    # no matching case
-##    die('unrecognized AST node ' + str(n))
 main()
 
