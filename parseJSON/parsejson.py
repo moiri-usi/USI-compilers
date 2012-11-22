@@ -33,7 +33,7 @@ tokens = ( 'OSB', 'CSB', 'OCB', 'CCB', 'COMA', 'DP', 'FLOAT', 'INT', 'BOOLEAN', 
 
 def t_STRING(t):
     r'"([^"\\]|\\("|\\|/|b|f|n|r|t|u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]))*"'
-    t.value = t.value[1:-1]
+    t.value = t.value[1:-1].decode('string-escape')
     return t
 
 def t_FLOAT(t):
@@ -199,6 +199,11 @@ def main():
         json_obj = parser.parse(lexer=lex)
     except:
         die("Parser error")
+#    if json.loads(input_text) == json_obj: 
+#        print json.dumps(json_obj, sort_keys=True, indent=4)
+#    else:
+#        print "not equal to json.loads"
+
     print json.dumps(json_obj, sort_keys=True, indent=4)
 
 main()
