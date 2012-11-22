@@ -10,16 +10,11 @@ from ply import lex, yacc
 
 # error reporting
 def die(msg, lineno=None):
-  if lineno:
-    sys.stderr.write('ERROR: line ' + str(lineno) + ': ' + msg + '\n')
-  else:
-    sys.stderr.write('ERROR: ' + msg + '\n')
-  sys.exit(1)
-
-  def __init__(self, left, op, right):
-    self.left = left
-    self.op = op
-    self.right = right
+    if lineno:
+        sys.stderr.write('ERROR: line ' + str(lineno) + ': ' + msg + '\n')
+    else:
+        sys.stderr.write('ERROR: ' + msg + '\n')
+    sys.exit(1)
     
 #OSB -> [
 #CSB ->  ]
@@ -66,7 +61,7 @@ t_CCB = r'\}'
 t_COMA = r'\,'
 t_DP = r'\:'
 
-def t_WS(t): ## delete white and other spaces !!! a set the world!!!!!!!!!
+def t_WS(t): ## delete white and other spaces !!! and set the world!!!!!!!!!
   r'[ \t\n\r\f]+'
   pass
 
@@ -74,39 +69,6 @@ def t_error(t):
   raise SyntaxError("Unknown symbol %r" % (t.value[0],))
   print "Skipping", repr(t.value[0])
   t.lexer.skip(1)
-
-precedence = (
-    ('left', 'INT'),
-    ('left', 'FLOAT', 'BOOLEAN', 'NULL'),
-    ('left', 'STRING'),
-)
-"""
-OBJ : OCB ATTR CCB
-ATTR : STRING DP TERM ATTR1
-ATTR1 : COMA STRING DP TERM ATTR1
-ATTR1 : EMPTY
-TERM : ARRAY
-TERM : NUMBER
-TERM : STRING
-TERM : BOOLEAN
-TERM : NULL
-ARRAY : OSB ELEMT CSB
-ELEMT : TERM ELEMNT1 
-ELEMT1 : COMA TERM ELEMT1 
-ELEMT1 : EMPTY
-
-##OBJ -> {STR:TERM OBJ'
-##OBJ' -> ,STR:TERM OBJ'
-##OBJ' -> }
-##TERM -> [TERM TERM'
-##TERM' -> ,TERM TERM'
-##TERM' -> ]
-##TERM -> STR
-##TERM -> NUM
-##TERM -> BOOL
-##TERM -> NULL
-##TERM -> OBJ
-"""
 
 ## TERM : OBJ
 ## TERM : ARRAY
@@ -123,7 +85,7 @@ ELEMT1 : EMPTY
 ## ARRAY1 : ]
 
 def p_error(p):
-    raise SyntaxError(p)
+    raise SyntaxError("Unexpected Token: " + str(p))
 
 def p_term_object(p):
     """ TERM : OBJ """
@@ -192,13 +154,10 @@ def main():
     try:
         lex.lex()
         lex.input(input_text)
-    except:
-        die("Scanner error")
-#    try:
-    parser = yacc.yacc()
-    json_obj = parser.parse(lexer=lex)
-#    except:
-#        die("Parser error")
+        parser = yacc.yacc()
+        json_obj = parser.parse(lexer=lex)
+    except SyntaxError as ex:
+        die(str(ex))
 #    if json.loads(input_text) == json_obj: 
 #        print json.dumps(json_obj, sort_keys=True, indent=4)
 #    else:
