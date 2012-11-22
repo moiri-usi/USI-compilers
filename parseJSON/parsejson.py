@@ -32,7 +32,7 @@ tokens = ( 'OSB', 'CSB', 'OCB', 'CCB', 'COMA', 'DP', 'FLOAT', 'INT', 'BOOLEAN', 
 #### Regular expressions for token!!!!! we are young!!!....
 
 def t_STRING(t):
-    r'"([^"\\]|\\("|\\))*"'
+    r'"([^"\\]|\\("|\\|/|b|f|n|r|t|u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]))*"'
     t.value = t.value[1:-1]
     return t
 
