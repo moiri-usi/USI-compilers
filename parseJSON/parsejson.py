@@ -46,14 +46,25 @@ def t_INT(t):
     t.value = int(t.value)
     return t
 
+def t_BOOLEAN(t):
+    r'(true|false)'
+    if t.value == "true":
+        t.value = True
+    else:
+        t.value = False
+   return t
+
+def t_NULL(t):
+    r'null'
+    t.value = None
+    return t
+
 t_OSB = r'\['
 t_CSB = r'\]'
 t_OCB = r'\{'
 t_CCB = r'\}'
 t_COMA = r'\,'
 t_DP = r'\:'
-t_BOOLEAN = r'(true|false)'
-t_NULL = r'null'
 
 def t_WS(t): ## delete white and other spaces !!! a set the world!!!!!!!!!
   r'[ \t\n\r\f]+'
