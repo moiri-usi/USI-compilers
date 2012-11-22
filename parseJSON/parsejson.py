@@ -37,12 +37,12 @@ def t_STRING(t):
     return t
 
 def t_FLOAT(t):
-    r'(0|(\+|-)?[1-9][0-9]*)?(\.|(e|E)(\+|-)?)[0-9]*((e|E)(\+|-)?[1-9][0-9]*)?'    
+    r'(0|(\+|-)?[0-9]*)?(\.|(e|E)(\+|-)?)[0-9]*((e|E)(\+|-)?[1-9][0-9]*)?'    
     t.value = float(t.value)
     return t
 
 def t_INT(t):
-    r'(\+|-)?[1-9][0-9]*'
+    r'((\+|-)?[1-9][0-9]*)|0'
     t.value = int(t.value)
     return t
 
@@ -194,11 +194,11 @@ def main():
         lex.input(input_text)
     except:
         die("Scanner error")
-    try:
-        parser = yacc.yacc()
-        json_obj = parser.parse(lexer=lex)
-    except:
-        die("Parser error")
+#    try:
+    parser = yacc.yacc()
+    json_obj = parser.parse(lexer=lex)
+#    except:
+#        die("Parser error")
 #    if json.loads(input_text) == json_obj: 
 #        print json.dumps(json_obj, sort_keys=True, indent=4)
 #    else:
