@@ -58,7 +58,7 @@ t_OCB = r'\{'
 t_CCB = r'\}'
 t_COMA = r'\,'
 t_DP = r'\:'
-t_NUMBER = r'(0|[1-9][0-9]*)?\.[0-9]*((e|E)(\+|-)?[1-9][0-9]*)?'
+t_NUMBER = r'(0|[1-9][0-9]*)?\.?[0-9]+((e|E)(\+|-)?[1-9][0-9]*)?'
 t_BOOLEAN = r'(true|false)'
 t_STRING = r'"([^"\\]|\\("|\\))*"'
 t_NULL = r'null'
@@ -89,25 +89,74 @@ ELEMT1 : COMA TERM ELEMT1
 ELEMT1 : EMPTY
 """
 
+## TERM : OBJ
+## TERM : ARRAY
+## TERM : STRING
+## TERM : NUMBER
+## TERM : BOOLEAN
+## TERM : NULL
+## OBJ : {STR:TERM OBJ1
+## OBJ1 : ,STR:TERM OBJ1
+## OBJ1 : }
+## ARRAY : [TERM ARRAY1
+## ARRAY1 : ,TERM ARRAY1
+## ARRAY1 : ]
 
-##OBJ  -> {STR:TERM OBJ'
+##OBJ -> {STR:TERM OBJ'
 ##OBJ' -> ,STR:TERM OBJ'
 ##OBJ' -> }
-##TERM  -> [TERM TERM'
+##TERM -> [TERM TERM'
 ##TERM' -> ,TERM TERM'
 ##TERM' -> ]
-##TERM  -> STR
-##TERM  -> NUM
-##TERM  -> BOOL
-##TERM  -> NULL
+##TERM -> STR
+##TERM -> NUM
+##TERM -> BOOL
+##TERM -> NULL
+##TERM -> OBJ
 
 def p_error(p):
     raise SyntaxError(p)
 
+## TERM : OBJ
+## TERM : ARRAY
+## TERM : STRING
+## TERM : NUMBER
+## TERM : BOOLEAN
+## TERM : NULL
+## OBJ : {STR:TERM OBJ1
+## OBJ1 : ,STR:TERM OBJ1
+## OBJ1 : }
+## ARRAY : [TERM ARRAY1
+## ARRAY1 : ,TERM ARRAY1
+## ARRAY1 : ]
+
+def p_term_object(p):
+    """ TERM : OBJ """
+    p[0] = p[1]
+
+def p_term_array(p):
+    """ TERM : ARRAY """
+    p[0] = p[1]
+
+def p_term_string(p):
+    """ TERM : STRING """
+    p[0] = p[1]
+
+def p_term_number(p):
+    """ TERM : NUMBER """
+    p[0] = p[1]
+
+def p_term_boolean(p):
+    """ TERM : BOOLEAN """
+    p[0] = p[1]
+
+def p_term_null(p):
+    """ TERM : NULL """
+    p[0] = p[1]
+
 def p_object_start(p):
     """ OBJ : OCB STRING DP TERM OBJ1 """
-    p[0] = {p[2]:p[4]}
-
+    p[0] = dict(p[2])
 
 def p_object1_content(p):
     """ OBJ1 : COMA STRING DP TERM OBJ1 """
@@ -117,41 +166,26 @@ def p_object1_end(p):
     """ OBJ1 : CCB """
     pass
 
-def p_term_array_start(p):
-    """ TERM  : OSB TERM TERM1 """
-    p[0] = [p[2]]
+def p_array_start(p):
+    """ ARRAY : OSB TERM ARRAY1 """
+    p[0] = list(p[2])
 
-def p_term1_array_content(p):
-    """ TERM1 : COMA TERM """
+def p_array1_content(p):
+    """ ARRAY1 : COMA TERM """
     p[0].append(p[2])
     
-def p_term1_array_end(p):
-    """ TERM1 : CSB """
+def p_array1_end(p):
+    """ ARRAY1 : CSB """
     pass
 
-def p_term_string(p):
-    """ TERM  : STRING """
-    p[0] = p[1]
+def main():
 
-def p_term_number(p):
-    """ TERM  : NUMBER """
-    p[0] = p[1]
+    input_text = sys.stdin.read()
+    lex.lex()
+    lex.input(input_text)
+    parser = yacc.yacc()
 
-def p_term_boolean(p):
-    """ TERM  : BOOLEAN """
-    p[0] = p[1]
-def p_term_null(p):
-    """ TERM  : NULL """
-    p[0] = p[1]
-
-def main2():
-    
-        input_text = sys.stdin.read()
-        lex.lex()
-        lex.input(input_text)
-        parser = yacc.yacc()
-            
-        print parser.parse(lexer=lex)#.trim("\'[]")
+    print parser.parse(lexer=lex)
 
  
 
@@ -208,5 +242,5 @@ def main2():
 ##
 ##    # no matching case
 ##    die('unrecognized AST node ' + str(n))
-main2()
+main()
 
