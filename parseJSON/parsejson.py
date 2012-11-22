@@ -72,16 +72,29 @@ def t_error(t):
   print "Skipping", repr(t.value[0])
   t.lexer.skip(1)
 
-precedence = (
-  ('left', 'STRING', ''),
-  ('left', 'STRING', ''),
-)
+
+"""
+OBJ : OCB ATTR CCB
+ATTR : STRING DP TERM ATTR1
+ATTR1 : COMA STRING DP TERM ATTR1
+ATTR1 : EMPTY
+TERM : ARRAY
+TERM : NUMBER
+TERM : STRING
+TERM : BOOLEAN
+TERM : NULL
+ARRAY : OSB ELEMT CSB
+ELEMT : TERM ELEMNT1 
+ELEMT1 : COMA TERM ELEMT1 
+ELEMT1 : EMPTY
+"""
+
 
 ##OBJ  -> {STR:TERM OBJ'
-##OBJ' -> ,STR:TERM
+##OBJ' -> ,STR:TERM OBJ'
 ##OBJ' -> }
 ##TERM  -> [TERM TERM'
-##TERM' -> ,TERM
+##TERM' -> ,TERM TERM'
 ##TERM' -> ]
 ##TERM  -> STR
 ##TERM  -> NUM
@@ -89,83 +102,75 @@ precedence = (
 ##TERM  -> NULL
 
 def p_error(p):
-  raise SyntaxError(p)
+    raise SyntaxError(p)
 
 def p_object_start(p):
-  """ OBJ  -> {STR:TERM OBJ1 """
-  p[0] = '{', p[2], ':', p[4], p[5]
+    """ OBJ : OCB STRING DP TERM OBJ1 """
+    p[0] = {p[2]:p[4]}
+
 
 def p_object1_content(p):
-  """ OBJ1 -> ,STR:TERM """
-  p[0] = ',', p[2], ':', p[4]
+    """ OBJ1 : COMA STRING DP TERM OBJ1 """
+    p[0].update({p[2]:p[4]})
 
 def p_object1_end(p):
-  """ OBJ1 -> } """
-  p[0] = '}'
+    """ OBJ1 : CCB """
+    pass
 
 def p_term_array_start(p):
-  """ TERM  -> [TERM TERM1 """
-  p[0] = '[', p[2], p[3]
+    """ TERM  : OSB TERM TERM1 """
+    p[0] = [p[2]]
 
 def p_term1_array_content(p):
-  """ TERM1 -> ,TERM """
-  p[0] = ',', p[1]
-
+    """ TERM1 : COMA TERM """
+    p[0].append(p[2])
+    
 def p_term1_array_end(p):
-  """ TERM1 -> ] """
-  p[0] = ']'
+    """ TERM1 : CSB """
+    pass
 
 def p_term_string(p):
-  """ TERM  -> STR """
-  p[0] = p[1]
+    """ TERM  : STRING """
+    p[0] = p[1]
 
 def p_term_number(p):
-  """ TERM  -> NUM """
-  p[0] = p[1]
+    """ TERM  : NUMBER """
+    p[0] = p[1]
+
 def p_term_boolean(p):
-  """ TERM  -> BOOL """
-  p[0] = p[1]
+    """ TERM  : BOOLEAN """
+    p[0] = p[1]
 def p_term_null(p):
-  """ TERM  -> NULL """
-  p[0] = p[1]
+    """ TERM  : NULL """
+    p[0] = p[1]
 
 def main2():
-    try:
-        if len (sys.stdin) > 0:
-            input_text = sys.stdin.read
-            lex.lex()
-            lex.input(input_text)
-            parser = yacc.yacc()
+    
+        input_text = sys.stdin.read()
+        lex.lex()
+        lex.input(input_text)
+        parser = yacc.yacc()
             
-            print parser    
+        print parser.parse(lexer=lex)#.trim("\'[]")
 
-"""
-parser = yacc.yacc(start="Program", debug=1)
-    t = parser.parse(lexer = lex)
+ 
 
-    value = self.interp(t)
-    print value
-"""
-
-    except :
-        die('error')
-
-def main():
-  try:
-    if len(sys.argv) == 3 and sys.argv[1] and sys.argv[1] == '-e':
-      x = sys.argv[2]
-      Interpreter().eval(x)
-    else:
-      for arg in sys.argv[1:]:
-        f = open(arg)
-        if f:
-            x = f.read()
-            interp = Interpreter()
-            interp.eval(x)   ##   Interpreter().eval(x)
-        else:
-          die('file not found: ' + f)
-  except SyntaxError as ex:
-    die(str(ex))
+##def main():
+##  try:
+##    if len(sys.argv) == 3 and sys.argv[1] and sys.argv[1] == '-e':
+##      x = sys.argv[2]
+##      Interpreter().eval(x)
+##    else:
+##      for arg in sys.argv[1:]:
+##        f = open(arg)
+##        if f:
+##            x = f.read()
+##            interp = Interpreter()
+##            interp.eval(x)   ##   Interpreter().eval(x)
+##        else:
+##          die('file not found: ' + f)
+##  except SyntaxError as ex:
+##    die(str(ex))
 
 ##class Interpreter(object):
 ##
@@ -203,5 +208,5 @@ def main():
 ##
 ##    # no matching case
 ##    die('unrecognized AST node ' + str(n))
-main1()
+main2()
 
