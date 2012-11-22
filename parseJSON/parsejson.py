@@ -17,51 +17,53 @@ def die(msg, lineno=None):
   sys.exit(1)
 
 # AST classes
-class Exp(object): pass
-class Const(Exp):
-  def __init__(self, value):
-    self.value = value
-class Bin(Exp):
+##class Exp(object): pass
+##class Const(Exp):
+##  def __init__(self, value):
+##    self.value = value
+##class Bin(Exp):
+
+
   def __init__(self, left, op, right):
     self.left = left
     self.op = op
     self.right = right
+    
+##OBJ  -> {STR:TERM OBJ'
+##OBJ' -> ,STR:TERM
+##OBJ' -> }
+##TERM  -> [TERM TERM'
+##TERM' -> ,TERM
+##TERM' -> ]
+##TERM  -> STR
+##TERM  -> NUM
+##TERM  -> BOOL
+##TERM  -> NULL
 
-# original grammar:
-#
-# Exp : Exp + Exp
-# Exp : Exp - Exp
-# Exp : Exp * Exp
-# Exp : Exp / Exp
-# Exp : n
-# Exp : ( Exp )
+#OSB -> [
+#CSB ->  ]
+#OCB -> {
+#CCB ->  }
+#COMA -> ,
+#DP -> :
 
-# with associativity and precedence fixed:
-#
-# Exp : Exp + Term
-# Exp : Exp - Term
-# Exp : Term
-# Term : Term * Factor
-# Term : Term / Factor
-# Term : Factor
-# Factor : n
-# Factor : ( Exp )
+ 
+tokens = ( 'OSB', 'CSB', 'OCB', 'CCB', 'COMA', 'DP', 'NUMBER', 'BOOLEAN', 'STRING', 'NULL' )
 
-tokens = ( 'PLUS', 'MINUS', 'TIMES', 'DIV', 'INT', 'LP', 'RP' )
+#### Regular expressions for token!!!!! we are young!!!....
 
-def t_INT(t):
-  r'(0|[1-9]\d*)'
-  t.value = int(t.value)
-  return t
+t_OSB = r'\['
+t_CSB = r'\]'
+t_OCB = r'\{'
+t_CCB = r'\}'
+t_COMA = r'\,'
+t_DP = r'\:'
+t_NUMBER = r'(0|[1-9][0-9]*)?\.[0-9]*((e|E)(\+|-)?[1-9][0-9]*)?'
+t_BOOLEAN = r'(true|false)'
+t_STRING = r'"([^"\\]|\\("|\\))*"'
+t_NULL = r'null'
 
-t_PLUS = r'\+'
-t_MINUS = r'\-'
-t_TIMES = r'\*'
-t_DIV = r'/'
-t_LP = r'\('
-t_RP = r'\)'
-
-def t_WS(t):
+def t_WS(t): ## delete white and other spaces !!! a set the world!!!!!!!!!
   r'[ \t\n\r\f]+'
   pass
 
@@ -71,41 +73,82 @@ def t_error(t):
   t.lexer.skip(1)
 
 precedence = (
-  ('left', 'PLUS', 'MINUS'),
-  ('left', 'TIMES', 'DIV'),
+  ('left', 'STRING', ''),
+  ('left', 'STRING', ''),
 )
+
+##OBJ  -> {STR:TERM OBJ'
+##OBJ' -> ,STR:TERM
+##OBJ' -> }
+##TERM  -> [TERM TERM'
+##TERM' -> ,TERM
+##TERM' -> ]
+##TERM  -> STR
+##TERM  -> NUM
+##TERM  -> BOOL
+##TERM  -> NULL
 
 def p_error(p):
   raise SyntaxError(p)
 
-def p_program(p):
-  """Program : Exp"""
+def p_object_start(p):
+  """ OBJ  -> {STR:TERM OBJ1 """
+  p[0] = '{', p[2], ':', p[4], p[5]
+
+def p_object1_content(p):
+  """ OBJ1 -> ,STR:TERM """
+  p[0] = ',', p[2], ':', p[4]
+
+def p_object1_end(p):
+  """ OBJ1 -> } """
+  p[0] = '}'
+
+def p_term_array_start(p):
+  """ TERM  -> [TERM TERM1 """
+  p[0] = '[', p[2], p[3]
+
+def p_term1_array_content(p):
+  """ TERM1 -> ,TERM """
+  p[0] = ',', p[1]
+
+def p_term1_array_end(p):
+  """ TERM1 -> ] """
+  p[0] = ']'
+
+def p_term_string(p):
+  """ TERM  -> STR """
   p[0] = p[1]
 
-def p_plus(p):
-  """Exp : Exp PLUS Exp"""
-  p[0] = Bin(p[1], '+', p[3])
+def p_term_number(p):
+  """ TERM  -> NUM """
+  p[0] = p[1]
+def p_term_boolean(p):
+  """ TERM  -> BOOL """
+  p[0] = p[1]
+def p_term_null(p):
+  """ TERM  -> NULL """
+  p[0] = p[1]
 
-def p_minus(p):
-  """Exp : Exp MINUS Exp"""
-  p[0] = Bin(p[1], '-', p[3])
+def main2():
+    try:
+        if len (sys.stdin) > 0:
+            input_text = sys.stdin.read
+            lex.lex()
+            lex.input(input_text)
+            parser = yacc.yacc()
+            
+            print parser    
 
-def p_times(p):
-  """Exp : Exp TIMES Exp"""
-  p[0] = Bin(p[1], '*', p[3])
+"""
+parser = yacc.yacc(start="Program", debug=1)
+    t = parser.parse(lexer = lex)
 
-def p_div(p):
-  """Exp : Exp DIV Exp"""
-  p[0] = Bin(p[1], '/', p[3])
+    value = self.interp(t)
+    print value
+"""
 
-def p_num(p):
-  """Exp : INT"""
-  p[0] = Const(p[1])
-
-def p_paren(p):
-  """Exp : LP Exp RP"""
-  p[0] = p[2]
-
+    except :
+        die('error')
 
 def main():
   try:
@@ -117,46 +160,48 @@ def main():
         f = open(arg)
         if f:
             x = f.read()
-            Interpreter().eval(x)
+            interp = Interpreter()
+            interp.eval(x)   ##   Interpreter().eval(x)
         else:
           die('file not found: ' + f)
   except SyntaxError as ex:
     die(str(ex))
 
-class Interpreter(object):
-  def eval(self, text):
-    lex.lex()
-    lex.input(text)
-
-    # for tok in iter(lex.token, None):
-      # print repr(tok.type), repr(tok.value)
-
-    parser = yacc.yacc(start="Program", debug=1)
-    t = parser.parse(lexer = lex)
-
-    value = self.interp(t)
-    print value
-
-  def interp(self, n):
-    def interp(n): return self.interp(n)
-
-    if isinstance(n, Const):
-      return n.value
-    elif isinstance(n, Bin):
-      x = interp(n.left)
-      y = interp(n.right)
-      if n.op == '+':
-        return x + y
-      elif n.op == '-':
-        return x - y
-      elif n.op == '*':
-        return x * y
-      elif n.op == '/':
-        return x / y
-
-    # no matching case
-    die('unrecognized AST node ' + str(n))
-
-if __name__ == '__main__':
-  main()
+##class Interpreter(object):
+##
+##
+##
+##  def eval(self, text):
+##    lex.lex()
+##    lex.input(text)
+##
+##    # for tok in iter(lex.token, None):
+##      # print repr(tok.type), repr(tok.value)
+##
+##    parser = yacc.yacc(start="Program", debug=1)
+##    t = parser.parse(lexer = lex)
+##
+##    value = self.interp(t)
+##    print value
+##
+##  def interp(self, n):
+##    def interp(n): return self.interp(n)
+##
+##    if isinstance(n, Const):
+##      return n.value
+##    elif isinstance(n, Bin):
+##      x = interp(n.left)
+##      y = interp(n.right)
+##      if n.op == '+':
+##        return x + y
+##      elif n.op == '-':
+##        return x - y
+##      elif n.op == '*':
+##        return x * y
+##      elif n.op == '/':
+##        return x / y
+##
+##    # no matching case
+##    die('unrecognized AST node ' + str(n))
+main1()
 
