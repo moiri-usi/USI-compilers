@@ -27,9 +27,24 @@ def die(msg, lineno=None):
 #CCB ->  }
 #COMA -> ,
 #DP -> :
-tokens = ( 'OSB', 'CSB', 'OCB', 'CCB', 'COMA', 'DP', 'NUMBER', 'BOOLEAN', 'STRING', 'NULL' )
+tokens = ( 'OSB', 'CSB', 'OCB', 'CCB', 'COMA', 'DP', 'FLOAT', 'INT', 'BOOLEAN', 'STRING', 'NULL' )
 
 #### Regular expressions for token!!!!! we are young!!!....
+
+def t_STRING(t):
+    r'"([^"\\]|\\("|\\))*"'
+    t.value = t.value[1:-1]
+    return t
+
+def t_FLOAT(t):
+    r'(0|[1-9][0-9]*)?(\.|(e|E)(\+|-)?)[0-9]*((e|E)(\+|-)?[1-9][0-9]*)?'    
+    t.value = float(t.value)
+    return t
+
+def t_INT(t):
+    r'[1-9][0-9]*'
+    t.value = int(t.value)
+    return t
 
 t_OSB = r'\['
 t_CSB = r'\]'
@@ -37,9 +52,7 @@ t_OCB = r'\{'
 t_CCB = r'\}'
 t_COMA = r'\,'
 t_DP = r'\:'
-t_NUMBER = r'(0|[1-9][0-9]*)?\.?[0-9]+((e|E)(\+|-)?[1-9][0-9]*)?'
 t_BOOLEAN = r'(true|false)'
-t_STRING = r'"([^"\\]|\\("|\\))*"'
 t_NULL = r'null'
 
 def t_WS(t): ## delete white and other spaces !!! a set the world!!!!!!!!!
@@ -51,7 +64,11 @@ def t_error(t):
   print "Skipping", repr(t.value[0])
   t.lexer.skip(1)
 
-
+precedence = (
+    ('left', 'INT'),
+    ('left', 'FLOAT', 'BOOLEAN', 'NULL'),
+    ('left', 'STRING'),
+)
 """
 OBJ : OCB ATTR CCB
 ATTR : STRING DP TERM ATTR1
@@ -83,7 +100,8 @@ ELEMT1 : EMPTY
 ## TERM : OBJ
 ## TERM : ARRAY
 ## TERM : STRING
-## TERM : NUMBER
+## TERM : FLOAT
+## TERM : INT
 ## TERM : BOOLEAN
 ## TERM : NULL
 ## OBJ : {STR:TERM OBJ1
@@ -108,8 +126,12 @@ def p_term_string(p):
     """ TERM : STRING """
     p[0] = p[1]
 
-def p_term_number(p):
-    """ TERM : NUMBER """
+def p_term_float(p):
+    """ TERM : FLOAT """
+    p[0] = p[1]
+
+def p_term_int(p):
+    """ TERM : INT """
     p[0] = p[1]
 
 def p_term_boolean(p):
@@ -140,13 +162,13 @@ def p_object1_end(p):
 
 def p_array_start(p):
     """ ARRAY : OSB TERM ARRAY1 """
-    p[0] = list(p[2])
+    p[0] = [p[2]]
     if p[3] != None:
         p[0] += p[3]
 
 def p_array1_content(p):
     """ ARRAY1 : COMA TERM ARRAY1 """
-    p[0] = list(p[2])
+    p[0] = [p[2]]
     if p[3] != None:
         p[0] += p[3]
     
