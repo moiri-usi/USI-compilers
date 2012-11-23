@@ -13,7 +13,7 @@ def die(msg, lineno=None):
     if lineno:
         sys.stderr.write('ERROR: line ' + str(lineno) + ': ' + msg + '\n')
     else:
-        sys.stderr.write('ERROR: ' + msg + '\n')
+        sys.stderr.write(msg + '\n')
     sys.exit(1)
     
 #OSB -> [
@@ -62,13 +62,14 @@ t_COMA = r'\,'
 t_DP = r'\:'
 
 def t_WS(t): ## delete white and other spaces !!! and set the world!!!!!!!!!
-  r'[ \t\n\r\f]+'
-  pass
+    r'[ \t\n\r\f]+'
+    pass
 
 def t_error(t):
-  raise SyntaxError("Unknown symbol %r" % (t.value[0],))
-  print "Skipping", repr(t.value[0])
-  t.lexer.skip(1)
+    raise SyntaxError("Unknown symbol %r" % (t.value[0],))
+    #raise SyntaxError("No JSON object could be decoded")
+    print "Skipping", repr(t.value[0])
+    t.lexer.skip(1)
 
 ## TERM : OBJ
 ## TERM : ARRAY
@@ -148,7 +149,7 @@ def p_array1_end(p):
 
 def p_item_term(p):
     """ ITEM : TERM """
-    p[0] = p[1]
+    p[0] = [p[1]]
 
 def p_item_(p):
     """ ITEM : """
