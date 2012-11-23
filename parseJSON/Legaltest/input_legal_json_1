@@ -1,0 +1,40 @@
+[{
+    "#####LEGAL TEST CASES JSON - PARSING####":"JOSAFAT - SIMON",
+     "name": "Jack (\"Bee\") Nimble", 
+    "format": {
+        "type":       "rect", 
+        "width":      1920, 
+        "height":     true, 
+        "interlace":  false, 
+        "frame rate": 24,
+	"josa": {
+				"test1": "josa", 
+				"test2": "cambio \t sks", 
+				"test3": [545, "jol"],
+				"test4": [4],
+				"test5": {
+				
+						"test5.1": "carrera \" ",
+						"test5.2": "HoJnJ \\ FDFDG ",
+						"test5.3": "joska \/ ",
+						"test5.4": "cosita \b",
+						"test5.5": "uulala \n",
+						"test5.6": {
+								"test5.6.1": [{"test5.6.1.1":"rica \r jok", "hexadecimas": "\uabbD"},45],
+								"test5.6.2": "\u343d",
+								"test5.6.3": "\uABD43d",
+								"test5.6.4": null,
+								"test5.6.5": 0.909E-5,
+								"test5.6.6": 0.909e5,
+								"test5.6.7": 1212.4545E+5,
+								"test5.6.8": -0.090e3
+								
+
+							   }
+					}
+				
+		 }
+	
+	
+    }
+},3.3433, 90, "josa \f ksks", 124.323e-2, 12.232E-5, 454264512532232.61515151545e-4444451144]
