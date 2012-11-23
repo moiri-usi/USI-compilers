@@ -77,12 +77,16 @@ def t_error(t):
 ## TERM : INT
 ## TERM : BOOLEAN
 ## TERM : NULL
-## OBJ : {STR:TERM OBJ1
+## OBJ : {ATTR OBJ1
 ## OBJ1 : ,STR:TERM OBJ1
 ## OBJ1 : }
-## ARRAY : [TERM ARRAY1
+## ATTR : STR:TERM
+## ATTR : 
+## ARRAY : [ITEM ARRAY1
 ## ARRAY1 : ,TERM ARRAY1
 ## ARRAY1 : ]
+## ITEM : TERM
+## ITEM :
 
 def p_error(p):
     raise SyntaxError("Unexpected Token: " + str(p))
@@ -98,11 +102,20 @@ def p_term(p):
     p[0] = p[1]
 
 def p_object_start(p):
-    """ OBJ : OCB STRING DP TERM OBJ1 """
+    """ OBJ : OCB ATTR OBJ1 """
     p[0] = dict()
-    p[0].update({p[2]:p[4]})
-    if p[5] != None:
-        p[0].update(p[5])
+    if p[2] != None:
+        p[0].update(p[2])
+    if p[3] != None:
+        p[0].update(p[3])
+
+def p_attr_term(p):
+    """ ATTR : STRING DP TERM """
+    p[0] = {p[1]:p[3]}
+
+def p_attr_(p):
+    """ ATTR : """
+    p[0] = None
 
 def p_object1_content(p):
     """ OBJ1 : COMA STRING DP TERM OBJ1 """
@@ -116,8 +129,10 @@ def p_object1_end(p):
     p[0] = None
 
 def p_array_start(p):
-    """ ARRAY : OSB TERM ARRAY1 """
-    p[0] = [p[2]]
+    """ ARRAY : OSB ITEM ARRAY1 """
+    p[0] = []
+    if p[2] != None:
+        p[0] += p[2]
     if p[3] != None:
         p[0] += p[3]
 
@@ -129,6 +144,14 @@ def p_array1_content(p):
     
 def p_array1_end(p):
     """ ARRAY1 : CSB """
+    p[0] = None
+
+def p_item_term(p):
+    """ ITEM : TERM """
+    p[0] = p[1]
+
+def p_item_(p):
+    """ ITEM : """
     p[0] = None
 
 def main():
