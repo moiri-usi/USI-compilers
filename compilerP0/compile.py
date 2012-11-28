@@ -580,7 +580,8 @@ class Engine( object ):
         iter_list = self.expr_list
         self.expr_list = []
         for expr in iter_list:
-            if hasattr(expr, 'left') and hasattr(expr, 'right'):
+            if isinstance(expr, ASM_movl):
+                ## cleanup move expressions moving a register to itself
                 left_color = None
                 right_color = None
                 if isinstance(expr.left, ASM_v_register):
