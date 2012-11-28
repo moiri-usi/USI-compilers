@@ -34,7 +34,8 @@ elif [[ $1 == "-alloc" ]]; then
     ALLOC=1
     echo "ALLOC-code"
 else
-    echo "STACK-code"
+    ALLOC=1
+    echo "ALLOC-code"
 fi
 
 source $SRC
