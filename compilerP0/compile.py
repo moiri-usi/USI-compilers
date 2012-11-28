@@ -255,6 +255,48 @@ class Engine( object ):
             new_varname = self.flatten_ast_add_assign(expr)    
             return compiler.ast.Name(new_varname)
 
+        elif isinstance( node, compiler.ast.And ):
+            self.DEBUG( "And" )
+            flat_nodes = []
+            cnt = 0
+            for n in node.nodes:
+                flat_node = self.flatten_ast(n)
+                if (cnt == 0):
+                    flat_nodes.append(flat_node)
+                elif (cnt == 1):
+                    flat_nodes.append(flat_node)
+                    expr = compiler.ast.And(flat_nodes)
+                    new_varname = self.flatten_ast_add_assign( expr )
+                elif (cnt > 1):
+                    expr = compiler.ast.And([compiler.ast.Name(new_varname), flat_node])
+                    new_varname = self.flatten_ast_add_assign( expr )
+                cnt += 1
+            return compiler.ast.Name(new_varname)
+
+        elif isinstance( node, compiler.ast.Or ):
+            self.DEBUG( "Or" )
+            flat_nodes = []
+            cnt = 0
+            for n in node.nodes:
+                flat_node = self.flatten_ast(n)
+                if (cnt == 0):
+                    flat_nodes.append(flat_node)
+                elif (cnt == 1):
+                    flat_nodes.append(flat_node)
+                    expr = compiler.ast.Or(flat_nodes)
+                    new_varname = self.flatten_ast_add_assign( expr )
+                elif (cnt > 1):
+                    expr = compiler.ast.Or([compiler.ast.Name(new_varname), flat_node])
+                    new_varname = self.flatten_ast_add_assign( expr )
+                cnt += 1
+            return compiler.ast.Name(new_varname)
+
+        elif isinstance( node, compiler.ast.Not ):
+            self.DEBUG( "Not" )
+            expr = compiler.ast.Not(self.flatten_ast(node.expr))
+            new_varname = self.flatten_ast_add_assign( expr )
+            return compiler.ast.Name(new_varname)
+
         else:
             die( "unknown AST node" + str( node ) )
 
