@@ -20,9 +20,8 @@ def usage():
     print "USAGE:"
     print "    %s [OPERATION] [ARGUMENT] FILE" % sys.argv[0]
     print "OPERATION:"
-    print "    -stack:    prints ASM-code using only stack-operations"
     print "    -pseudo:   prints ASM-pseudo-code using virtual registers"
-    print "    -liveness: prints the liveness analysis of the -stack ASM"
+    print "    -liveness: prints the liveness analysis of the -pseudo ASM"
     print "    -ig:       prints dot syntax of the interference graph"
     print "    -ig-color: prints dot syntax of the colored interference graph"
     print "    -alloc:    prints ASM-code using register allocation (default)"
@@ -35,9 +34,8 @@ def usage():
 ## P0 compiler implementation
 #############################
 class Engine( object ):
-    def __init__( self, filepath=None, DEBUG=False, PSEUDO=False ):
+    def __init__( self, filepath=None, DEBUG=False ):
         self.DEBUGMODE = DEBUG
-        self.PSEUDO = PSEUDO
         if filepath:
             if not os.path.exists( filepath ):
                 die( "ERROR: file '%s' does not exist" % filepath )
@@ -283,13 +281,8 @@ class Engine( object ):
                 self.flatten_ast_2_list( chld, [] )
             left = self.lookup( nd.left.name )
             right = self.lookup( nd.right.name )
-            if not self.PSEUDO:
-                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
-                ret = self.reg_list['eax']
-                self.expr_list.append( ASM_addl( right, ret ) )
-            else:
-                ret = left
-                self.expr_list.append( ASM_addl( right, ret ) )
+            ret = left
+            self.expr_list.append( ASM_addl( right, ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.Sub ):
@@ -298,13 +291,8 @@ class Engine( object ):
                 self.flatten_ast_2_list( chld, [] )
             left = self.lookup( nd.left.name )
             right = self.lookup( nd.right.name )
-            if not self.PSEUDO:
-                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
-                ret = self.reg_list['eax']
-                self.expr_list.append( ASM_subl( right, ret ) )
-            else:
-                ret = left
-                self.expr_list.append( ASM_subl( right, ret ) )
+            ret = left
+            self.expr_list.append( ASM_subl( right, ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.Mul ):
@@ -313,13 +301,8 @@ class Engine( object ):
                 self.flatten_ast_2_list( chld, [] )
             left = self.lookup( nd.left.name )
             right = self.lookup( nd.right.name )
-            if not self.PSEUDO:
-                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
-                ret = self.reg_list['eax']
-                self.expr_list.append( ASM_imull( right, ret ) )
-            else:
-                ret = left
-                self.expr_list.append( ASM_imull( right, ret ) )
+            ret = left
+            self.expr_list.append( ASM_imull( right, ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.Bitand ):
@@ -328,13 +311,8 @@ class Engine( object ):
                 self.flatten_ast_2_list( chld, [] )
             left = self.lookup( nd.nodes[0].name )
             right = self.lookup( nd.nodes[1].name )
-            if not self.PSEUDO:
-                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
-                ret = self.reg_list['eax']
-                self.expr_list.append( ASM_andl( right, ret ) )
-            else:
-                ret = left
-                self.expr_list.append( ASM_andl( right, ret ) )
+            ret = left
+            self.expr_list.append( ASM_andl( right, ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.Bitor ):
@@ -343,13 +321,8 @@ class Engine( object ):
                 self.flatten_ast_2_list( chld, [] )
             left = self.lookup( nd.nodes[0].name )
             right = self.lookup( nd.nodes[1].name )
-            if not self.PSEUDO:
-                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
-                ret = self.reg_list['eax']
-                self.expr_list.append( ASM_orl( right, ret ) )
-            else:
-                ret = left
-                self.expr_list.append( ASM_orl( right, ret ) )
+            ret = left
+            self.expr_list.append( ASM_orl( right, ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.Bitxor ):
@@ -358,13 +331,8 @@ class Engine( object ):
                 self.flatten_ast_2_list( chld, [] )
             left = self.lookup( nd.nodes[0].name )
             right = self.lookup( nd.nodes[1].name )
-            if not self.PSEUDO:
-                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
-                ret = self.reg_list['eax']
-                self.expr_list.append( ASM_xorl( right, ret ) )
-            else:
-                ret = left
-                self.expr_list.append( ASM_xorl( right, ret ) )
+            ret = left
+            self.expr_list.append( ASM_xorl( right, ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.Invert ):
@@ -372,13 +340,8 @@ class Engine( object ):
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, [] )
             op = self.lookup(nd.expr.name)
-            if not self.PSEUDO:
-                self.expr_list.append( ASM_movl( op, self.reg_list['eax'] ) )
-                ret = self.reg_list['eax']
-                self.expr_list.append( ASM_notl( ret ) )
-            else:
-                ret = op
-                self.expr_list.append( ASM_notl( ret ) )
+            ret = op
+            self.expr_list.append( ASM_notl( ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.UnarySub ):
@@ -386,13 +349,8 @@ class Engine( object ):
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, [] )
             op = self.lookup(nd.expr.name)
-            if not self.PSEUDO:
-                self.expr_list.append( ASM_movl( op, self.reg_list['eax'] ) )
-                ret = self.reg_list['eax']
-                self.expr_list.append( ASM_negl( ret ) )
-            else:
-                ret = op
-                self.expr_list.append( ASM_negl( ret ) )
+            ret = op
+            self.expr_list.append( ASM_negl( ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.LeftShift ):
@@ -403,15 +361,9 @@ class Engine( object ):
             right = self.lookup( nd.right.name )
             ## shift needs the shifting value in the register ecx
             ## and is called with %cl
-            if not self.PSEUDO:
-                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
-                self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
-                ret = self.reg_list['eax']
-                self.expr_list.append( ASM_shll( ASM_register('cl'), ret ) )
-            else:
-                self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
-                ret = left
-                self.expr_list.append( ASM_shll( ASM_register('cl'), ret ) )
+            self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
+            ret = left
+            self.expr_list.append( ASM_shll( ASM_register('cl'), ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.RightShift ):
@@ -422,15 +374,9 @@ class Engine( object ):
             right = self.lookup( nd.right.name )
             ## shift needs the shifting value in the register ecx
             ## and is called with %cl
-            if not self.PSEUDO:
-                self.expr_list.append( ASM_movl( left, self.reg_list['eax'] ) )
-                self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
-                ret = self.reg_list['eax']
-                self.expr_list.append( ASM_shrl( ASM_register('cl'), ret ) )
-            else:
-                self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
-                ret = left
-                self.expr_list.append( ASM_shrl( ASM_register('cl'), ret ) )
+            self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
+            ret = left
+            self.expr_list.append( ASM_shrl( ASM_register('cl'), ret ) )
             return ret
 
         elif isinstance( nd, compiler.ast.Assign ):
@@ -441,11 +387,7 @@ class Engine( object ):
                 self.expr_list.append( ASM_movl( ASM_immedeate(nd.expr.value), new_def_elem ) )
             elif isinstance( nd.expr, compiler.ast.Name ):
                 ## expr is a var, in list
-                if not self.PSEUDO:
-                    self.expr_list.append( ASM_movl( self.stack_lookup( nd.expr.name ), self.reg_list['eax'] ) )
-                    self.expr_list.append( ASM_movl( self.reg_list['eax'], new_def_elem ) )
-                else:
-                    self.expr_list.append( ASM_movl( self.vartable_lookup( nd.expr.name ), new_def_elem ) )
+                self.expr_list.append( ASM_movl( self.vartable_lookup( nd.expr.name ), new_def_elem ) )
             else:
                 ## expr is not const
                 op = self.flatten_ast_2_list( nd.expr, [] )
@@ -460,11 +402,7 @@ class Engine( object ):
             ## lhs is name of the function
             ## rhs is name of the temp var for the param tree
             if nd.args:
-                if not self.PSEUDO:
-                    self.expr_list.append( ASM_movl( self.lookup( nd.args[0].name ), self.reg_list['eax'] ) )
-                    self.expr_list.append( ASM_movl( self.reg_list['eax'], ASM_stack(0, self.reg_list['esp']) ) )
-                else:
-                    self.expr_list.append( ASM_movl( self.lookup( nd.args[0].name), ASM_stack(0, self.reg_list['esp']) ) )
+                self.expr_list.append( ASM_movl( self.lookup( nd.args[0].name), ASM_stack(0, self.reg_list['esp']) ) )
             myCallObj = ASM_call( nd.node.name )
             myCallObj.set_r_def( self.reg_list['eax'] )
             myCallObj.set_r_ignore( self.reg_list['eax'] )
@@ -570,10 +508,7 @@ class Engine( object ):
         return v_reg
 
     def lookup( self, nam, defined=True ):
-        if not self.PSEUDO:
-            elem = self.stack_lookup( nam, defined )
-        else:
-            elem = self.vartable_lookup( nam, defined )
+        elem = self.vartable_lookup( nam, defined )
         return elem
 
     def cleanup_asm( self ):
@@ -776,7 +711,6 @@ class Engine( object ):
 if 1 <= len( sys.argv[1:] ):
     DEBUG = False
     CLEANUP_ASM = False
-    PRINT_STACK = False
     PRINT_PSEUDO = False
     GEN_PSEUDO = False
     PRINT_LIVENESS = False
@@ -794,9 +728,7 @@ if 1 <= len( sys.argv[1:] ):
         DEBUG = True
     if 1 < len( sys.argv[1:] ) and "-o" in sys.argv:
         CLEANUP_ASM = True
-    if 1 < len( sys.argv[1:] ) and "-stack" in sys.argv:
-        PRINT_STACK = True
-    elif 1 < len( sys.argv[1:] ) and "-pseudo" in sys.argv:
+    if 1 < len( sys.argv[1:] ) and "-pseudo" in sys.argv:
         GEN_PSEUDO = True
         PRINT_PSEUDO = True
     elif 1 < len( sys.argv[1:] ) and "-liveness" in sys.argv:
@@ -831,7 +763,7 @@ if 1 <= len( sys.argv[1:] ):
         PRINT_ALLOC = True
 
     ## generate assembler
-    compl = Engine( sys.argv[-1], DEBUG, GEN_PSEUDO )
+    compl = Engine( sys.argv[-1], DEBUG )
     compl.compileme()
 
     ## perform liveness/coloring/spilling and generate ig
@@ -886,20 +818,13 @@ if 1 <= len( sys.argv[1:] ):
     elif PRINT_PSEUDO:
         compl.print_asm( compl.expr_list )
     elif PRINT_ALLOC:
+        ## object that call the method, print_asm, with the argument compl.expr_list OF THE CLASS ENGINE
         compl.print_asm( compl.get_prolog() ) 
         compl.print_asm( compl.expr_list, True )
         compl.print_asm( compl.get_epilog() )
-    elif PRINT_STACK:
-        compl.print_asm( compl.get_prolog() ) 
-        compl.print_asm( compl.expr_list, False )
-        compl.print_asm( compl.get_epilog() )
     else:
+        usage()
         die( "ERROR: wrong parametrisation" ) 
-        ## object that call the method, print_asm, with the argument compl.expr_list OF THE CLASS ENGINE
-        ## by default, print alloc
-        #compl.print_asm( compl.get_prolog() ) 
-        #compl.print_asm( compl.expr_list, True )
-        #compl.print_asm( compl.get_epilog() ) 
 
 else:        
     usage()
