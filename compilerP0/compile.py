@@ -63,7 +63,7 @@ class Engine( object ):
         }
         ## list handling
         self.asmlist_mem = 0
-        self.asmlist_vartable = {}
+        self.asmlist_vartable = {"True":None, "False":None}
         self.asmlist_stack = {}
 
     def compileme( self, expression=None, flatten=True ):
@@ -136,6 +136,14 @@ class Engine( object ):
 
         elif isinstance( node, compiler.ast.Name ):
             self.DEBUG( "Name" )
+            ## TODO: probably not used anymore -> handled in vartable_lookup
+            # ## quick and dirty solution to handle booleans
+            # if node.name == "True":
+            #     return compiler.ast.Const(1)
+            # elif node.name == "False":
+            #     return compiler.ast.Const(0)
+            # else:
+            ## because of function names we need to create a new assignment
             expr = compiler.ast.Name(node.name)
             new_varname = self.flatten_ast_add_assign( expr )
             return compiler.ast.Name(new_varname)
@@ -279,8 +287,8 @@ class Engine( object ):
             self.DEBUG( "Add" )
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, [] )
-            left = self.lookup( nd.left.name )
-            right = self.lookup( nd.right.name )
+            left = self.vartable_lookup( nd.left.name )
+            right = self.vartable_lookup( nd.right.name )
             ret = left
             self.expr_list.append( ASM_addl( right, ret ) )
             return ret
@@ -289,8 +297,8 @@ class Engine( object ):
             self.DEBUG( "Sub" )
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, [] )
-            left = self.lookup( nd.left.name )
-            right = self.lookup( nd.right.name )
+            left = self.vartable_lookup( nd.left.name )
+            right = self.vartable_lookup( nd.right.name )
             ret = left
             self.expr_list.append( ASM_subl( right, ret ) )
             return ret
@@ -299,8 +307,8 @@ class Engine( object ):
             self.DEBUG( "Mul" )
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, [] )
-            left = self.lookup( nd.left.name )
-            right = self.lookup( nd.right.name )
+            left = self.vartable_lookup( nd.left.name )
+            right = self.vartable_lookup( nd.right.name )
             ret = left
             self.expr_list.append( ASM_imull( right, ret ) )
             return ret
@@ -309,8 +317,8 @@ class Engine( object ):
             self.DEBUG( "Bitand" )
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, [] )
-            left = self.lookup( nd.nodes[0].name )
-            right = self.lookup( nd.nodes[1].name )
+            left = self.vartable_lookup( nd.nodes[0].name )
+            right = self.vartable_lookup( nd.nodes[1].name )
             ret = left
             self.expr_list.append( ASM_andl( right, ret ) )
             return ret
@@ -319,8 +327,8 @@ class Engine( object ):
             self.DEBUG( "Bitor" )
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, [] )
-            left = self.lookup( nd.nodes[0].name )
-            right = self.lookup( nd.nodes[1].name )
+            left = self.vartable_lookup( nd.nodes[0].name )
+            right = self.vartable_lookup( nd.nodes[1].name )
             ret = left
             self.expr_list.append( ASM_orl( right, ret ) )
             return ret
@@ -329,8 +337,8 @@ class Engine( object ):
             self.DEBUG( "Bitxor" )
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, [] )
-            left = self.lookup( nd.nodes[0].name )
-            right = self.lookup( nd.nodes[1].name )
+            left = self.vartable_lookup( nd.nodes[0].name )
+            right = self.vartable_lookup( nd.nodes[1].name )
             ret = left
             self.expr_list.append( ASM_xorl( right, ret ) )
             return ret
@@ -339,7 +347,7 @@ class Engine( object ):
             self.DEBUG( "Invert" )
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, [] )
-            op = self.lookup(nd.expr.name)
+            op = self.vartable_lookup(nd.expr.name)
             ret = op
             self.expr_list.append( ASM_notl( ret ) )
             return ret
@@ -348,7 +356,7 @@ class Engine( object ):
             self.DEBUG( "UnarySub" )
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, [] )
-            op = self.lookup(nd.expr.name)
+            op = self.vartable_lookup(nd.expr.name)
             ret = op
             self.expr_list.append( ASM_negl( ret ) )
             return ret
@@ -357,8 +365,8 @@ class Engine( object ):
             self.DEBUG( "LeftShift" )
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, [] )
-            left = self.lookup( nd.left.name )
-            right = self.lookup( nd.right.name )
+            left = self.vartable_lookup( nd.left.name )
+            right = self.vartable_lookup( nd.right.name )
             ## shift needs the shifting value in the register ecx
             ## and is called with %cl
             self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
@@ -370,8 +378,8 @@ class Engine( object ):
             self.DEBUG( "LeftRight" )
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, [] )
-            left = self.lookup( nd.left.name )
-            right = self.lookup( nd.right.name )
+            left = self.vartable_lookup( nd.left.name )
+            right = self.vartable_lookup( nd.right.name )
             ## shift needs the shifting value in the register ecx
             ## and is called with %cl
             self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
@@ -382,17 +390,12 @@ class Engine( object ):
         elif isinstance( nd, compiler.ast.Assign ):
             self.DEBUG( "Assign" )
             nam = nd.nodes[0].name ## just consider the first assignement variable
-            new_def_elem = self.lookup( nam, False )
-            if isinstance( nd.expr, compiler.ast.Const ):
-                self.expr_list.append( ASM_movl( ASM_immedeate(nd.expr.value), new_def_elem ) )
-            elif isinstance( nd.expr, compiler.ast.Name ):
-                ## expr is a var, in list
-                self.expr_list.append( ASM_movl( self.vartable_lookup( nd.expr.name ), new_def_elem ) )
-            else:
-                ## expr is not const
-                op = self.flatten_ast_2_list( nd.expr, [] )
-                self.expr_list.append( ASM_movl( op, new_def_elem ) )
+            new_def_elem = self.vartable_lookup( nam, False )
+            op = self.flatten_ast_2_list( nd.expr, [] )
+            self.expr_list.append( ASM_movl( op, new_def_elem ) )
+
             if isinstance( new_def_elem, ASM_v_register ) and new_def_elem.is_new():
+                ## new_def_elem was priviously spilled and needs to be moved to the stack
                 self.expr_list.append( ASM_movl( new_def_elem, self.stack_lookup( new_def_elem.get_name(), False ) ) )
                 new_def_elem.set_new( False )
             return
@@ -402,7 +405,9 @@ class Engine( object ):
             ## lhs is name of the function
             ## rhs is name of the temp var for the param tree
             if nd.args:
-                self.expr_list.append( ASM_movl( self.lookup( nd.args[0].name), ASM_stack(0, self.reg_list['esp']) ) )
+                self.expr_list.append(
+                    ASM_movl( self.vartable_lookup( nd.args[0].name), ASM_stack(0, self.reg_list['esp']) )
+                )
             myCallObj = ASM_call( nd.node.name )
             myCallObj.set_r_def( self.reg_list['eax'] )
             myCallObj.set_r_ignore( self.reg_list['eax'] )
@@ -414,26 +419,24 @@ class Engine( object ):
         elif isinstance( nd, compiler.ast.Discard ):
             self.DEBUG( "Discard" )
             ## discard all below
-            return []
+            return
 
         elif isinstance( nd, compiler.ast.Name ):
             self.DEBUG( "Name" )
-            ## handled by higher node
-            return []
+            return self.vartable_lookup( nd.name )
  
         elif isinstance( nd, compiler.ast.Const ):
-            ## handled by higher node
             self.DEBUG( "Const" )
-            return []
+            return ASM_immedeate(nd.value)
 
         elif isinstance( nd, compiler.ast.AssName ):
             ## handled by higher node
             self.DEBUG( "AssName" )
-            return []
+            return
 
         else:
             self.DEBUG( "*** ELSE ***" )
-            return []
+            return
 
     ## helper for flatten_ast_2_list
     def init_stack_mem( self, mem ):
@@ -487,7 +490,13 @@ class Engine( object ):
             self.asmlist_vartable.update({nam:new_elem})
         ## return vartable object
         v_reg = self.asmlist_vartable[nam]
-        if v_reg.is_spilled() and defined:
+        if v_reg == None:
+            ## handle booleans
+            if nam == "True":
+                v_reg = ASM_immedeate(1, 1) ## value=1, type_tag=BOOL
+            elif nam == "False":
+                v_reg = ASM_immedeate(0, 1) ## value=0, type_tag=BOOL
+        elif v_reg.is_spilled() and defined:
             ## instruction call using the spilled v_reg (not defining)
             stack_pos = self.stack_lookup( v_reg.get_spilled_name() )
             self.var_counter += 1
@@ -506,10 +515,6 @@ class Engine( object ):
             new_elem.set_new( True )
             v_reg = new_elem
         return v_reg
-
-    def lookup( self, nam, defined=True ):
-        elem = self.vartable_lookup( nam, defined )
-        return elem
 
     def cleanup_asm( self ):
         iter_list = self.expr_list
@@ -531,7 +536,7 @@ class Engine( object ):
                     self.expr_list.append(expr)
             else:
                 self.expr_list.append(expr)
-                
+
 
     ## liveness analysis
     ####################

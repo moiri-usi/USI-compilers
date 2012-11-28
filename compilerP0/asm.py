@@ -115,11 +115,18 @@ class ASM_stack( ASM_operand ):
 
 # constant (i.e. $3)
 class ASM_immedeate( ASM_operand ):
-    def __init__(self, val ):
+    def __init__(self, val, type_tag=0 ):
         super(ASM_immedeate, self).__init__( self ) 
         self.val = val
+        ## INT_TAG = 0
+        ## BOOL_TAG = 1
+        ## FLOAT_TAG = 2
+        ## BIG_TAG = 3
+        self.type_tag = type_tag
     def get_val( self ):
         return self.val
+    def get_type_tag( self ):
+        return self.type_tag
     def __str__( self ):
         return '$%d' % self.val
 
