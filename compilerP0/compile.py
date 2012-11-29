@@ -143,6 +143,7 @@ class Engine( object ):
             # elif node.name == "False":
             #     return compiler.ast.Const(0)
             # else:
+
             ## because of function names we need to create a new assignment
             expr = compiler.ast.Name(node.name)
             new_varname = self.flatten_ast_add_assign( expr )
@@ -161,10 +162,15 @@ class Engine( object ):
             elif isinstance( node, compiler.ast.Print ):
                 fct_name = "print_int"
                 self.DEBUG( "Print" )
-            ## create a CallFunc AST with name 'print'
+            ## create a CallFunc AST with name 'print_int_nl'
             attr = []
-            if len(node.nodes) is not 0:
-                attr = [self.flatten_ast( node.nodes[0] )]
+            i = 0
+            for attr_elem in node.nodes:
+                i += 1
+                attr = [ self.flatten_ast( attr_elem ) ]
+                if len( node.nodes ) > i:
+                    expr = compiler.ast.CallFunc(compiler.ast.Name( "print_int" ), attr )
+                    self.flatten_ast_add_assign( expr )
             expr = compiler.ast.CallFunc(compiler.ast.Name( fct_name ), attr )
             self.flatten_ast_add_assign( expr )
             ## returns nothing because print has no return value
