@@ -57,6 +57,8 @@ class D:
         print self.d
         print a
         print c
+        return -1
 
 clsd = D(10, 11)
-clsd.print_attr_plus( 12, 13 )
+ret = clsd.print_attr_plus( 12, 13 )
+print ret
