@@ -31,6 +31,30 @@ def usage():
     print "FILE:"
     print "    A file containing valid P0 code. This file is mandatory for the script to run\n"
 
+
+## Additional AST Classes
+#########################
+class Label(compiler.ast.Node):
+    def __init__(self, name):
+        self.name = name
+
+    def getChildren(self):
+        return [self.name]
+
+    def getChildNodes(self):
+        return [self.name]
+
+class Goto(compiler.ast.Node):
+    def __init__(self, label):
+        self.label = label
+
+    def getChildren(self):
+        return [self.name]
+
+    def getChildNodes(self):
+        return [self.name]
+
+
 ## P0 compiler implementation
 #############################
 class Engine( object ):
@@ -47,6 +71,8 @@ class Engine( object ):
                     die( "ERROR: invalid syntax in file '%s'" %filepath )
         self.var_counter = 0
         self.tempvar = "temp$"
+        self.label_counter = 0
+        self.templabel = "L"
 
         ## data structures
         self.flat_ast = []
@@ -67,6 +93,7 @@ class Engine( object ):
         self.asmlist_stack = {}
 
     def compileme( self, expression=None, flatten=True ):
+        self.asmlist_mem = 0
         if expression:
             self.ast = compiler.parse( expression )
         if flatten:
@@ -298,6 +325,37 @@ class Engine( object ):
             new_varname = self.flatten_ast_add_assign( expr )
             return compiler.ast.Name(new_varname)
 
+        elif isinstance( node, compiler.ast.If ):
+            self.DEBUG( "If" )
+            if len(node.tests) == 0:
+                if node.else_ is not None:
+                    self.flatten_ast( node.else_ )
+                return
+
+            ## if not cond1 goto false_label
+            new_tests = node.tests
+            test1 = new_tests.pop(0)
+            self.label_counter += 1
+            false_label = self.templabel + str(self.label_counter)
+            new_varname = self.flatten_ast( compiler.ast.Not( test1[0] ) )
+            self.flat_ast.append( compiler.ast.If( [( new_varname, compiler.ast.Goto( Name( false_label ) ) )], None ) )
+            ## statement1 (cond1 is True)
+            self.flatten_ast( test1[1] )
+            if len(node.tests) == 0:
+                ## goto end_label (is false_label in this case)
+                self.flat_ast.append( compiler.ast.Goto( Name( false_label ) ) )
+            if len(node.tests) > 1:
+                ## there was an elif
+                ## goto end_label
+                self.label_counter += 1
+                end_label = self.templabel + str(self.label_counter)
+                self.flat_ast.append( compiler.ast.Goto( Name( end_label ) ) )
+                ## start false_label and recoursively flatten If with one test less
+                self.flat_ast.append( compiler.ast.Label( Name( false_label ) ) )
+                self.flatten_ast( compiler.ast.If( new_tests, node.else_ ) )
+                ## end_label
+                self.flat_ast.append( compiler.ast.Label( Name( end_label ) ) )
+
         else:
             die( "unknown AST node" + str( node ) )
 
@@ -447,10 +505,10 @@ class Engine( object ):
             self.DEBUG( "CallFunc" )
             ## lhs is name of the function
             ## rhs is name of the temp var for the param tree
-            stack_offset = 0
+            stack_offset = self.asmlist_mem
             for attr in reversed(nd.args):
                 self.expr_list.append(
-                    ASM_movl( self.flatten_ast_2_list( attr ), ASM_stack(stack_offset, self.reg_list['esp']) )
+                    ASM_movl( self.flatten_ast_2_list( attr ), ASM_stack( 0 - stack_offset, self.reg_list['ebp']) )
                 )
                 stack_offset += 4
             myCallObj = ASM_call( nd.node.name )
