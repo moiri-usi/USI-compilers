@@ -400,41 +400,6 @@ class Engine( object ):
                 self.flatten_ast( If( node.tests[1:], node.else_ ), end_label )
             return    
 
-
-#            if len(node.tests) == 0:
-#                if node.else_ is not None:
-#                    self.flatten_ast( node.else_ )
-#                return
-#
-#            ## if not cond1 goto false_label
-#            test1 = node.tests[0]
-#            if flat_tmp != None:
-#                end_label = flat_tmp
-#            else:
-#                self.label_counter += 1
-#                end_label = self.templabel + str(self.label_counter)
-#            self.label_counter += 1
-#            false_label = self.templabel + str(self.label_counter)
-#            new_varname = self.flatten_ast( Not( test1[0] ) )
-#            self.flat_ast.append( If( [( new_varname, LabelName( false_label ) )], None ) )
-#            ## statement1 (cond1 is True)
-#            self.flatten_ast( test1[1] )
-#            if len(node.tests) == 1 and node.else_ is not None:
-#                ## goto end_label
-#                self.flat_ast.append( Goto( LabelName( end_label ) ) )
-#                self.flat_ast.append( Label( LabelName( false_label ) ) )
-#                self.flatten_ast( If( node.tests[1:], node.else_ ), end_label )
-#            elif len(node.tests) > 1:
-#                ## there was an elif
-#                ## goto end_label
-#                self.flat_ast.append( Goto( LabelName( end_label ) ) )
-#                ## start false_label and recoursively flatten If with one test less
-#                self.flat_ast.append( Label( LabelName( false_label ) ) )
-#                self.flatten_ast( If( node.tests[1:], node.else_ ), end_label )
-#                ## end_label
-#                self.flat_ast.append( Label( LabelName( end_label ) ) )
-#            return
-
         else:
             die( "unknown AST node" + str( node ) )
 
