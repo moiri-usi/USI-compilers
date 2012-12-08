@@ -32,7 +32,7 @@ class ASM_label( object ):
         self.DEBUG_type = "ASM_label"
         self.name = name
     def __str__( self ):
-        return self.name + ":"
+        return self.name
 
 # text description used for the header
 class ASM_text( object ):
@@ -365,9 +365,19 @@ class ASM_shrl( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "shrl " + str(self.left) + ", " + str(self.right)
 
+# jump
+class ASM_jmp( ASM_instruction ):
+    def __init__( self, label ):
+        super(ASM_jmp, self).__init__( self )
+        self.DEBUG_type = "ASM_jmp"
+        self.label = label
+    def __str__( self ):
+        return self.inst_ident + "jmp " + str(self.label)
+
 # jump if equal
 class ASM_je( ASM_instruction ):
     def __init__( self, label ):
+        super(ASM_je, self).__init__( self )
         self.DEBUG_type = "ASM_je"
         self.label = label
     def __str__( self ):
@@ -376,6 +386,7 @@ class ASM_je( ASM_instruction ):
 # compare
 class ASM_cmpl( ASM_instruction ):
     def __init__( self, left, right ):
+        super(ASM_cmpl, self).__init__( self )
         self.DEBUG_type = "ASM_cmpl"
         self.left = left
         self.right = right
@@ -389,6 +400,7 @@ class ASM_cmpl( ASM_instruction ):
 # set if lower
 class ASM_setlb( ASM_instruction ):
     def __init__( self, op ):
+        super(ASM_setlb, self).__init__( self )
         self.DEBUG_type = "ASM_setlb"
         self.op = op
         self.set_r_def( op )
@@ -400,6 +412,7 @@ class ASM_setlb( ASM_instruction ):
 # set if lower or equal
 class ASM_setleb( ASM_instruction ):
     def __init__( self, op ):
+        super(ASM_setleb, self).__init__( self )
         self.DEBUG_type = "ASM_setleb"
         self.op = op
         self.set_r_def( op )
@@ -411,6 +424,7 @@ class ASM_setleb( ASM_instruction ):
 # set if greater
 class ASM_setgb( ASM_instruction ):
     def __init__( self, op ):
+        super(ASM_setgb, self).__init__( self )
         self.DEBUG_type = "ASM_setgb"
         self.op = op
         self.set_r_def( op )
@@ -422,6 +436,7 @@ class ASM_setgb( ASM_instruction ):
 # set if greater or equal
 class ASM_setgeb( ASM_instruction ):
     def __init__( self, op ):
+        super(ASM_setgeb, self).__init__( self )
         self.DEBUG_type = "ASM_setgeb"
         self.op = op
         self.set_r_def( op )
@@ -433,6 +448,7 @@ class ASM_setgeb( ASM_instruction ):
 # set if equal
 class ASM_seteb( ASM_instruction ):
     def __init__( self, op ):
+        super(ASM_seteb, self).__init__( self )
         self.DEBUG_type = "ASM_seteb"
         self.op = op
         self.set_r_def( op )
@@ -444,6 +460,7 @@ class ASM_seteb( ASM_instruction ):
 # set if not equal
 class ASM_setneb( ASM_instruction ):
     def __init__( self, op ):
+        super(ASM_setneb, self).__init__( self )
         self.DEBUG_type = "ASM_setneb"
         self.op = op
         self.set_r_def( op )
@@ -451,3 +468,12 @@ class ASM_setneb( ASM_instruction ):
         return self.inst_ident + "setneb " + self.op.print_alloc()
     def __str__( self ):
         return self.inst_ident + "setneb " + str(self.op)
+
+# print label
+class ASM_plabel( ASM_instruction ):
+    def __init__( self, label ):
+        super(ASM_plabel, self).__init__( self )
+        self.DEBUG_type = "ASM_plabel"
+        self.label = label
+    def __str__( self ):
+        return str(self.label) + ":"

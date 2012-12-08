@@ -8,6 +8,7 @@
 import sys
 import os.path
 import compiler
+from compiler.ast import *
 from ig import *
 from asm import *
 
@@ -34,7 +35,7 @@ def usage():
 
 ## Additional AST Classes
 #########################
-class Label(compiler.ast.Node):
+class Label(Node):
     def __init__(self, name):
         self.name = name
 
@@ -44,7 +45,7 @@ class Label(compiler.ast.Node):
     def getChildNodes(self):
         return (self.name)
 
-class LabelName(compiler.ast.Node):
+class LabelName(Node):
     def __init__(self, name):
         self.name = name
 
@@ -54,7 +55,7 @@ class LabelName(compiler.ast.Node):
     def getChildNodes(self):
         return ()
 
-class Goto(compiler.ast.Node):
+class Goto(Node):
     def __init__(self, label):
         self.label = label
 
@@ -64,8 +65,8 @@ class Goto(compiler.ast.Node):
     def getChildNodes(self):
         return (self.label)
 
-class AssignBool(compiler.ast.Node):
-    def __init_(self, nodes, expr, comp):
+class AssignBool(Node):
+    def __init__(self, nodes, expr, comp):
         self.nodes = nodes
         self.expr = expr
         self.comp = comp
@@ -141,79 +142,79 @@ class Engine( object ):
 
     ## generate flatten AST
     #######################
-    def flatten_ast( self, node ):
-        if isinstance( node, compiler.ast.Module):
+    def flatten_ast( self, node, flat_tmp=None ):
+        if isinstance( node, Module):
             self.DEBUG( "Module" )
-            self.flat_ast = compiler.ast.Module( None, self.flatten_ast(node.node) )
+            self.flat_ast = Module( None, self.flatten_ast(node.node) )
             return self.flat_ast
 
-        elif isinstance( node, compiler.ast.Stmt):
+        elif isinstance( node, Stmt):
             self.DEBUG( "Stmt" )
             for n in node.nodes:
                 self.flatten_ast(n)
-            return compiler.ast.Stmt(self.flat_ast)
+            return Stmt(self.flat_ast)
 
-        elif isinstance(node, compiler.ast.Add):
+        elif isinstance(node, Add):
             self.DEBUG( "Add" )
-            expr = compiler.ast.Add( (self.flatten_ast(node.left), self.flatten_ast(node.right)) )
+            expr = Add( (self.flatten_ast(node.left), self.flatten_ast(node.right)) )
             new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name( new_varname )
+            return Name( new_varname )
 
-        elif isinstance(node, compiler.ast.Mul ):
+        elif isinstance(node, Mul ):
             self.DEBUG( "Mul" )
-            expr = compiler.ast.Mul( (self.flatten_ast( node.left ), self.flatten_ast( node.right )) )
+            expr = Mul( (self.flatten_ast( node.left ), self.flatten_ast( node.right )) )
             new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name( new_varname )
+            return Name( new_varname )
 
-        elif isinstance(node, compiler.ast.Sub ):
+        elif isinstance(node, Sub ):
             self.DEBUG( "Sub" )
-            expr = compiler.ast.Sub( (self.flatten_ast( node.left ), self.flatten_ast( node.right )) )
+            expr = Sub( (self.flatten_ast( node.left ), self.flatten_ast( node.right )) )
             new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name( new_varname )
+            return Name( new_varname )
 
-        elif isinstance(node, compiler.ast.Const):
+        elif isinstance(node, Const):
             self.DEBUG( "Const" )
             val = self.check_plain_integer(node.value)
-            return compiler.ast.Name( self.flatten_ast_add_assign( compiler.ast.Const(val) ) )
+            return Name( self.flatten_ast_add_assign( Const(val) ) )
 
-        elif isinstance(node, compiler.ast.Discard):
+        elif isinstance(node, Discard):
             self.DEBUG( "Discard" )
             expr = self.flatten_ast( node.expr )
             new_varname = self.flatten_ast_add_assign( expr )
             return
 
-        elif isinstance(node, compiler.ast.AssName ):
+        elif isinstance(node, AssName ):
             self.DEBUG( "AssName" )
             return node
 
-        elif isinstance( node, compiler.ast.Assign ):
+        elif isinstance( node, Assign ):
             self.DEBUG( "Assign" )
             nodes = self.flatten_ast( node.nodes[0] )
             expr = self.flatten_ast( node.expr )
-            self.flat_ast.append( compiler.ast.Assign( [nodes], expr ) )
+            self.flat_ast.append( Assign( [nodes], expr ) )
             return
 
-        elif isinstance( node, compiler.ast.Name ):
+        elif isinstance( node, Name ):
             self.DEBUG( "Name" )
             ## because of function names we need to create a new assignment
-            expr = compiler.ast.Name(node.name)
+            expr = Name(node.name)
             new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name(new_varname)
+            return Name(new_varname)
 
-        elif isinstance( node, compiler.ast.CallFunc ):
+        elif isinstance( node, CallFunc ):
             self.DEBUG( "CallFunc" )
             attr = []
             for attr_elem in node.args:
                 attr.append( self.flatten_ast( attr_elem ) )
-            expr = compiler.ast.CallFunc( node.node, attr )
+            expr = CallFunc( node.node, attr )
             new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name(new_varname)
+            return Name(new_varname)
 
-        elif isinstance( node, compiler.ast.Printnl ) or isinstance( node, compiler.ast.Print ):
-            if isinstance( node, compiler.ast.Printnl ):
+        elif isinstance( node, Printnl ) or isinstance( node, Print ):
+            if isinstance( node, Printnl ):
                 fct_name = "print_int_nl"
                 self.DEBUG( "Printnl" )
-            elif isinstance( node, compiler.ast.Print ):
+            elif isinstance( node, Print ):
                 fct_name = "print_int"
                 self.DEBUG( "Print" )
             ## create a CallFunc AST with name 'print_int_nl'
@@ -223,39 +224,39 @@ class Engine( object ):
                 i += 1
                 attr = [ self.flatten_ast( attr_elem ) ]
                 if len( node.nodes ) > i:
-                    expr = compiler.ast.CallFunc(compiler.ast.Name( "print_int" ), attr )
+                    expr = CallFunc(Name( "print_int" ), attr )
                     self.flatten_ast_add_assign( expr )
-            expr = compiler.ast.CallFunc(compiler.ast.Name( fct_name ), attr )
+            expr = CallFunc(Name( fct_name ), attr )
             self.flatten_ast_add_assign( expr )
             ## returns nothing because print has no return value
             return
 
-        elif isinstance( node, compiler.ast.UnarySub ):
+        elif isinstance( node, UnarySub ):
             self.DEBUG( "UnarySub" )
-            expr = compiler.ast.UnarySub(self.flatten_ast(node.expr))
+            expr = UnarySub(self.flatten_ast(node.expr))
             new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name(new_varname)
+            return Name(new_varname)
 
-        elif isinstance( node, compiler.ast.UnaryAdd ):
+        elif isinstance( node, UnaryAdd ):
             self.DEBUG( "UnaryAdd" )
             ## ignore UnaryAdd node and use only its content
             expr = self.flatten_ast(node.expr)
             new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name(new_varname)
+            return Name(new_varname)
 
-        elif isinstance(node, compiler.ast.LeftShift):
+        elif isinstance(node, LeftShift):
             self.DEBUG( "LeftShift" )
-            expr = compiler.ast.LeftShift((self.flatten_ast(node.left), self.flatten_ast(node.right)))
+            expr = LeftShift((self.flatten_ast(node.left), self.flatten_ast(node.right)))
             new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name(new_varname)
+            return Name(new_varname)
 
-        elif isinstance(node, compiler.ast.RightShift):
+        elif isinstance(node, RightShift):
             self.DEBUG( "RightShift" )
-            expr = compiler.ast.RightShift((self.flatten_ast(node.left), self.flatten_ast(node.right)))
+            expr = RightShift((self.flatten_ast(node.left), self.flatten_ast(node.right)))
             new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name(new_varname)
+            return Name(new_varname)
 
-        elif isinstance( node, compiler.ast.Bitand ):
+        elif isinstance( node, Bitand ):
             self.DEBUG( "Bitand" )
             flat_nodes = []
             cnt = 0
@@ -265,15 +266,15 @@ class Engine( object ):
                     flat_nodes.append(flat_node)
                 elif (cnt == 1):
                     flat_nodes.append(flat_node)
-                    expr = compiler.ast.Bitand(flat_nodes)
+                    expr = Bitand(flat_nodes)
                     new_varname = self.flatten_ast_add_assign( expr )
                 elif (cnt > 1):
-                    expr = compiler.ast.Bitand([compiler.ast.Name(new_varname), flat_node])
+                    expr = Bitand([Name(new_varname), flat_node])
                     new_varname = self.flatten_ast_add_assign( expr )
                 cnt += 1
-            return compiler.ast.Name(new_varname)
+            return Name(new_varname)
 
-        elif isinstance( node, compiler.ast.Bitor ):
+        elif isinstance( node, Bitor ):
             self.DEBUG( "Bitor" )
             flat_nodes = []
             cnt = 0
@@ -283,15 +284,15 @@ class Engine( object ):
                     flat_nodes.append(flat_node)
                 elif (cnt == 1):
                     flat_nodes.append(flat_node)
-                    expr = compiler.ast.Bitor(flat_nodes)
+                    expr = Bitor(flat_nodes)
                     new_varname = self.flatten_ast_add_assign( expr )
                 elif (cnt > 1):
-                    expr = compiler.ast.Bitor([compiler.ast.Name(new_varname), flat_node])
+                    expr = Bitor([Name(new_varname), flat_node])
                     new_varname = self.flatten_ast_add_assign( expr )
                 cnt += 1
-            return compiler.ast.Name(new_varname)
+            return Name(new_varname)
 
-        elif isinstance( node, compiler.ast.Bitxor ):
+        elif isinstance( node, Bitxor ):
             self.DEBUG( "Bitxor" )
             flat_nodes = []
             cnt = 0
@@ -301,21 +302,21 @@ class Engine( object ):
                     flat_nodes.append(flat_node)
                 elif (cnt == 1):
                     flat_nodes.append(flat_node)
-                    expr = compiler.ast.Bitxor(flat_nodes)
+                    expr = Bitxor(flat_nodes)
                     new_varname = self.flatten_ast_add_assign( expr )
                 elif (cnt > 1):
-                    expr = compiler.ast.Bitxor([compiler.ast.Name(new_varname), flat_node])
+                    expr = Bitxor([Name(new_varname), flat_node])
                     new_varname = self.flatten_ast_add_assign( expr )
                 cnt += 1
-            return compiler.ast.Name(new_varname)
+            return Name(new_varname)
 
-        elif isinstance (node, compiler.ast.Invert ):
+        elif isinstance (node, Invert ):
             self.DEBUG("Invert")
-            expr = compiler.ast.Invert(self.flatten_ast(node.expr))
+            expr = Invert(self.flatten_ast(node.expr))
             new_varname = self.flatten_ast_add_assign(expr)    
-            return compiler.ast.Name(new_varname)
+            return Name(new_varname)
 
-        elif isinstance( node, compiler.ast.And ):
+        elif isinstance( node, And ):
             self.DEBUG( "And" )
             flat_nodes = []
             cnt = 0
@@ -325,15 +326,15 @@ class Engine( object ):
                     flat_nodes.append(flat_node)
                 elif (cnt == 1):
                     flat_nodes.append(flat_node)
-                    expr = compiler.ast.And(flat_nodes)
+                    expr = And(flat_nodes)
                     new_varname = self.flatten_ast_add_assign( expr )
                 elif (cnt > 1):
-                    expr = compiler.ast.And([compiler.ast.Name(new_varname), flat_node])
+                    expr = And([Name(new_varname), flat_node])
                     new_varname = self.flatten_ast_add_assign( expr )
                 cnt += 1
-            return compiler.ast.Name(new_varname)
+            return Name(new_varname)
 
-        elif isinstance( node, compiler.ast.Or ):
+        elif isinstance( node, Or ):
             self.DEBUG( "Or" )
             flat_nodes = []
             cnt = 0
@@ -343,58 +344,96 @@ class Engine( object ):
                     flat_nodes.append(flat_node)
                 elif (cnt == 1):
                     flat_nodes.append(flat_node)
-                    expr = compiler.ast.Or(flat_nodes)
+                    expr = Or(flat_nodes)
                     new_varname = self.flatten_ast_add_assign( expr )
                 elif (cnt > 1):
-                    expr = compiler.ast.Or([compiler.ast.Name(new_varname), flat_node])
+                    expr = Or([Name(new_varname), flat_node])
                     new_varname = self.flatten_ast_add_assign( expr )
                 cnt += 1
-            return compiler.ast.Name(new_varname)
+            return Name(new_varname)
 
-        elif isinstance( node, compiler.ast.Not ):
+        elif isinstance( node, Not ):
             self.DEBUG( "Not" )
-            expr = compiler.ast.Not(self.flatten_ast(node.expr))
+            expr = Not(self.flatten_ast(node.expr))
             new_varname = self.flatten_ast_add_assign( expr )
-            return compiler.ast.Name(new_varname)
+            return Name(new_varname)
 
-        elif isinstance( node, compiler.ast.Compare ):
+        elif isinstance( node, Compare ):
             self.DEBUG( "Compare" )
             ## only one operand -> was taken care of in insert_ast
             op1 = node.ops[0]
-            expr = compiler.ast.Compare( self.flatten_ast(node.expr), [(op1[0], self.flatten_ast(op1[1]))] )
+            expr = Compare( self.flatten_ast(node.expr), [(op1[0], self.flatten_ast(op1[1]))] )
             new_varname = self.flatten_ast_add_assign_bool( expr, op1[0] )
-            return compiler.ast.Name( new_varname )
+            return Name( new_varname )
 
-        elif isinstance( node, compiler.ast.If ):
+        elif isinstance( node, If ):
             self.DEBUG( "If" )
-            if len(node.tests) == 0:
-                if node.else_ is not None:
-                    self.flatten_ast( node.else_ )
-                return
-
-            ## if not cond1 goto false_label
-            new_tests = node.tests
-            test1 = new_tests.pop(0)
-            self.label_counter += 1
-            false_label = self.templabel + str(self.label_counter)
-            new_varname = self.flatten_ast( compiler.ast.Not( test1[0] ) )
-            self.flat_ast.append( compiler.ast.If( [( new_varname, compiler.ast.Goto( LabelName( false_label ) ) )], None ) )
-            ## statement1 (cond1 is True)
-            self.flatten_ast( test1[1] )
-            if len(node.tests) == 0:
-                ## goto end_label (is false_label in this case)
-                self.flat_ast.append( compiler.ast.Goto( LabelName( false_label ) ) )
-            if len(node.tests) > 1:
-                ## there was an elif
-                ## goto end_label
+            ## set end_label
+            if flat_tmp != None:
+                end_label = flat_tmp
+            else:
                 self.label_counter += 1
                 end_label = self.templabel + str(self.label_counter)
-                self.flat_ast.append( compiler.ast.Goto( LabelName( end_label ) ) )
+            if len(node.tests) == 0:
+                ## recursivity reached end
+                if node.else_ is not None:
+                    self.flatten_ast( node.else_ )
+                    ## end_label
+                    self.flat_ast.append( Label( LabelName( end_label ) ) )
+            else:
+                test1 = node.tests[0]
+                ## if not cond1 goto false_label
+                if node.else_ is None  and len(node.tests) == 1:
+                    false_label = end_label
+                else:
+                    self.label_counter += 1
+                    false_label = self.templabel + str(self.label_counter)
+                new_varname = self.flatten_ast( Not( test1[0] ) )
+                self.flat_ast.append( If( [( new_varname, LabelName( false_label ) )], None ) )
+                ## statement1 (cond1 is True)
+                self.flatten_ast( test1[1] )
+                if node.else_ is not None or len(node.tests) > 1:
+                    ## goto end_label
+                    self.flat_ast.append( Goto( LabelName( end_label ) ) )
                 ## start false_label and recoursively flatten If with one test less
-                self.flat_ast.append( compiler.ast.Label( LabelName( false_label ) ) )
-                self.flatten_ast( compiler.ast.If( new_tests, node.else_ ) )
-                ## end_label
-                self.flat_ast.append( compiler.ast.Label( LabelName( end_label ) ) )
+                self.flat_ast.append( Label( LabelName( false_label ) ) )
+                self.flatten_ast( If( node.tests[1:], node.else_ ), end_label )
+            return    
+
+
+#            if len(node.tests) == 0:
+#                if node.else_ is not None:
+#                    self.flatten_ast( node.else_ )
+#                return
+#
+#            ## if not cond1 goto false_label
+#            test1 = node.tests[0]
+#            if flat_tmp != None:
+#                end_label = flat_tmp
+#            else:
+#                self.label_counter += 1
+#                end_label = self.templabel + str(self.label_counter)
+#            self.label_counter += 1
+#            false_label = self.templabel + str(self.label_counter)
+#            new_varname = self.flatten_ast( Not( test1[0] ) )
+#            self.flat_ast.append( If( [( new_varname, LabelName( false_label ) )], None ) )
+#            ## statement1 (cond1 is True)
+#            self.flatten_ast( test1[1] )
+#            if len(node.tests) == 1 and node.else_ is not None:
+#                ## goto end_label
+#                self.flat_ast.append( Goto( LabelName( end_label ) ) )
+#                self.flat_ast.append( Label( LabelName( false_label ) ) )
+#                self.flatten_ast( If( node.tests[1:], node.else_ ), end_label )
+#            elif len(node.tests) > 1:
+#                ## there was an elif
+#                ## goto end_label
+#                self.flat_ast.append( Goto( LabelName( end_label ) ) )
+#                ## start false_label and recoursively flatten If with one test less
+#                self.flat_ast.append( Label( LabelName( false_label ) ) )
+#                self.flatten_ast( If( node.tests[1:], node.else_ ), end_label )
+#                ## end_label
+#                self.flat_ast.append( Label( LabelName( end_label ) ) )
+#            return
 
         else:
             die( "unknown AST node" + str( node ) )
@@ -403,16 +442,16 @@ class Engine( object ):
     def flatten_ast_add_assign( self, expr ):
         self.var_counter += 1
         name = self.tempvar + str( self.var_counter )
-        nodes = compiler.ast.AssName(name, 'OP_ASSIGN')
-        self.flat_ast.append( compiler.ast.Assign( [nodes], expr ) )
+        nodes = AssName(name, 'OP_ASSIGN')
+        self.flat_ast.append( Assign( [nodes], expr ) )
         self.DEBUG( "\t\t\tnew statement node: append Assign" + str( name ) )
         return name
 
     def flatten_ast_add_assign_bool( self, expr, op ):
         self.var_counter += 1
         name = self.tempvar + str( self.var_counter )
-        nodes = compiler.ast.AssName( name, 'OP_ASSIGN' )
-        self.flat_ast.append( compiler.ast.AssignBool( [nodes], expr, op ) )
+        nodes = AssName( name, 'OP_ASSIGN' )
+        self.flat_ast.append( AssignBool( [nodes], expr, op ) )
         self.DEBUG( "\t\t\tnew statement node: append AssignBool" + str( name ) )
         return name
 
@@ -420,19 +459,19 @@ class Engine( object ):
     ## convert the flattened AST into a list of ASM expressions
     ###########################################################
     def flatten_ast_2_list( self, nd ):
-        if isinstance( nd, compiler.ast.Module ):
+        if isinstance( nd, Module ):
             self.DEBUG( "Module" )
             self.flatten_ast_2_list( nd.node )
             return self.expr_list
 
-        elif isinstance( nd, compiler.ast.Stmt ):
+        elif isinstance( nd, Stmt ):
             self.DEBUG( "Stmt" )
             ## program
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld )
             return
 
-        elif isinstance( nd, compiler.ast.Add ):
+        elif isinstance( nd, Add ):
             self.DEBUG( "Add" )
             left = self.vartable_lookup( nd.left.name )
             right = self.vartable_lookup( nd.right.name )
@@ -440,7 +479,7 @@ class Engine( object ):
             self.expr_list.append( ASM_addl( right, ret ) )
             return ret
 
-        elif isinstance( nd, compiler.ast.Sub ):
+        elif isinstance( nd, Sub ):
             self.DEBUG( "Sub" )
             left = self.vartable_lookup( nd.left.name )
             right = self.vartable_lookup( nd.right.name )
@@ -448,7 +487,7 @@ class Engine( object ):
             self.expr_list.append( ASM_subl( right, ret ) )
             return ret
 
-        elif isinstance( nd, compiler.ast.Mul ):
+        elif isinstance( nd, Mul ):
             self.DEBUG( "Mul" )
             left = self.vartable_lookup( nd.left.name )
             right = self.vartable_lookup( nd.right.name )
@@ -456,7 +495,7 @@ class Engine( object ):
             self.expr_list.append( ASM_imull( right, ret ) )
             return ret
 
-        elif isinstance( nd, compiler.ast.Bitand ):
+        elif isinstance( nd, Bitand ):
             self.DEBUG( "Bitand" )
             left = self.vartable_lookup( nd.nodes[0].name )
             right = self.vartable_lookup( nd.nodes[1].name )
@@ -464,7 +503,7 @@ class Engine( object ):
             self.expr_list.append( ASM_andl( right, ret ) )
             return ret
 
-        elif isinstance( nd, compiler.ast.Bitor ):
+        elif isinstance( nd, Bitor ):
             self.DEBUG( "Bitor" )
             left = self.vartable_lookup( nd.nodes[0].name )
             right = self.vartable_lookup( nd.nodes[1].name )
@@ -472,7 +511,7 @@ class Engine( object ):
             self.expr_list.append( ASM_orl( right, ret ) )
             return ret
 
-        elif isinstance( nd, compiler.ast.Bitxor ):
+        elif isinstance( nd, Bitxor ):
             self.DEBUG( "Bitxor" )
             left = self.vartable_lookup( nd.nodes[0].name )
             right = self.vartable_lookup( nd.nodes[1].name )
@@ -480,21 +519,21 @@ class Engine( object ):
             self.expr_list.append( ASM_xorl( right, ret ) )
             return ret
 
-        elif isinstance( nd, compiler.ast.Invert ):
+        elif isinstance( nd, Invert ):
             self.DEBUG( "Invert" )
             op = self.vartable_lookup(nd.expr.name)
             ret = op
             self.expr_list.append( ASM_notl( ret ) )
             return ret
 
-        elif isinstance( nd, compiler.ast.UnarySub ):
+        elif isinstance( nd, UnarySub ):
             self.DEBUG( "UnarySub" )
             op = self.vartable_lookup(nd.expr.name)
             ret = op
             self.expr_list.append( ASM_negl( ret ) )
             return ret
 
-        elif isinstance( nd, compiler.ast.LeftShift ):
+        elif isinstance( nd, LeftShift ):
             self.DEBUG( "LeftShift" )
             left = self.vartable_lookup( nd.left.name )
             right = self.vartable_lookup( nd.right.name )
@@ -505,7 +544,7 @@ class Engine( object ):
             self.expr_list.append( ASM_shll( ASM_register('cl'), ret ) )
             return ret
 
-        elif isinstance( nd, compiler.ast.RightShift ):
+        elif isinstance( nd, RightShift ):
             self.DEBUG( "LeftRight" )
             left = self.vartable_lookup( nd.left.name )
             right = self.vartable_lookup( nd.right.name )
@@ -516,17 +555,17 @@ class Engine( object ):
             self.expr_list.append( ASM_shrl( ASM_register('cl'), ret ) )
             return ret
 
-        elif isinstance( nd, compiler.ast.Assign ) or isinstance( nd, compiler.ast.AssignBool ):
+        elif isinstance( nd, Assign ) or isinstance( nd, AssignBool ):
             nam = nd.nodes[0].name ## just consider the first assignement variable
             new_def_elem = self.vartable_lookup( nam, False )
             op = self.flatten_ast_2_list( nd.expr )
-            if isinstance( nd, compiler.ast.Assign ):
+            if isinstance( nd, Assign ):
                 self.DEBUG( "Assign" )
                 self.expr_list.append( ASM_movl( op, new_def_elem ) )
-            elif isinstance( nd, compiler.ast.AssignBool ):
+            elif isinstance( nd, AssignBool ):
                 self.DEBUG( "AssignBool" )
                 ## move condition flag (former operation must be ASM_cond() ) into new_def_elem
-                if nd.op == '<':
+                if nd.comp == '<':
                     self.expr_list.append( ASM_setlb( new_def_elem ) )
                 elif nd.comp == '<=':
                     self.expr_list.append( ASM_setleb( new_def_elem ) )
@@ -547,7 +586,7 @@ class Engine( object ):
                 new_def_elem.set_new( False )
             return
 
-        elif isinstance( nd, compiler.ast.CallFunc ):
+        elif isinstance( nd, CallFunc ):
             self.DEBUG( "CallFunc" )
             ## lhs is name of the function
             ## rhs is name of the temp var for the param tree
@@ -565,51 +604,58 @@ class Engine( object ):
             self.expr_list.append( myCallObj )
             return self.reg_list['eax']
 
-        elif isinstance( nd, compiler.ast.Discard ):
+        elif isinstance( nd, Discard ):
             self.DEBUG( "Discard" )
             ## discard all below
             return
 
-        elif isinstance( nd, compiler.ast.Name ):
+        elif isinstance( nd, Name ):
             self.DEBUG( "Name" )
             return self.vartable_lookup( nd.name )
 
-        elif isinstance( nd, compiler.ast.LabelName ):
+        elif isinstance( nd, LabelName ):
             self.DEBUG( "LabelName" )
             return self.labeltable_lookup( nd.name )
  
-        elif isinstance( nd, compiler.ast.Const ):
+        elif isinstance( nd, Const ):
             self.DEBUG( "Const" )
             return ASM_immedeate(nd.value)
 
-        elif isinstance( nd, compiler.ast.AssName ):
+        elif isinstance( nd, AssName ):
             ## handled by higher node
             self.DEBUG( "AssName" )
             return
 
-        elif isinstance( nd, compiler.ast.Compare ):
+        elif isinstance( nd, Compare ):
             self.DEBUG( "Compare" )
             op1 = nd.ops[0]
             self.expr_list.append(
-                ASM_cmpl( self.flatten_ast_2_list( nd.expr ), self.flatten_ast_2_list( nd.expr ) )
+                ASM_cmpl( self.flatten_ast_2_list( nd.expr ), self.flatten_ast_2_list( op1[1] ) )
             )
+            ## no return value needed, this is handeled in AssignBool
             return
 
-        elif isinstance( nd, compiler.ast.If ):
+        elif isinstance( nd, Not ):
+            self.DEBUG( "Not" )
+            v_reg = self.flatten_ast_2_list( nd.expr )
+            self.expr_list.append( ASM_notl( v_reg ) )
+            return v_reg
+
+        elif isinstance( nd, If ):
             self.DEBUG( "If" )
             ## check if nd.tests[0][0] is true
-            self.expr_list.append( ASM_cmpl( self.flatten_ast_2_list( nd.test[0][0] ), ASM_immedeate( 0 ) ) )
-            self.flatten_ast_2_list( nd.test[0][1] )
+            self.expr_list.append( ASM_cmpl( self.flatten_ast_2_list( nd.tests[0][0] ), ASM_immedeate( 0 ) ) )
+            self.expr_list.append( ASM_je( self.flatten_ast_2_list( nd.tests[0][1] ) ) )
             return
 
-        elif isinstance( nd, compiler.ast.Goto ):
+        elif isinstance( nd, Goto ):
             self.DEBUG( "Goto" )
-            self.expr_list.append( ASM_je( self.flatten_ast_2_list( nd.label ) ) )
+            self.expr_list.append( ASM_jmp( self.flatten_ast_2_list( nd.label ) ) )
             return
 
-        elif isinstance( nd, compiler.ast.Label ):
+        elif isinstance( nd, Label ):
             self.DEBUG( "Label" )
-            self.expr_list.append( ASM_label( self.flatten_ast_2_list( nd.name ) ) )
+            self.expr_list.append( ASM_plabel( self.flatten_ast_2_list( nd.name ) ) )
             return
 
         else:
@@ -632,10 +678,10 @@ class Engine( object ):
         prolog = []
         ## asm prolog
         prolog.append( ASM_text("text") )
-        prolog.append( ASM_label("LC0") )
+        prolog.append( ASM_plabel( self.labletable_lookup( "LC0" ) ) )
         prolog.append( ASM_text("ascii \"Compiled with JPSM!\"") )
         prolog.append( ASM_text("globl main") )
-        prolog.append( ASM_label("main") )
+        prolog.append( ASM_plabel( self.labletable_lookup( "main" ) ) )
         prolog.append( ASM_pushl( self.reg_list['ebp'] ) )
         prolog.append( ASM_movl( self.reg_list['esp'], self.reg_list['ebp'] ) )
         prolog.append( ASM_subl( ASM_immedeate( self.init_stack_mem(self.asmlist_mem) ), self.reg_list['esp'] ) )
