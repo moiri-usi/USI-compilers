@@ -365,4 +365,89 @@ class ASM_shrl( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "shrl " + str(self.left) + ", " + str(self.right)
 
+# jump if equal
+class ASM_je( ASM_instruction ):
+    def __init__( self, label ):
+        self.DEBUG_type = "ASM_je"
+        self.label = label
+    def __str__( self ):
+        return self.inst_ident + "je " + str(self.label)
 
+# compare
+class ASM_cmpl( ASM_instruction ):
+    def __init__( self, left, right ):
+        self.DEBUG_type = "ASM_cmpl"
+        self.left = left
+        self.right = right
+        self.set_r_use( left )
+        self.set_r_use( right )
+    def print_alloc( self ):
+        return self.inst_ident + "cmpl " + self.left.print_alloc() + ", " + self.right.print_alloc()
+    def __str__( self ):
+        return self.inst_ident + "cmpl " + str(self.left) + ", " + str(self.right)
+
+# set if lower
+class ASM_setlb( ASM_instruction ):
+    def __init__( self, op ):
+        self.DEBUG_type = "ASM_setlb"
+        self.op = op
+        self.set_r_def( op )
+    def print_alloc( self ):
+        return self.inst_ident + "setlb " + self.op.print_alloc()
+    def __str__( self ):
+        return self.inst_ident + "setlb " + str(self.op)
+
+# set if lower or equal
+class ASM_setleb( ASM_instruction ):
+    def __init__( self, op ):
+        self.DEBUG_type = "ASM_setleb"
+        self.op = op
+        self.set_r_def( op )
+    def print_alloc( self ):
+        return self.inst_ident + "setleb " + self.op.print_alloc()
+    def __str__( self ):
+        return self.inst_ident + "setleb " + str(self.op)
+
+# set if greater
+class ASM_setgb( ASM_instruction ):
+    def __init__( self, op ):
+        self.DEBUG_type = "ASM_setgb"
+        self.op = op
+        self.set_r_def( op )
+    def print_alloc( self ):
+        return self.inst_ident + "setgb " + self.op.print_alloc()
+    def __str__( self ):
+        return self.inst_ident + "setgb " + str(self.op)
+
+# set if greater or equal
+class ASM_setgeb( ASM_instruction ):
+    def __init__( self, op ):
+        self.DEBUG_type = "ASM_setgeb"
+        self.op = op
+        self.set_r_def( op )
+    def print_alloc( self ):
+        return self.inst_ident + "setgeb " + self.op.print_alloc()
+    def __str__( self ):
+        return self.inst_ident + "setgeb " + str(self.op)
+
+# set if equal
+class ASM_seteb( ASM_instruction ):
+    def __init__( self, op ):
+        self.DEBUG_type = "ASM_seteb"
+        self.op = op
+        self.set_r_def( op )
+    def print_alloc( self ):
+        return self.inst_ident + "seteb " + self.op.print_alloc()
+    def __str__( self ):
+        return self.inst_ident + "seteb " + str(self.op)
+
+# set if not equal
+class ASM_setneb( ASM_instruction ):
+    def __init__( self, op ):
+        self.DEBUG_type = "ASM_setneb"
+        self.op = op
+        self.set_r_def( op )
+    def print_alloc( self ):
+        return self.inst_ident + "setneb " + self.op.print_alloc()
+    def __str__( self ):
+        return self.inst_ident + "setneb " + str(self.op)
