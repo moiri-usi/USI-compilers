@@ -316,6 +316,7 @@ class Engine( object ):
             new_varname = self.flatten_ast_add_assign(expr)    
             return Name(new_varname)
 
+        ## probably not used anymore because of handeling in ast_insert
         elif isinstance( node, And ):
             self.DEBUG( "And" )
             flat_nodes = []
@@ -334,6 +335,7 @@ class Engine( object ):
                 cnt += 1
             return Name(new_varname)
 
+        ## probably not used anymore because of handeling in ast_insert
         elif isinstance( node, Or ):
             self.DEBUG( "Or" )
             flat_nodes = []
@@ -360,10 +362,15 @@ class Engine( object ):
 
         elif isinstance( node, Compare ):
             self.DEBUG( "Compare" )
-            ## only one operand -> was taken care of in insert_ast
-            op1 = node.ops[0]
-            expr = Compare( self.flatten_ast(node.expr), [(op1[0], self.flatten_ast(op1[1]))] )
-            new_varname = self.flatten_ast_add_assign_bool( expr, op1[0] )
+            cnt = 0
+            for op in node.ops:
+                flat_op = self.flatten_ast(op[1])
+                if cnt == 0:
+                    expr = Compare( self.flatten_ast( node.expr ), [(op[0], flat_op)] )
+                else:
+                    expr = Compare( Name( new_varname ), [(op[0], flat_op)] )
+                new_varname = self.flatten_ast_add_assign_bool( expr, op[0] )
+                cnt += 1
             return Name( new_varname )
 
         elif isinstance( node, If ):
@@ -382,12 +389,13 @@ class Engine( object ):
                     self.flat_ast.append( Label( LabelName( end_label ) ) )
             else:
                 test1 = node.tests[0]
-                ## if not cond1 goto false_label
+                ## set false_label
                 if node.else_ is None  and len(node.tests) == 1:
                     false_label = end_label
                 else:
                     self.label_counter += 1
                     false_label = self.templabel + str(self.label_counter)
+                ## if not cond1 goto false_label
                 new_varname = self.flatten_ast( Not( test1[0] ) )
                 self.flat_ast.append( If( [( new_varname, LabelName( false_label ) )], None ) )
                 ## statement1 (cond1 is True)
@@ -398,7 +406,28 @@ class Engine( object ):
                 ## start false_label and recoursively flatten If with one test less
                 self.flat_ast.append( Label( LabelName( false_label ) ) )
                 self.flatten_ast( If( node.tests[1:], node.else_ ), end_label )
-            return    
+            return
+
+        elif isinstance( node, While ):
+            self.DEBUG( "While" )
+            ## create labels
+            self.label_counter += 1
+            top_label = self.templabel + str(self.label_counter)
+            self.label_counter += 1
+            test_label = self.templabel + str(self.label_counter)
+            ## goto test
+            self.flat_ast.append( Goto( LabelName( test_label ) ) )
+            ## topLabel:
+            self.flat_ast.append( Label( LabelName( top_label ) ) )
+            ## flatten while body
+            self.flatten_ast( node.body )
+            ## testLabel:
+            self.flat_ast.append( Label( LabelName( test_label ) ) )
+            ## flatten condition
+            new_varname = self.flatten_ast( node.test )
+            ## test
+            self.flat_ast.append( If( [( new_varname, LabelName( top_label ) )], None ) )
+            return
 
         else:
             die( "unknown AST node" + str( node ) )
@@ -731,13 +760,22 @@ class Engine( object ):
 
     ## liveness analysis
     ####################
-    def liveness (self):
+    def liveness( self ):
+        ## decomposition in blocks
+        
+        ## do liveness on blocks
+
+        ## reiterate liveness until liveness tree is consistent
+
+        pass
+
+    def liveness_bb( self, start=len(self.expr_list), end=0 ):
         # live = [[self.reg_list['eax']]]
         live = [[]]
         j = 0
         last_ignores = []
         remove_ignores = False
-        for i in range( len(self.expr_list), 0, -1 ):
+        for i in range( start, end, -1 ):
             element = self.expr_list[i-1]
             temp_live = self.sub_def_live( element.get_r_def(), list(live[j]), live[j] )
             temp_live = self.add_use_live( element.get_r_use(), temp_live )
@@ -970,15 +1008,15 @@ if 1 <= len( sys.argv[1:] ):
         ig_color = False
         while True:
             compl.compileme( None, False )
-            liveness = compl.liveness()
+            liveness = compl.liveness_bb()
             ig = compl.create_ig( liveness )
             ig_color = compl.color_ig( ig )
             if ig_color != False:
                 break
     elif GEN_IG:
-        ig = compl.create_ig( compl.liveness() )
+        ig = compl.create_ig( compl.liveness_bb() )
     elif GEN_LIVENESS:
-        liveness = compl.liveness()
+        liveness = compl.liveness_bb()
 
     if CLEANUP_ASM:
         compl.cleanup_asm()
