@@ -405,9 +405,9 @@ class ASM_setlb( ASM_instruction ):
         self.op = op
         self.set_r_def( op )
     def print_alloc( self ):
-        return self.inst_ident + "setlb " + self.op.print_alloc()
+        return self.inst_ident + "setlb (" + self.op.print_alloc() + ",1)"
     def __str__( self ):
-        return self.inst_ident + "setlb " + str(self.op)
+        return self.inst_ident + "setlb (" + str(self.op) + ",1)"
 
 # set if lower or equal
 class ASM_setleb( ASM_instruction ):
@@ -417,9 +417,9 @@ class ASM_setleb( ASM_instruction ):
         self.op = op
         self.set_r_def( op )
     def print_alloc( self ):
-        return self.inst_ident + "setleb " + self.op.print_alloc()
+        return self.inst_ident + "setleb (" + self.op.print_alloc() + ",1)"
     def __str__( self ):
-        return self.inst_ident + "setleb " + str(self.op)
+        return self.inst_ident + "setleb (" + str(self.op) + ",1)"
 
 # set if greater
 class ASM_setgb( ASM_instruction ):
@@ -429,9 +429,9 @@ class ASM_setgb( ASM_instruction ):
         self.op = op
         self.set_r_def( op )
     def print_alloc( self ):
-        return self.inst_ident + "setgb " + self.op.print_alloc()
+        return self.inst_ident + "setgb (" + self.op.print_alloc() + ",1)"
     def __str__( self ):
-        return self.inst_ident + "setgb " + str(self.op)
+        return self.inst_ident + "setgb (" + str(self.op) + ",1)"
 
 # set if greater or equal
 class ASM_setgeb( ASM_instruction ):
@@ -441,9 +441,9 @@ class ASM_setgeb( ASM_instruction ):
         self.op = op
         self.set_r_def( op )
     def print_alloc( self ):
-        return self.inst_ident + "setgeb " + self.op.print_alloc()
+        return self.inst_ident + "setgeb (" + self.op.print_alloc() + ",1)"
     def __str__( self ):
-        return self.inst_ident + "setgeb " + str(self.op)
+        return self.inst_ident + "setgeb (" + str(self.op) + ",1)"
 
 # set if equal
 class ASM_seteb( ASM_instruction ):
@@ -453,9 +453,9 @@ class ASM_seteb( ASM_instruction ):
         self.op = op
         self.set_r_def( op )
     def print_alloc( self ):
-        return self.inst_ident + "seteb " + self.op.print_alloc()
+        return self.inst_ident + "seteb (" + self.op.print_alloc() + ",1)"
     def __str__( self ):
-        return self.inst_ident + "seteb " + str(self.op)
+        return self.inst_ident + "seteb (" + str(self.op) + ",1)"
 
 # set if not equal
 class ASM_setneb( ASM_instruction ):
@@ -465,9 +465,9 @@ class ASM_setneb( ASM_instruction ):
         self.op = op
         self.set_r_def( op )
     def print_alloc( self ):
-        return self.inst_ident + "setneb " + self.op.print_alloc()
+        return self.inst_ident + "setneb (" + self.op.print_alloc() + ",1)"
     def __str__( self ):
-        return self.inst_ident + "setneb " + str(self.op)
+        return self.inst_ident + "setneb (" + str(self.op) + ",1)"
 
 # print label
 class ASM_plabel( ASM_instruction ):

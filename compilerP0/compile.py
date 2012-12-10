@@ -638,7 +638,7 @@ class Engine( object ):
         elif isinstance( nd, If ):
             self.DEBUG( "If" )
             ## check if nd.tests[0][0] is true
-            self.expr_list.append( ASM_cmpl( self.flatten_ast_2_list( nd.tests[0][0] ), ASM_immedeate( 0 ) ) )
+            self.expr_list.append( ASM_cmpl( ASM_immedeate( 0 ), self.flatten_ast_2_list( nd.tests[0][0] ) ) )
             self.expr_list.append( ASM_je( self.flatten_ast_2_list( nd.tests[0][1] ) ) )
             return
 
@@ -672,10 +672,10 @@ class Engine( object ):
         prolog = []
         ## asm prolog
         prolog.append( ASM_text("text") )
-        prolog.append( ASM_plabel( self.labletable_lookup( "LC0" ) ) )
+        prolog.append( ASM_plabel( self.labeltable_lookup( "LC0" ) ) )
         prolog.append( ASM_text("ascii \"Compiled with JPSM!\"") )
         prolog.append( ASM_text("globl main") )
-        prolog.append( ASM_plabel( self.labletable_lookup( "main" ) ) )
+        prolog.append( ASM_plabel( self.labeltable_lookup( "main" ) ) )
         prolog.append( ASM_pushl( self.reg_list['ebp'] ) )
         prolog.append( ASM_movl( self.reg_list['esp'], self.reg_list['ebp'] ) )
         prolog.append( ASM_subl( ASM_immedeate( self.init_stack_mem(self.asmlist_mem) ), self.reg_list['esp'] ) )
@@ -760,37 +760,72 @@ class Engine( object ):
 
     ## liveness analysis
     ####################
+#    def liveness( self ):
+#        changed = True
+#        live_in = [[]]
+#        live_out = [[]]
+#        while changed:
+#            changed = False
+#            (live_in, live_out) = self.liveness_bb( live_in, live_out )
+#            for i in range(0, len(self.expr_list), 1):
+#                if live_in[i] != live_out[i+1]:
+#                    self.DEBUG( str(i) + " " + self.concat_live(live_in[i]) + " " + self.concat_live(live_out[i+1]) )
+#                    changed = True
+#        return live_out
+
     def liveness( self ):
-        ## decomposition in blocks
-        
-        ## do liveness on blocks
-
-        ## reiterate liveness until liveness tree is consistent
-
-        pass
-
-    def liveness_bb( self, start=len(self.expr_list), end=0 ):
-        # live = [[self.reg_list['eax']]]
-        live = [[]]
-        j = 0
-        last_ignores = []
-        remove_ignores = False
-        for i in range( start, end, -1 ):
-            element = self.expr_list[i-1]
-            temp_live = self.sub_def_live( element.get_r_def(), list(live[j]), live[j] )
-            temp_live = self.add_use_live( element.get_r_use(), temp_live )
-            if remove_ignores: ## the iteration before added no ignore elements
-                temp_live = self.sub_def_live( last_ignores, temp_live )
-                remove_ignores = False
-            if ( len( temp_live ) > 0 and len( element.get_r_ignore() ) > 0 ):
-                ## the actual live element has live variables and the asm
-                ## instruction has some special register handling
-                temp_live = self.add_use_live( element.get_r_ignore(), temp_live )
-                remove_ignores = True
-                last_ignores = element.get_r_ignore()
-            live.append( temp_live )
-            j += 1
-        return live
+        changed = True
+        live_in = []
+        live_in_old = []
+        live_out = [[]]
+        live_out_old = [[]]
+        for i in range(0, len(self.expr_list), 1):
+            live_in.append([])
+            live_in_old.append([])
+            live_out.append([])
+            live_out_old.append([])
+        while changed:
+            changed = False
+            j = 0
+            last_ignores = []
+            label_list = {}
+            remove_ignores = False
+            for i in range( len(self.expr_list), 0, -1 ):
+                element = self.expr_list[i-1]
+                ## LIVE_in(i) = ( LIVE_out(i) - DEF(i) ) union USE(i)
+                temp_live = self.sub_def_live( element.get_r_def(), list(live_out[j]), live_out[j] )
+                temp_live = self.add_use_live( element.get_r_use(), temp_live )
+                if remove_ignores: ## the iteration before added no ignore elements
+                    temp_live = self.sub_def_live( last_ignores, temp_live )
+                    remove_ignores = False
+                if ( len( temp_live ) > 0 and len( element.get_r_ignore() ) > 0 ):
+                    ## the actual live element has live variables and the asm
+                    ## instruction has some special register handling
+                    temp_live = self.add_use_live( element.get_r_ignore(), temp_live )
+                    remove_ignores = True
+                    last_ignores = element.get_r_ignore()
+                if isinstance(element, ASM_plabel):
+                    ## get all labels from asm list (possible succeeders)
+                    label_list.update({element.label:temp_live})
+                live_in_old[j] = live_in[j]
+                live_in[j] = temp_live
+                ## LIVE_out(i) = union_{j in succ(i)} LIVE_in(j)
+                if isinstance( element, ASM_jmp ):
+                    if element.label not in label_list:
+                        label_list.update({element.label:[]})
+                    succ_union = label_list[element.label] 
+                elif isinstance( element, ASM_je ):
+                    if element.label not in label_list:
+                        label_list.update({element.label:[]})
+                    succ_union = self.add_use_live( label_list[element.label], temp_live )
+                else:
+                    succ_union = temp_live
+                live_out_old[j+1] = live_out[j+1]
+                live_out[j+1] = succ_union
+                if self.concat_live(live_out_old[j+1]) != self.concat_live(live_out[j+1]) or self.concat_live(live_in_old[j]) != self.concat_live(live_in[j]):
+                    changed = True
+                j += 1
+        return live_out
 
     ## helper for liveness   
     def sub_def_live( self, defi, live, live_ptr=None ):
@@ -1008,15 +1043,15 @@ if 1 <= len( sys.argv[1:] ):
         ig_color = False
         while True:
             compl.compileme( None, False )
-            liveness = compl.liveness_bb()
+            liveness = compl.liveness()
             ig = compl.create_ig( liveness )
             ig_color = compl.color_ig( ig )
             if ig_color != False:
                 break
     elif GEN_IG:
-        ig = compl.create_ig( compl.liveness_bb() )
+        ig = compl.create_ig( compl.liveness() )
     elif GEN_LIVENESS:
-        liveness = compl.liveness_bb()
+        liveness = compl.liveness()
 
     if CLEANUP_ASM:
         compl.cleanup_asm()
