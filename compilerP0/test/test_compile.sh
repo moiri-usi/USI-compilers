@@ -25,14 +25,15 @@
 
 PSEUDO=0
 ALLOC=0
+STACK=0
 SRC=in_x86.sh
 if [[ $1 == "-pseudo" ]]; then
     PSEUDO=1
     SRC=in_pseudo.sh
     echo "PSEUDO-code"
-elif [[ $1 == "-alloc" ]]; then
-    ALLOC=1
-    echo "ALLOC-code"
+elif [[ $1 == "-stack" ]]; then
+    STACK=1
+    echo "STACK-code"
 else
     ALLOC=1
     echo "ALLOC-code"
@@ -48,6 +49,8 @@ generate(){
         python ./../compile.py -pseudo "./${1}.p0" >> "./${1}.s" || RES=1
     elif [[ $ALLOC -eq 1 ]]; then
         python ./../compile.py -alloc "./${1}.p0" > "./${1}.s" || RES=1
+    elif [[ $STACK -eq 1 ]]; then
+        python ./../compile.py -stack "./${1}.p0" > "./${1}.s" || RES=1
     else
         python ./../compile.py "./${1}.p0" > "./${1}.s" || RES=1
     fi

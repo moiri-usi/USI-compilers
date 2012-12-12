@@ -90,7 +90,7 @@ class AssignBool(Node):
 ## P0 compiler implementation
 #############################
 class Engine( object ):
-    def __init__( self, filepath=None, DEBUG=False ):
+    def __init__( self, filepath=None, DEBUG=False, STACK=False ):
         self.DEBUGMODE = DEBUG
         self.STACK = STACK
         if filepath:
@@ -369,9 +369,9 @@ class Engine( object ):
 
         elif isinstance( node, Not ):
             self.DEBUG( "Not" )
-            expr = Not(self.flatten_ast(node.expr))
+            expr = Not( self.flatten_ast( node.expr ) )
             new_varname = self.flatten_ast_add_assign( expr )
-            return Name(new_varname)
+            return Name( new_varname )
 
         elif isinstance( node, Compare ):
             self.DEBUG( "Compare" )
@@ -480,70 +480,88 @@ class Engine( object ):
 
         elif isinstance( nd, Add ):
             self.DEBUG( "Add" )
-            left = self.vartable_lookup( nd.left.name )
-            right = self.vartable_lookup( nd.right.name )
+            left = self.lookup( nd.left.name )
+            right = self.lookup( nd.right.name )
             ret = left
+            if self.STACK:
+                self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
+                ret = self.reg_list['eax']
             self.expr_list.append( ASM_addl( right, ret ) )
             return ret
 
         elif isinstance( nd, Sub ):
             self.DEBUG( "Sub" )
-            left = self.vartable_lookup( nd.left.name )
-            right = self.vartable_lookup( nd.right.name )
+            left = self.lookup( nd.left.name )
+            right = self.lookup( nd.right.name )
             ret = left
+            if self.STACK:
+                self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
+                ret = self.reg_list['eax']
             self.expr_list.append( ASM_subl( right, ret ) )
             return ret
 
         elif isinstance( nd, Mul ):
             self.DEBUG( "Mul" )
-            left = self.vartable_lookup( nd.left.name )
-            right = self.vartable_lookup( nd.right.name )
+            left = self.lookup( nd.left.name )
+            right = self.lookup( nd.right.name )
             ret = left
+            if self.STACK:
+                self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
+                ret = self.reg_list['eax']
             self.expr_list.append( ASM_imull( right, ret ) )
             return ret
 
         elif isinstance( nd, Bitand ):
             self.DEBUG( "Bitand" )
-            left = self.vartable_lookup( nd.nodes[0].name )
-            right = self.vartable_lookup( nd.nodes[1].name )
+            left = self.lookup( nd.nodes[0].name )
+            right = self.lookup( nd.nodes[1].name )
             ret = left
+            if self.STACK:
+                self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
+                ret = self.reg_list['eax']
             self.expr_list.append( ASM_andl( right, ret ) )
             return ret
 
         elif isinstance( nd, Bitor ):
             self.DEBUG( "Bitor" )
-            left = self.vartable_lookup( nd.nodes[0].name )
-            right = self.vartable_lookup( nd.nodes[1].name )
+            left = self.lookup( nd.nodes[0].name )
+            right = self.lookup( nd.nodes[1].name )
             ret = left
+            if self.STACK:
+                self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
+                ret = self.reg_list['eax']
             self.expr_list.append( ASM_orl( right, ret ) )
             return ret
 
         elif isinstance( nd, Bitxor ):
             self.DEBUG( "Bitxor" )
-            left = self.vartable_lookup( nd.nodes[0].name )
-            right = self.vartable_lookup( nd.nodes[1].name )
+            left = self.lookup( nd.nodes[0].name )
+            right = self.lookup( nd.nodes[1].name )
             ret = left
+            if self.STACK:
+                self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
+                ret = self.reg_list['eax']
             self.expr_list.append( ASM_xorl( right, ret ) )
             return ret
 
         elif isinstance( nd, Invert ):
             self.DEBUG( "Invert" )
-            op = self.vartable_lookup(nd.expr.name)
+            op = self.lookup(nd.expr.name)
             ret = op
             self.expr_list.append( ASM_notl( ret ) )
             return ret
 
         elif isinstance( nd, UnarySub ):
             self.DEBUG( "UnarySub" )
-            op = self.vartable_lookup(nd.expr.name)
+            op = self.lookup(nd.expr.name)
             ret = op
             self.expr_list.append( ASM_negl( ret ) )
             return ret
 
         elif isinstance( nd, LeftShift ):
             self.DEBUG( "LeftShift" )
-            left = self.vartable_lookup( nd.left.name )
-            right = self.vartable_lookup( nd.right.name )
+            left = self.lookup( nd.left.name )
+            right = self.lookup( nd.right.name )
             ## shift needs the shifting value in the register ecx
             ## and is called with %cl
             self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
@@ -553,8 +571,8 @@ class Engine( object ):
 
         elif isinstance( nd, RightShift ):
             self.DEBUG( "LeftRight" )
-            left = self.vartable_lookup( nd.left.name )
-            right = self.vartable_lookup( nd.right.name )
+            left = self.lookup( nd.left.name )
+            right = self.lookup( nd.right.name )
             ## shift needs the shifting value in the register ecx
             ## and is called with %cl
             self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
@@ -564,26 +582,30 @@ class Engine( object ):
 
         elif isinstance( nd, Assign ) or isinstance( nd, AssignBool ):
             nam = nd.nodes[0].name ## just consider the first assignement variable
-            new_def_elem = self.vartable_lookup( nam, False )
+            new_def_elem = self.lookup( nam, False )
             op = self.flatten_ast_2_list( nd.expr )
             if isinstance( nd, Assign ):
                 self.DEBUG( "Assign" )
+                if self.STACK:
+                    self.expr_list.append( ASM_movl( op, self.reg_list['eax'] ) )
+                    op = self.reg_list['eax']
                 self.expr_list.append( ASM_movl( op, new_def_elem ) )
             elif isinstance( nd, AssignBool ):
                 self.DEBUG( "AssignBool" )
+                self.expr_list.append( ASM_movl( ASM_immedeate(0), self.reg_list['edx'] ) )
                 ## move condition flag (former operation must be ASM_cond() ) into new_def_elem
                 if nd.comp == '<':
-                    self.expr_list.append( ASM_setlb( ASM_register('dl') ) )
+                    self.expr_list.append( ASM_setl( ASM_register('dl') ) )
                 elif nd.comp == '<=':
-                    self.expr_list.append( ASM_setleb( ASM_register('dl') ) )
+                    self.expr_list.append( ASM_setle( ASM_register('dl') ) )
                 elif nd.comp == '>':
-                    self.expr_list.append( ASM_setgb( ASM_register('dl') ) )
+                    self.expr_list.append( ASM_setg( ASM_register('dl') ) )
                 elif nd.comp == '>=':
-                    self.expr_list.append( ASM_setgeb( ASM_register('dl') ) )
+                    self.expr_list.append( ASM_setge( ASM_register('dl') ) )
                 elif nd.comp == '==':
-                    self.expr_list.append( ASM_seteb( ASM_register('dl') ) )
+                    self.expr_list.append( ASM_sete( ASM_register('dl') ) )
                 elif nd.comp == '!=':
-                    self.expr_list.append( ASM_setneb( ASM_register('dl') ) )
+                    self.expr_list.append( ASM_setne( ASM_register('dl') ) )
                 else:
                     die( "ERROR: unknown compare operator" )
                 self.expr_list.append( ASM_movl( self.reg_list['edx'], new_def_elem ) )
@@ -600,8 +622,12 @@ class Engine( object ):
             ## rhs is name of the temp var for the param tree
             stack_offset = 0
             for attr in reversed(nd.args):
+                attr = self.flatten_ast_2_list( attr )
+                if self.STACK:
+                    self.expr_list.append( ASM_movl( attr, self.reg_list['eax'] ) )
+                    attr = self.reg_list['eax']
                 self.expr_list.append(
-                    ASM_movl( self.flatten_ast_2_list( attr ), ASM_stack( stack_offset, self.reg_list['esp']) )
+                    ASM_movl( attr, ASM_stack( stack_offset, self.reg_list['esp']) )
                 )
                 stack_offset += 4
             myCallObj = ASM_call( nd.node.name )
@@ -619,7 +645,7 @@ class Engine( object ):
 
         elif isinstance( nd, Name ):
             self.DEBUG( "Name" )
-            return self.vartable_lookup( nd.name )
+            return self.lookup( nd.name )
 
         elif isinstance( nd, LabelName ):
             self.DEBUG( "LabelName" )
@@ -637,9 +663,14 @@ class Engine( object ):
         elif isinstance( nd, Compare ):
             self.DEBUG( "Compare" )
             op1 = nd.ops[0]
+            left = self.flatten_ast_2_list( nd.expr )
+            right = self.flatten_ast_2_list( op1[1] )
+            if self.STACK:
+                self.expr_list.append( ASM_movl( right, self.reg_list['eax'] ) )
+                right = self.reg_list['eax']
             self.expr_list.append(
-                #ASM_cmpl( self.flatten_ast_2_list( op1[1] ), self.flatten_ast_2_list( nd.expr ) )
-                ASM_cmpl( self.flatten_ast_2_list( nd.expr ), self.flatten_ast_2_list( op1[1] ) )
+#                ASM_cmpl( left, right )
+                ASM_cmpl( right, left )
             )
             ## no return value needed, this is handeled in AssignBool
             return
@@ -648,7 +679,8 @@ class Engine( object ):
             self.DEBUG( "Not" )
             v_reg = self.flatten_ast_2_list( nd.expr )
             self.expr_list.append( ASM_cmpl( ASM_immedeate( 0 ), v_reg ) )
-            self.expr_list.append( ASM_setneb( ASM_register('dl') ) )
+            self.expr_list.append( ASM_movl( ASM_immedeate( 0 ), self.reg_list['edx'] ) )
+            self.expr_list.append( ASM_sete( ASM_register('dl') ) )
             self.expr_list.append( ASM_movl( self.reg_list['edx'], v_reg ) )
             return v_reg
 
@@ -656,7 +688,7 @@ class Engine( object ):
             self.DEBUG( "If" )
             ## check if nd.tests[0][0] is true
             self.expr_list.append( ASM_cmpl( ASM_immedeate( 0 ), self.flatten_ast_2_list( nd.tests[0][0] ) ) )
-            self.expr_list.append( ASM_je( self.flatten_ast_2_list( nd.tests[0][1] ) ) )
+            self.expr_list.append( ASM_jne( self.flatten_ast_2_list( nd.tests[0][1] ) ) )
             return
 
         elif isinstance( nd, Goto ):
@@ -707,9 +739,9 @@ class Engine( object ):
 
     def lookup( self, nam, defined=True ):
         if self.STACK:
-            return stack_lookup( self, nam, defined )
+            return self.stack_lookup( nam, defined )
         else:
-            return vartable_lookup( self, nam, defined )
+            return self.vartable_lookup( nam, defined )
 
     def stack_lookup( self, nam, defined=True ):
         if nam not in self.asmlist_stack:
@@ -992,6 +1024,8 @@ if 1 <= len( sys.argv[1:] ):
     CLEANUP_ASM = False
     PRINT_PSEUDO = False
     GEN_PSEUDO = False
+    PRINT_STACK = False
+    GEN_STACK = False
     PRINT_LIVENESS = False
     GEN_LIVENESS = False
     PRINT_IG = False
@@ -1010,6 +1044,9 @@ if 1 <= len( sys.argv[1:] ):
     if 1 < len( sys.argv[1:] ) and "-pseudo" in sys.argv:
         GEN_PSEUDO = True
         PRINT_PSEUDO = True
+    elif 1 < len( sys.argv[1:] ) and "-stack" in sys.argv:
+        GEN_STACK = True
+        PRINT_STACK = True
     elif 1 < len( sys.argv[1:] ) and "-liveness" in sys.argv:
         GEN_PSEUDO = True
         GEN_LIVENESS = True
@@ -1042,7 +1079,7 @@ if 1 <= len( sys.argv[1:] ):
         PRINT_ALLOC = True
 
     ## generate assembler
-    compl = Engine( sys.argv[-1], DEBUG )
+    compl = Engine( sys.argv[-1], DEBUG, GEN_STACK )
     compl.compileme()
 
     ## perform liveness/coloring/spilling and generate ig
@@ -1099,6 +1136,10 @@ if 1 <= len( sys.argv[1:] ):
         compl.print_liveness( liveness )
     elif PRINT_PSEUDO:
         compl.print_asm( compl.expr_list )
+    elif PRINT_STACK:
+        compl.print_asm( compl.get_prolog() ) 
+        compl.print_asm( compl.expr_list )
+        compl.print_asm( compl.get_epilog() )
     elif PRINT_ALLOC:
         ## object that call the method, print_asm, with the argument compl.expr_list OF THE CLASS ENGINE
         compl.print_asm( compl.get_prolog() ) 

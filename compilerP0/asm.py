@@ -383,6 +383,15 @@ class ASM_je( ASM_instruction ):
     def __str__( self ):
         return self.inst_ident + "je " + str(self.label)
 
+# jump if equal
+class ASM_jne( ASM_instruction ):
+    def __init__( self, label ):
+        super(ASM_jne, self).__init__( self )
+        self.DEBUG_type = "ASM_jne"
+        self.label = label
+    def __str__( self ):
+        return self.inst_ident + "jne " + str(self.label)
+
 # compare
 class ASM_cmpl( ASM_instruction ):
     def __init__( self, left, right ):
@@ -398,9 +407,9 @@ class ASM_cmpl( ASM_instruction ):
         return self.inst_ident + "cmpl " + str(self.left) + ", " + str(self.right)
 
 # set if lower
-class ASM_setlb( ASM_instruction ):
+class ASM_setl( ASM_instruction ):
     def __init__( self, op ):
-        super(ASM_setlb, self).__init__( self )
+        super(ASM_setl, self).__init__( self )
         self.DEBUG_type = "ASM_setlb"
         self.op = op
         self.set_r_def( op )
@@ -410,9 +419,9 @@ class ASM_setlb( ASM_instruction ):
         return self.inst_ident + "setl " + str(self.op)
 
 # set if lower or equal
-class ASM_setleb( ASM_instruction ):
+class ASM_setle( ASM_instruction ):
     def __init__( self, op ):
-        super(ASM_setleb, self).__init__( self )
+        super(ASM_setle, self).__init__( self )
         self.DEBUG_type = "ASM_setleb"
         self.op = op
         self.set_r_def( op )
@@ -422,9 +431,9 @@ class ASM_setleb( ASM_instruction ):
         return self.inst_ident + "setle " + str(self.op)
 
 # set if greater
-class ASM_setgb( ASM_instruction ):
+class ASM_setg( ASM_instruction ):
     def __init__( self, op ):
-        super(ASM_setgb, self).__init__( self )
+        super(ASM_setg, self).__init__( self )
         self.DEBUG_type = "ASM_setgb"
         self.op = op
         self.set_r_def( op )
@@ -434,9 +443,9 @@ class ASM_setgb( ASM_instruction ):
         return self.inst_ident + "setg " + str(self.op)
 
 # set if greater or equal
-class ASM_setgeb( ASM_instruction ):
+class ASM_setge( ASM_instruction ):
     def __init__( self, op ):
-        super(ASM_setgeb, self).__init__( self )
+        super(ASM_setge, self).__init__( self )
         self.DEBUG_type = "ASM_setgeb"
         self.op = op
         self.set_r_def( op )
@@ -446,9 +455,9 @@ class ASM_setgeb( ASM_instruction ):
         return self.inst_ident + "setge " + str(self.op)
 
 # set if equal
-class ASM_seteb( ASM_instruction ):
+class ASM_sete( ASM_instruction ):
     def __init__( self, op ):
-        super(ASM_seteb, self).__init__( self )
+        super(ASM_sete, self).__init__( self )
         self.DEBUG_type = "ASM_seteb"
         self.op = op
         self.set_r_def( op )
@@ -458,9 +467,9 @@ class ASM_seteb( ASM_instruction ):
         return self.inst_ident + "sete " + str(self.op)
 
 # set if not equal
-class ASM_setneb( ASM_instruction ):
+class ASM_setne( ASM_instruction ):
     def __init__( self, op ):
-        super(ASM_setneb, self).__init__( self )
+        super(ASM_setne, self).__init__( self )
         self.DEBUG_type = "ASM_setneb"
         self.op = op
         self.set_r_def( op )
