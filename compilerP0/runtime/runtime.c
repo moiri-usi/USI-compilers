@@ -87,54 +87,77 @@ int is_bound_method(pyobj val) {
   return is_big(val) && (project_big(val)->tag == BMETHOD);
 }
 
-#ifdef TAGGING
 /*
-  Injecting into pyobj.
-*/
+ * Delegate to inject_* functions.
+ */
+pyobj create_int(int i) {
+  return inject_int(i);
+}
+pyobj create_bool(int b) {
+  return inject_bool(b);
+}
+pyobj create_float(float f) {
+  return inject_float(f);
+}
+
+#ifdef TAGGING
+
+/*
+ * Injecting into pyobj. Tag primitive values.
+ */
 pyobj inject_int(int i) {
   return (i << SHIFT) | INT_TAG;
 }
 pyobj inject_bool(int b) {
   return (b << SHIFT) | BOOL_TAG;
 }
-pyobj inject_float(int f) {
+pyobj inject_float(float f) {
+  /* use a union to avoid bits changing when casting */
+  union { float f; int i; } x;
+  x.f = f;
+  int i = x.i;
   /* Could accomplish this with a special mask */
-  return ((f >> SHIFT) << SHIFT) | FLOAT_TAG;
+  return ((i >> SHIFT) << SHIFT) | FLOAT_TAG;
 }
 pyobj inject_big(big_pyobj* p) {
   assert((((long)p) & MASK) == 0); 
   return ((long)p) | BIG_TAG;
 }
-#endif
 
-#ifndef TAGGING
+#else
+
 /*
-  Creating boxed primitives as a pyobj.
-*/
-pyobj create_int(int i) {
+ * Creating boxed primitives as a pyobj.
+ */
+pyobj inject_int(int i) {
   big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
   ret->tag = INT;
   ret->u.i = i;
   return ret;
 }
-pyobj create_bool(int b) {
+pyobj inject_bool(int b) {
   big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
   ret->tag = BOOL;
   ret->u.b = b;
   return ret;
 }
-pyobj create_float(float f) {
+pyobj inject_float(float f) {
   big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
   ret->tag = FLOAT;
   ret->u.fl = f;
   return ret;
 }
+
 #endif
 
 /*
-  Projecting from pyobj.
-*/
+ * Projecting from pyobj. Returns an untagged/unboxed value.
+ */
 int project_int(pyobj val) {
+  if (is_bool(val))
+    return project_bool(val) ? 1 : 0;
+  if (is_float(val))
+    return (int) project_float(val);
 #ifdef TAGGING
   assert((val & MASK) == INT_TAG);
   return val >> SHIFT;
@@ -145,6 +168,10 @@ int project_int(pyobj val) {
 #endif
 }
 int project_bool(pyobj val) {
+  if (is_int(val))
+    return project_int(val) != 0;
+  if (is_float(val))
+    return project_float(val) != 0.f;
 #ifdef TAGGING
   assert((val & MASK) == BOOL_TAG);
   return val >> SHIFT;
@@ -155,6 +182,10 @@ int project_bool(pyobj val) {
 #endif
 }
 float project_float(pyobj val) {
+  if (is_int(val))
+    return (float) project_int(val);
+  if (is_bool(val))
+    return project_bool(val) ? 1.f : 0.f;
 #ifdef TAGGING
   assert((val & MASK) == FLOAT_TAG);
   return (val >> SHIFT) << SHIFT;
@@ -1110,6 +1141,13 @@ pyobj get_function(pyobj o)
 #else
   return ret;
 #endif
+}
+
+void *get_fun_ptr_from_attr(pyobj c, char* attr)
+{
+  pyobj meth = get_attr(c, attr);
+  pyobj fun = get_function(meth);
+  return get_fun_ptr(fun);
 }
 
 pyobj get_attr(pyobj c, char* attr)

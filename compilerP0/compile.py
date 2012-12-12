@@ -152,6 +152,213 @@ class Engine( object ):
             die( "ERROR: syntax error, no plain integer allowed" )
         return val
 
+    def insert_ast (self, node):
+
+        if isinstance( node, compiler.ast.Module):
+            self.DEBUG ("Module_insert")
+            self.insertar = compiler.ast.Module (None, self.insert_ast(node.node))
+            return self.insertar
+
+        elif isinstance (node, compiler.ast.Stmt):
+            self.DEBUG ("Stmt_insert")
+            chain = []
+            for n in node.nodes:
+                 chain.append(self.insert_ast(n))
+            return compiler.ast.Stmt(chain)
+
+        elif isinstance (node, compiler.ast.Const):
+            self.DEBUG ("Const_insert")
+            return CallFunc(Name('inject_int'), [Const(node.value)])
+
+        elif isinstance (node, compiler.ast.Name):
+            self.DEBUG ("Name_insert")
+            if self.node.name == 'True':
+                expr = CallFunc(Name('inject_bool'), [Const(1)])
+
+            elif self.node.name == 'False':
+                expr = CallFunc(Name('inject_bool'), [Const(0)])
+            elif self.node.name == 'None':
+                exp = CallFunc(Name('inject_big'), [Const(0)])
+            else :
+                expr = self.node
+            return expr
+
+        elif isinstance (node, compiler.ast.Add):
+            self.DEBUG ("Add_insert")
+            left = self.insert_flat(node.left)
+            right = self.insert_flat(node.right)
+            return CallFunc(Name('inject_int'), [Add(CallFunc(Name('project_int'), [left]), CallFunc(Name('project_int'), [right]))])
+
+        elif isinstance (node, compiler.ast.Sub):
+            self.DEBUG ("Sub_insert")
+            left = self.insert_flat(node.left)
+            right = self.insert_flat(node.right)
+            return CallFunc(Name('inject_int'), [Sub(CallFunc(Name('project_int'), [left]), CallFunc(Name('project_int'), [right]))])
+
+        elif isinstance (node, compiler.ast.Mul):
+            self.DEBUG ("Mul_insert")
+            left = self.insert_flat(node.left)
+            right = self.insert_flat(node.right)
+            return CallFunc(Name('inject_int'), [Mul(CallFunc(Name('project_int'), [left]), CallFunc(Name('project_int'), [right]))])
+
+
+        elif isinstance( node, compiler.ast.UnarySub ):
+            self.DEBUG( "UnarySub_insert" )
+            expr = self.insert_flat(node.expr)
+            return CallFunc(Name('inject_int'), [UnarySub(CallFunc(Name('project_int'), [expr]))])
+
+
+        elif isinstance( node, compiler.ast.UnaryAdd ):
+            self.DEBUG( "UnaryAdd_insert" )
+            ## ignore UnaryAdd node and use only its content
+            expr = self.insert_flat(node.expr)
+            return CallFunc(Name('inject_int'), [UnaryAdd(CallFunc(Name('project_int'), [expr]))])
+
+        elif isinstance (node, compiler.ast.Invert ):
+            self.DEBUG("Invert_insert")
+            expr = self.invert_ast(node.expr)
+            return CallFunc(Name('inject_int'), [Invert(CallFunc(Name('project_int'), [expr]))])
+
+        elif isinstance(node, compiler.ast.LeftShift):
+            self.DEBUG( "LeftShift_insert" )
+            left = self.insert_flat(node.left)
+            right = self.insert_flat(node.right)
+            return CallFunc(Name('inject_int'), [LeftShift(CallFunc(Name('project_int'), [left]), CallFunc(Name('project_int'), [right]))])
+
+        elif isinstance(node, compiler.ast.RightShift):
+            self.DEBUG( "RightShift_insert" )
+            left = self.insert_flat(node.left)
+            right = self.insert_flat(node.right)
+            return CallFunc(Name('inject_int'), [RightShift(CallFunc(Name('project_int'), [left]), CallFunc(Name('project_int'), [right]))])
+
+        elif isinstance(node, compiler.ast.Discard):
+            self.DEBUG( "Discard_insert" )
+            expr = self.insert_ast( node.expr )
+            return expr
+
+        elif isinstance(node, compiler.ast.AssName ):
+            self.DEBUG( "AssName_insert")
+            return node
+
+        elif isinstance( node, compiler.ast.Assign ):
+            self.DEBUG( "Assign_insert")
+            nodes = self.insert_ast( node.nodes[0] )
+            expr = self.insert_ast( node.expr )
+            return  compiler.ast.Assign( [nodes], expr )
+
+        elif isinstance (node, compiler.ast.Bitand) :
+            self.DEBUG( "Bitand_insert")
+            chain = []
+            for attr in node.nodes:
+                chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr)]))
+            return CallFunc(Name('inject_int'), [Bitand(chain)])
+
+        elif isinstance (node, compiler.ast.Bitor):
+            self.DEBUG( "Bitor_insert")
+            chain = []
+            for attr in node.nodes:
+                chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr)]))
+            return CallFunc(Name('inject_int'), [Bitor(chain)])
+
+
+        elif isinstance (node, compiler.ast.Bitxor):
+            self.DEBUG( "Bitxor_insert")
+            chain = []
+            for attr in node.nodes:
+                chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr)]))
+            return CallFunc(Name('inject_int'), [Bitxor(chain)])
+
+
+        elif isinstance (node, compiler.ast.And):
+            self.DEBUG( "And_insert")
+            chain = []
+            for attr in node.nodes:
+                chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr)]))
+            return CallFunc(Name('inject_int'), [And(chain)])
+
+### ask not
+
+        elif isinstance (node, compiler.ast.Not):
+            self.DEBUG( "Not_insert")
+            expr = self.insert_ast(node.expr)
+            return CallFunc(Name('inject_bool'), [Bitand(CallFunc(Name('project_bool'), [expr]))])
+
+
+        elif isinstance (node, compiler.ast.Or):
+            self.DEBUG( "Or_insert")
+            chain = []
+            for attr in node.nodes:
+                chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr)]))
+            return CallFunc(Name('inject_int'), [Or(chain)])
+
+
+        elif isinstance (node, compiler.ast.Compare):
+            self.DEBUG( "Compare_insert")
+            expr = self.insert_ast(node.expr)
+            chain_final = []
+            for atrr in node.ops:
+                if atrr[0] != '==' and atrr[0] != '!=':
+                    operand_1 = attr[0]
+                    operand_2 = self.inser_ast(operand[1])
+                    chain_final.append((operand_1, CallFunc(Name('project_int'), [operand_2])))
+
+                    return CallFunc(Name('inject_bool'), [Compare(CallFunc(Name('project_int'), [expr]),chain_final)])
+
+                elif node.expr != True and node.expr != False:
+                    operand_1 = attr[0]
+                    operand_2 = self.inser_ast(operand[1])
+                    chain_final.append((operand_1, CallFunc(Name('project_int'), [operand_2])))
+
+                    return CallFunc(Name('inject_bool'), [Compare(CallFunc(Name('project_int'), [expr]),chain_final)])
+
+                else :
+                    operand_1 = attr[0]
+                    operand_2 = self.inser_ast(operand[1])
+                    chain_final.append((operand_1, CallFunc(Name('project_bool'), [operand_2])))
+
+                    return CallFunc(Name('inject_bool'), [Compare(CallFunc(Name('project_bool'), [expr]),chain_final)])
+
+
+        elif isinstance (node, compiler.ast.If):
+            self.DEBUG( "If_insert")
+            chain = []
+            for attr in node.tests:
+                chain.append((self.insert_ast(attr[0]),self.insert_ast(atrr[1])))
+            other = self.insert_ast(else_)
+            return compiler.ast.If(chain, other)
+
+        elif isinstance (node, compiler.ast.While):
+            self.DEBUG( "While_insert" )
+            chain = []
+            for attr in node.tests:
+                chain.append((self.insert_ast(attr[0]),self.insert_ast(atrr[1])))
+            body = self.insert_ast(body)
+            other = self.insert_ast(else_)
+            return compiler.ast.If(chain, body, other)
+
+        elif isinstance (node, compiler.ast.Print):
+            pass
+
+        elif isinstance (node, compiler.ast.CallFunc):
+            pass
+
+
+        """
+            return compiler.ast.Name( new_varname )
+            be carefull with the equals!!!
+            parentesis when I return a chain??
+            check bitand?
+            else? equals
+        """
+
+
+
+    """++++++++++++++++++++++++++
+    result boolen ojo compare
+
+    """
+
+
 
     ## generate flatten AST
     #######################
@@ -669,7 +876,6 @@ class Engine( object ):
                 self.expr_list.append( ASM_movl( right, self.reg_list['eax'] ) )
                 right = self.reg_list['eax']
             self.expr_list.append(
-#                ASM_cmpl( left, right )
                 ASM_cmpl( right, left )
             )
             ## no return value needed, this is handeled in AssignBool
@@ -869,7 +1075,7 @@ class Engine( object ):
                 j += 1
         return live_out
 
-    ## helper for liveness   
+    ## helper for liveness
     def sub_def_live( self, defi, live, live_ptr=None ):
         is_live = False
         for oper1 in defi:
@@ -907,8 +1113,8 @@ class Engine( object ):
     ## coloring
     ###########
     def create_ig( self, live ): ##lives is define as argument
-        ig = Graph()    ## OJO ig OBJECT = GRAPH CLASS 
-        d = {}    
+        ig = Graph()    ## OJO ig OBJECT = GRAPH CLASS
+        d = {}
         node_list = {}
         edge_list = []
         node_cnt_list = {}
@@ -1036,7 +1242,7 @@ if 1 <= len( sys.argv[1:] ):
     GEN_ALLOC = False
     if "-help" in sys.argv:
         usage()
-        sys.exit( 0 ) 
+        sys.exit( 0 )
     if 1 < len( sys.argv[1:] ) and "-debug" in sys.argv:
         DEBUG = True
     if 1 < len( sys.argv[1:] ) and "-o" in sys.argv:
@@ -1142,12 +1348,12 @@ if 1 <= len( sys.argv[1:] ):
         compl.print_asm( compl.get_epilog() )
     elif PRINT_ALLOC:
         ## object that call the method, print_asm, with the argument compl.expr_list OF THE CLASS ENGINE
-        compl.print_asm( compl.get_prolog() ) 
+        compl.print_asm( compl.get_prolog() )
         compl.print_asm( compl.expr_list, True )
         compl.print_asm( compl.get_epilog() )
     else:
         usage()
-        die( "ERROR: wrong parametrisation" ) 
+        die( "ERROR: wrong parametrisation" )
 
-else:        
+else:
     usage()
