@@ -5,6 +5,7 @@
 /* methods */
 pyobj C_m(pyobj self);
 pyobj D_m(pyobj self);
+pyobj D_n(pyobj self, pyobj x);
 
 /* classes */
 pyobj C, D;
@@ -25,8 +26,10 @@ int main()
 
 #ifdef TAGGING
   pyobj one = inject_int(1);
+  pyobj three = inject_int(3);
 #else
   pyobj one = create_int(1);
+  pyobj three = create_int(3);
 #endif
 
   // c.f = 1
@@ -35,7 +38,7 @@ int main()
   // d.f = 1
   set_attr(d, "f", one);
 
-  pyobj i, j, k;
+  pyobj i, j, k, h;
 
   // i = c.m()
   {
@@ -53,16 +56,30 @@ int main()
     j = f(get_receiver(meth));
   }
 
-  // k = i + j
+  // d.n(1)
+  {
+    pyobj (*f)(pyobj, pyobj) = (pyobj (*)(pyobj, pyobj)) get_fun_ptr_from_attr(d, "n");
+    f(d, three);
+  }
+
+  // k = d.m()
+  {
+    pyobj meth = get_attr(d, "m");
+    pyobj fun = get_function(meth);
+    pyobj (*f)(pyobj) = (pyobj (*)(pyobj)) get_fun_ptr(fun);
+    k = f(get_receiver(meth));
+  }
+
+  // h = i + j + k
   {
 #ifdef TAGGING
     // optimized, but assumes i and j are integers
-    // k = i + j
+    // h = i + j + k
 
     // unoptimized, but checks that i and j are integers
-    k = inject_int(project_int(i) + project_int(j));
+    h = inject_int(project_int(i) + project_int(j) + project_int(k));
 #else
-    k = create_int(project_int(i) + project_int(j));
+    h = create_int(project_int(i) + project_int(j) + project_int(k));
 #endif
   }
 
@@ -70,6 +87,7 @@ int main()
   print_any(i);
   print_any(j);
   print_any(k);
+  print_any(h);
 }
 
 /* code to create classes C and D */
@@ -101,6 +119,9 @@ static void setup_classes()
 
   pyobj D_m_closure = create_closure(D_m, list0);
   set_attr(D, "m", create_closure(D_m, list0));
+
+  pyobj D_n_closure = create_closure(D_n, list0);
+  set_attr(D, "n", create_closure(D_n, list0));
 }
 
 /*
@@ -120,5 +141,17 @@ pyobj D_m(pyobj self) {
   return inject_int(i+1);
 #else
   return create_int(i+1);
+#endif
+}
+
+/*
+ * def n(self, x): self.f = x; return None
+ */
+pyobj D_n(pyobj self, pyobj x) {
+  set_attr(self, "f", x);
+#ifdef TAGGING
+  return inject_big(0); /* None */
+#else
+  return NULL;
 #endif
 }

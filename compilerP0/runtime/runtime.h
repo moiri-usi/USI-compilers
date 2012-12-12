@@ -114,19 +114,21 @@ int is_class(pyobj val);
 int is_unbound_method(pyobj val);
 int is_bound_method(pyobj val);
 
-#ifdef TAGGING
+/* Boxing/tagging operations */
 pyobj inject_int(int i);
 pyobj inject_bool(int b);
-pyobj inject_float(int f);
+pyobj inject_float(float f);
+
+#ifdef TAGGING
 pyobj inject_big(big_pyobj* p);
 #endif
 
-#ifndef TAGGING
+/* Boxing/tagging operations. Just calls inject_T functions */
 pyobj create_int(int i);
 pyobj create_bool(int b);
-pyobj create_float(float b);
-#endif
+pyobj create_float(float f);
 
+/* Unboxing/untagging operations */
 int project_int(pyobj val);
 int project_bool(pyobj val);
 float project_float(pyobj val);
@@ -151,6 +153,8 @@ pyobj create_closure(void* fun_ptr, pyobj free_vars);
 void* get_fun_ptr(pyobj);
 pyobj get_free_vars(pyobj);
 pyobj set_free_vars(pyobj b, pyobj free_vars);
+
+void *get_fun_ptr_from_attr(pyobj c, char* attr);
 
 pyobj create_class(pyobj bases); /* bases should be a list of classes */
 pyobj create_object(pyobj cl);
