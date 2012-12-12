@@ -1,0 +1,75 @@
+# P0 input file
+#
+# Josafat Piraquive
+# Simon Maurer
+# (Lothar Rubusch) contributer for prior steps of the project
+a = 0
+if 1 == 1:
+    a = 1
+print 111
+print a
+a = 1
+if 0 == 1:
+    a = 0
+print 222
+print a
+a = 1
+if 1 != 1:
+    a = 0
+print 333
+print a
+a = 0
+if 0 != 1:
+    a = 1
+print 444
+print a
+a = 0
+if 0 < 1:
+    a = 1
+print 555
+print a
+a = 0
+if 0 <= 1:
+    a = 1
+print 666
+print a
+a = 1
+if 1 < 0:
+    a = 0
+print 777
+print a
+a = 1
+if 1 <= 0:
+    a = 0
+print 888
+print a
+a = 0
+if 1 > 0:
+    a = 1
+print 999
+print a
+a = 0
+if 1 >= 0:
+    a = 1
+print 111
+print a
+a = 1
+if 0 > 1:
+    a = 0
+print 222
+print a
+a = 1
+if 0 >= 1:
+    a = 0
+print 333
+print a
+a = 0
+if 0 >= 0:
+    a = 1
+print 444
+print a
+a = 0
+if 0 <= 0:
+    a = 1
+print 555
+print a
