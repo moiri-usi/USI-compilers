@@ -92,6 +92,7 @@ class AssignBool(Node):
 class Engine( object ):
     def __init__( self, filepath=None, DEBUG=False ):
         self.DEBUGMODE = DEBUG
+        self.STACK = STACK
         if filepath:
             if not os.path.exists( filepath ):
                 die( "ERROR: file '%s' does not exist" % filepath )
@@ -118,6 +119,18 @@ class Engine( object ):
             'esi':ASM_register('esi', False),
             'ebp':ASM_register('ebp', False),
             'esp':ASM_register('esp', False)
+#            'ax':ASM_register('ax'),
+#            'ah':ASM_register('ah'),
+#            'al':ASM_register('al'),
+#            'bx':ASM_register('bx'),
+#            'bh':ASM_register('bh'),
+#            'bl':ASM_register('bl'),
+#            'cx':ASM_register('cx'),
+#            'ch':ASM_register('ch'),
+#            'cl':ASM_register('cl'),
+#            'dx':ASM_register('dx'),
+#            'dh':ASM_register('dh'),
+#            'dl':ASM_register('dl'),
         }
         ## list handling
         self.asmlist_mem = 0
@@ -560,19 +573,20 @@ class Engine( object ):
                 self.DEBUG( "AssignBool" )
                 ## move condition flag (former operation must be ASM_cond() ) into new_def_elem
                 if nd.comp == '<':
-                    self.expr_list.append( ASM_setlb( new_def_elem ) )
+                    self.expr_list.append( ASM_setlb( ASM_register('dl') ) )
                 elif nd.comp == '<=':
-                    self.expr_list.append( ASM_setleb( new_def_elem ) )
+                    self.expr_list.append( ASM_setleb( ASM_register('dl') ) )
                 elif nd.comp == '>':
-                    self.expr_list.append( ASM_setgb( new_def_elem ) )
+                    self.expr_list.append( ASM_setgb( ASM_register('dl') ) )
                 elif nd.comp == '>=':
-                    self.expr_list.append( ASM_setgeb( new_def_elem ) )
+                    self.expr_list.append( ASM_setgeb( ASM_register('dl') ) )
                 elif nd.comp == '==':
-                    self.expr_list.append( ASM_seteb( new_def_elem ) )
+                    self.expr_list.append( ASM_seteb( ASM_register('dl') ) )
                 elif nd.comp == '!=':
-                    self.expr_list.append( ASM_setneb( new_def_elem ) )
+                    self.expr_list.append( ASM_setneb( ASM_register('dl') ) )
                 else:
                     die( "ERROR: unknown compare operator" )
+                self.expr_list.append( ASM_movl( self.reg_list['edx'], new_def_elem ) )
 
             if isinstance( new_def_elem, ASM_v_register ) and new_def_elem.is_new():
                 ## new_def_elem was priviously spilled and needs to be moved to the stack
@@ -624,6 +638,7 @@ class Engine( object ):
             self.DEBUG( "Compare" )
             op1 = nd.ops[0]
             self.expr_list.append(
+                #ASM_cmpl( self.flatten_ast_2_list( op1[1] ), self.flatten_ast_2_list( nd.expr ) )
                 ASM_cmpl( self.flatten_ast_2_list( nd.expr ), self.flatten_ast_2_list( op1[1] ) )
             )
             ## no return value needed, this is handeled in AssignBool
@@ -632,7 +647,9 @@ class Engine( object ):
         elif isinstance( nd, Not ):
             self.DEBUG( "Not" )
             v_reg = self.flatten_ast_2_list( nd.expr )
-            self.expr_list.append( ASM_notl( v_reg ) )
+            self.expr_list.append( ASM_cmpl( ASM_immedeate( 0 ), v_reg ) )
+            self.expr_list.append( ASM_setneb( ASM_register('dl') ) )
+            self.expr_list.append( ASM_movl( self.reg_list['edx'], v_reg ) )
             return v_reg
 
         elif isinstance( nd, If ):
@@ -687,6 +704,12 @@ class Engine( object ):
         epilog.append( ASM_leave() )
         epilog.append( ASM_ret() )
         return epilog
+
+    def lookup( self, nam, defined=True ):
+        if self.STACK:
+            return stack_lookup( self, nam, defined )
+        else:
+            return vartable_lookup( self, nam, defined )
 
     def stack_lookup( self, nam, defined=True ):
         if nam not in self.asmlist_stack:
@@ -760,19 +783,6 @@ class Engine( object ):
 
     ## liveness analysis
     ####################
-#    def liveness( self ):
-#        changed = True
-#        live_in = [[]]
-#        live_out = [[]]
-#        while changed:
-#            changed = False
-#            (live_in, live_out) = self.liveness_bb( live_in, live_out )
-#            for i in range(0, len(self.expr_list), 1):
-#                if live_in[i] != live_out[i+1]:
-#                    self.DEBUG( str(i) + " " + self.concat_live(live_in[i]) + " " + self.concat_live(live_out[i+1]) )
-#                    changed = True
-#        return live_out
-
     def liveness( self ):
         changed = True
         live_in = []
