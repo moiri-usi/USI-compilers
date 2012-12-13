@@ -343,10 +343,21 @@ class Engine( object ):
 
         elif isinstance (node, compiler.ast.CallFunc):
             self.DEBUG( "CallFunc_insert")
-            chain = []
-            for arg in node.args:
-                chain.append( CallFunc(Name('project_int'), [self.insert_ast( arg )] ) )
-            return CallFunc( Name('inject_int'), [CallFunc( self.insert_ast(node.node), chain )] )
+            if isinstance (node.node, Name):
+                ## normal function call
+                chain = []
+                for arg in node.args:
+                    chain.append( CallFunc(Name('project_int'), [self.insert_ast( arg )] ) )
+                return CallFunc( Name('inject_int'), [CallFunc( self.insert_ast(node.node), chain )] )
+            else:
+                ## call of  method
+                pointer = CallFunc(Name('create_object'),[node.node.expr])
+                meth = CallFunc(Name('get_attr'),[pointer,node.node.attrname])
+                fun = CallFunc(Name('get_function'),[meth])
+                parent_stmt.append(Assign([Name('meth')],meth)) ### meth
+                parent_stmt.append(Assign([Name('fun')],fun))
+                parent_stmt.append(Assign([Name('f')],CallFunc(Name('get_fun_ptr')),[fun]))
+                return CallFunc('f', [CallFunc(Name('get_receiver'),[meth])])
 
         elif isinstance (node, compiler.ast.Getattr):
             self.DEBUG( "Getatrr_insert")
