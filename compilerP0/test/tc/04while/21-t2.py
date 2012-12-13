@@ -5,5 +5,5 @@ print y
 while x < 10:
     y = x * 2
     print y
-    x += 1
+    x = x + 1
 print y

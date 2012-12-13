@@ -46,8 +46,5 @@ elif x > y:
 else:
     print c
 
-## row 6 in out
-print True if y != y else False
-
 if x == x:
     print True

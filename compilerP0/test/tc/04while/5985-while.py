@@ -9,11 +9,11 @@ i = input()
 inc = input()
 while i < a:
     print i
-    i += inc
+    i = i + inc
 print i
 
 i = input()
 while i <= a:
     print i
-    i += inc
+    i = i + inc
 print i
