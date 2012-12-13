@@ -241,11 +241,11 @@ class Engine( object ):
 
         elif isinstance( node, compiler.ast.Assign ):
             self.DEBUG( "Assign_insert")
-            if isinstance (node.nodes[0], AssAttr)
+            if isinstance (node.nodes[0], AssAttr):
                 expr = self.insert_ast( node.expr )
                 pointer = CallFunc(Name('create_object'),node.nodes[0].expr)
                 ret = CallFunc(Name('set_attr'), [pointer, Name(node.nodes[0].attrname), expr])
-            else
+            else:
                 nodes = self.insert_ast( node.nodes[0] )
                 expr = self.insert_ast( node.expr )
                 ret = compiler.ast.Assign( [nodes], expr )
@@ -560,27 +560,26 @@ class Engine( object ):
                     ## first operand
                     flat_node = self.flatten_ast(n)
                     new_varname = self.faltten_ast_add_assign( flat_node )
-                    
                 else:
-                    if_body = Assign( AssName( new_varname ), n )
+                    if_body = Assign( [AssName( new_varname, 'OP_ASSIGN' )], n )
                     expr = If( [( new_varname, Stmt( [if_body] ) )], None )
-                    self.flatten_ast(expr)
-                flat_node = self.flatten_ast(n)
-                new_varname = self.faltten_ast_add_assign( flat_node )
-                self.label_counter += 1
-                tmp_label = self.templabel + str(self.label_counter)
-                expr = If( [( new_varname, Stmt([Assign(AssName(new_varname), n)])LabelName( tmp_label ) )], None )
-                
-                flat_node = self.flatten_ast(n)
-                if (cnt == 0):
-                    flat_nodes.append(flat_node)
-                elif (cnt == 1):
-                    flat_nodes.append(flat_node)
-                    expr = And(flat_nodes)
-                    new_varname = self.flatten_ast_add_assign( expr )
-                elif (cnt > 1):
-                    expr = And([Name(new_varname), flat_node])
-                    new_varname = self.flatten_ast_add_assign( expr )
+                    self.flatten_ast( expr )
+               #  flat_node = self.flatten_ast(n)
+               #  new_varname = self.faltten_ast_add_assign( flat_node )
+               #  self.label_counter += 1
+               #  tmp_label = self.templabel + str(self.label_counter)
+               #  expr = If( [( new_varname, Stmt([Assign(AssName(new_varname), n)])LabelName( tmp_label ) )], None )
+               #  
+               #  flat_node = self.flatten_ast(n)
+               #  if (cnt == 0):
+               #      flat_nodes.append(flat_node)
+               #  elif (cnt == 1):
+               #      flat_nodes.append(flat_node)
+               #      expr = And(flat_nodes)
+               #      new_varname = self.flatten_ast_add_assign( expr )
+               #  elif (cnt > 1):
+               #      expr = And([Name(new_varname), flat_node])
+               #      new_varname = self.flatten_ast_add_assign( expr )
                 cnt += 1
             return Name(new_varname)
 
