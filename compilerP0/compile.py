@@ -137,10 +137,11 @@ class Engine( object ):
         self.asmlist_vartable = {}
         self.asmlist_stack = {}
         self.asmlist_labeltable = {}
+        self.class_table = {}
 
     def compileme( self, expression=None, flatten=True ):
         self.asmlist_mem = 0
-        new_ast=self.insert_ast(self.ast)
+        new_ast=self.insert_ast(self.ast, [])
         if expression:
             self.ast = compiler.parse( expression )
         if flatten:
@@ -154,7 +155,6 @@ class Engine( object ):
         return val
 
     def insert_ast (self, node, parent_stmt):
-
         if isinstance( node, compiler.ast.Module):
             self.DEBUG ("Module_insert")
             insertar = compiler.ast.Module (None, self.insert_ast(node.node, parent_stmt))
@@ -164,7 +164,7 @@ class Engine( object ):
             self.DEBUG ("Stmt_insert")
             chain = []
             for n in node.nodes:
-                 chain.append(self.insert_ast(n, chain))
+                 chain.append(self.insert_ast(n, None))
             return compiler.ast.Stmt(chain)
 
         elif isinstance (node, compiler.ast.Const):
@@ -178,7 +178,7 @@ class Engine( object ):
             elif node.name == 'False':
                 expr = CallFunc(Name('inject_bool'), [Const(0)])
             elif node.name == 'None':
-                exp = CallFunc(Name('inject_big'), [Const(0)])
+                expr = CallFunc(Name('inject_big'), [Const(0)])
             else :
                 expr = node
             return expr
@@ -275,7 +275,7 @@ class Engine( object ):
             self.DEBUG( "And_insert")
             chain = []
             for attr in node.nodes:
-                chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr, parent_stmt)]))
+                chain.append(CallFunc(Name('project_bool'), [self.insert_ast(attr, parent_stmt)]))
             return CallFunc(Name('inject_bool'), [And(chain)])
 
         elif isinstance (node, compiler.ast.Not):
@@ -287,7 +287,7 @@ class Engine( object ):
             self.DEBUG( "Or_insert")
             chain = []
             for attr in node.nodes:
-                chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr, parent_stmt)]))
+                chain.append(CallFunc(Name('project_bool'), [self.insert_ast(attr, parent_stmt)]))
             return CallFunc(Name('inject_bool'), [Or(chain)])
 
         elif isinstance (node, compiler.ast.Compare):
@@ -349,20 +349,19 @@ class Engine( object ):
                     x = callFunc(Name('create_object'), [node.node.name])
                     return x
                 else:
-                chain = []
-                for arg in node.args:
-                    chain.append( CallFunc(Name('project_int'), [self.insert_ast( arg, parent_stmt )] ) )
+                    chain = []
+                    for arg in node.args:
+                        chain.append( CallFunc(Name('project_int'), [self.insert_ast( arg, parent_stmt )] ) )
                 return CallFunc( Name('inject_int'), [CallFunc( self.insert_ast(node.node, parent_stmt), chain )] )
             else:
                 ## call of  method
-                    """
+                """
                     // i = c.m()
-                  {
                     pyobj meth = get_attr(c, "m");
                     pyobj fun = get_function(meth);
                     pyobj (*f)(pyobj) = (pyobj (*)(pyobj)) get_fun_ptr(fun);
                     i = f(get_receiver(meth));
-                       """
+                """
                 pointer = CallFunc(Name('create_object'),[node.node.expr])
                 meth = CallFunc(Name('get_attr'),[pointer,node.node.attrname])
                 fun = CallFunc(Name('get_function'),[meth])
@@ -465,25 +464,34 @@ class Engine( object ):
             return Name(new_varname)
 
         elif isinstance( node, Printnl ) or isinstance( node, Print ):
-            if isinstance( node, Printnl ):
-                fct_name = "print_int_nl"
-                self.DEBUG( "Printnl" )
-            elif isinstance( node, Print ):
-                fct_name = "print_int"
-                self.DEBUG( "Print" )
-            ## create a CallFunc AST with name 'print_int_nl'
-            attr = []
-            i = 0
-            for attr_elem in node.nodes:
-                i += 1
-                attr = [ self.flatten_ast( attr_elem ) ]
-                if len( node.nodes ) > i:
-                    expr = CallFunc(Name( "print_int" ), attr )
-                    self.flatten_ast_add_assign( expr )
-            expr = CallFunc(Name( fct_name ), attr )
-            self.flatten_ast_add_assign( expr )
+            self.DEBUG( "Printnl" )
+            attr = self.flatten_ast(node.nodes[0])
+            self.flat_ast.append( CallFunc(Name('print_any'), [attr] ) )
             ## returns nothing because print has no return value
             return
+          #  self.DEBUG( "PrintAny" )
+          #  self.flat_ast.append(CallFunc( Name('print_any'), [self.flatten_ast(node.nodes[0])] ))
+#         #   self.flatten_ast_add_assign( expr )
+          #  return
+          #  if isinstance( node, Printnl ):
+          #      fct_name = "print_int_nl"
+          #      self.DEBUG( "Printnl" )
+          #  elif isinstance( node, Print ):
+          #      fct_name = "print_int"
+          #      self.DEBUG( "Print" )
+          #  ## create a CallFunc AST with name 'print_int_nl'
+          #  attr = []
+          #  i = 0
+          #  for attr_elem in node.nodes:
+          #      i += 1
+          #      attr = [ self.flatten_ast( attr_elem ) ]
+          #      if len( node.nodes ) > i:
+          #          expr = CallFunc(Name( "print_int" ), attr )
+          #          self.flatten_ast_add_assign( expr )
+          #  expr = CallFunc(Name( fct_name ), attr )
+          #  self.flatten_ast_add_assign( expr )
+          #  ## returns nothing because print has no return value
+          #  return
 
         elif isinstance( node, UnarySub ):
             self.DEBUG( "UnarySub" )
