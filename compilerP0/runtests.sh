@@ -12,6 +12,7 @@ function help() {
     exit 0
 }
 
+runtime_dir=runtime
 runtime=runtime.c
 ccopts=-m32
 dir=.
@@ -71,7 +72,7 @@ if [ ! -d "$dir" ]; then
   exit 1
 fi
 
-gcc $ccopts -c $runtime -o "$dir/runtime.o"
+gcc $ccopts -c $runtime_dir/$runtime -o "$dir/runtime.o"
 
 for testpy in "$@"; do
   (
@@ -84,7 +85,7 @@ for testpy in "$@"; do
 
     # compile to .s
     python compile.py "$test.py" > "$test.s"
-    gcc $ccopts "$test.s" hashtable.o hashtable_itr.o hashtable_utility.o runtime.o -lm -o "$test"
+    gcc $ccopts "$test.s" $runtime_dir/hashtable.o $runtime_dir/hashtable_itr.o $runtime_dir/hashtable_utility.o $runtime_dir/runtime.o -lm -o "$test"
 
     python "$test.py" < "$in" > "$test.expected"
     "./$test" < "$in" > "$test.test"
