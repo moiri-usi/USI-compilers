@@ -140,10 +140,11 @@ class Engine( object ):
 
     def compileme( self, expression=None, flatten=True ):
         self.asmlist_mem = 0
+        new_ast=self.insert_ast(self.ast)
         if expression:
             self.ast = compiler.parse( expression )
         if flatten:
-            self.flat_ast = self.flatten_ast( self.ast )
+            self.flat_ast = self.flatten_ast( new_ast )
         self.expr_list = []
         self.expr_list = self.flatten_ast_2_list( self.flat_ast )
 
@@ -156,8 +157,8 @@ class Engine( object ):
 
         if isinstance( node, compiler.ast.Module):
             self.DEBUG ("Module_insert")
-            self.insertar = compiler.ast.Module (None, self.insert_ast(node.node))
-            return self.insertar
+            insertar = compiler.ast.Module (None, self.insert_ast(node.node))
+            return insertar
 
         elif isinstance (node, compiler.ast.Stmt):
             self.DEBUG ("Stmt_insert")
@@ -172,46 +173,44 @@ class Engine( object ):
 
         elif isinstance (node, compiler.ast.Name):
             self.DEBUG ("Name_insert")
-            if self.node.name == 'True':
+            if node.name == 'True':
                 expr = CallFunc(Name('inject_bool'), [Const(1)])
 
-            elif self.node.name == 'False':
+            elif node.name == 'False':
                 expr = CallFunc(Name('inject_bool'), [Const(0)])
-            elif self.node.name == 'None':
+            elif node.name == 'None':
                 exp = CallFunc(Name('inject_big'), [Const(0)])
             else :
-                expr = self.node
+                expr = node
             return expr
 
         elif isinstance (node, compiler.ast.Add):
             self.DEBUG ("Add_insert")
-            left = self.insert_flat(node.left)
-            right = self.insert_flat(node.right)
+            left = self.insert_ast(node.left)
+            right = self.insert_ast(node.right)
             return CallFunc(Name('inject_int'), [Add(CallFunc(Name('project_int'), [left]), CallFunc(Name('project_int'), [right]))])
 
         elif isinstance (node, compiler.ast.Sub):
             self.DEBUG ("Sub_insert")
-            left = self.insert_flat(node.left)
-            right = self.insert_flat(node.right)
+            left = self.insert_ast(node.left)
+            right = self.insert_ast(node.right)
             return CallFunc(Name('inject_int'), [Sub(CallFunc(Name('project_int'), [left]), CallFunc(Name('project_int'), [right]))])
 
         elif isinstance (node, compiler.ast.Mul):
             self.DEBUG ("Mul_insert")
-            left = self.insert_flat(node.left)
-            right = self.insert_flat(node.right)
+            left = self.insert_ast(node.left)
+            right = self.insert_ast(node.right)
             return CallFunc(Name('inject_int'), [Mul(CallFunc(Name('project_int'), [left]), CallFunc(Name('project_int'), [right]))])
-
 
         elif isinstance( node, compiler.ast.UnarySub ):
             self.DEBUG( "UnarySub_insert" )
-            expr = self.insert_flat(node.expr)
+            expr = self.insert_ast(node.expr)
             return CallFunc(Name('inject_int'), [UnarySub(CallFunc(Name('project_int'), [expr]))])
-
 
         elif isinstance( node, compiler.ast.UnaryAdd ):
             self.DEBUG( "UnaryAdd_insert" )
             ## ignore UnaryAdd node and use only its content
-            expr = self.insert_flat(node.expr)
+            expr = self.insert_ast(node.expr)
             return CallFunc(Name('inject_int'), [UnaryAdd(CallFunc(Name('project_int'), [expr]))])
 
         elif isinstance (node, compiler.ast.Invert ):
@@ -221,14 +220,14 @@ class Engine( object ):
 
         elif isinstance(node, compiler.ast.LeftShift):
             self.DEBUG( "LeftShift_insert" )
-            left = self.insert_flat(node.left)
-            right = self.insert_flat(node.right)
+            left = self.insert_ast(node.left)
+            right = self.insert_ast(node.right)
             return CallFunc(Name('inject_int'), [LeftShift(CallFunc(Name('project_int'), [left]), CallFunc(Name('project_int'), [right]))])
 
         elif isinstance(node, compiler.ast.RightShift):
             self.DEBUG( "RightShift_insert" )
-            left = self.insert_flat(node.left)
-            right = self.insert_flat(node.right)
+            left = self.insert_ast(node.left)
+            right = self.insert_ast(node.right)
             return CallFunc(Name('inject_int'), [RightShift(CallFunc(Name('project_int'), [left]), CallFunc(Name('project_int'), [right]))])
 
         elif isinstance(node, compiler.ast.Discard):
@@ -242,9 +241,15 @@ class Engine( object ):
 
         elif isinstance( node, compiler.ast.Assign ):
             self.DEBUG( "Assign_insert")
-            nodes = self.insert_ast( node.nodes[0] )
-            expr = self.insert_ast( node.expr )
-            return  compiler.ast.Assign( [nodes], expr )
+            if isinstance (node.nodes[0], AssAttr)
+                expr = self.insert_ast( node.expr )
+                pointer = CallFunc(Name('create_object'),node.nodes[0].expr)
+                ret = CallFunc(Name('set_attr'), [pointer, Name(node.nodes[0].attrname), expr])
+            else
+                nodes = self.insert_ast( node.nodes[0] )
+                expr = self.insert_ast( node.expr )
+                ret = compiler.ast.Assign( [nodes], expr )
+            return ret
 
         elif isinstance (node, compiler.ast.Bitand) :
             self.DEBUG( "Bitand_insert")
@@ -260,14 +265,12 @@ class Engine( object ):
                 chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr)]))
             return CallFunc(Name('inject_int'), [Bitor(chain)])
 
-
         elif isinstance (node, compiler.ast.Bitxor):
             self.DEBUG( "Bitxor_insert")
             chain = []
             for attr in node.nodes:
                 chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr)]))
             return CallFunc(Name('inject_int'), [Bitxor(chain)])
-
 
         elif isinstance (node, compiler.ast.And):
             self.DEBUG( "And_insert")
@@ -276,13 +279,10 @@ class Engine( object ):
                 chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr)]))
             return CallFunc(Name('inject_int'), [And(chain)])
 
-### ask not
-
         elif isinstance (node, compiler.ast.Not):
             self.DEBUG( "Not_insert")
             expr = self.insert_ast(node.expr)
             return CallFunc(Name('inject_bool'), [Bitand(CallFunc(Name('project_bool'), [expr]))])
-
 
         elif isinstance (node, compiler.ast.Or):
             self.DEBUG( "Or_insert")
@@ -291,39 +291,32 @@ class Engine( object ):
                 chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr)]))
             return CallFunc(Name('inject_int'), [Or(chain)])
 
-
         elif isinstance (node, compiler.ast.Compare):
             self.DEBUG( "Compare_insert")
             expr = self.insert_ast(node.expr)
             chain_final = []
-            for atrr in node.ops:
-                if atrr[0] != '==' and atrr[0] != '!=':
+            for attr in node.ops:
+                if attr[0] != '==' and attr[0] != '!=':
                     operand_1 = attr[0]
-                    operand_2 = self.inser_ast(operand[1])
+                    operand_2 = self.insert_ast(attr[1])
                     chain_final.append((operand_1, CallFunc(Name('project_int'), [operand_2])))
-
                     return CallFunc(Name('inject_bool'), [Compare(CallFunc(Name('project_int'), [expr]),chain_final)])
-
                 elif node.expr != True and node.expr != False:
                     operand_1 = attr[0]
-                    operand_2 = self.inser_ast(operand[1])
+                    operand_2 = self.insert_ast(attr[1])
                     chain_final.append((operand_1, CallFunc(Name('project_int'), [operand_2])))
-
                     return CallFunc(Name('inject_bool'), [Compare(CallFunc(Name('project_int'), [expr]),chain_final)])
-
-                else :
+                else:
                     operand_1 = attr[0]
-                    operand_2 = self.inser_ast(operand[1])
+                    operand_2 = self.insert_ast(attr[1])
                     chain_final.append((operand_1, CallFunc(Name('project_bool'), [operand_2])))
-
                     return CallFunc(Name('inject_bool'), [Compare(CallFunc(Name('project_bool'), [expr]),chain_final)])
-
 
         elif isinstance (node, compiler.ast.If):
             self.DEBUG( "If_insert")
             chain = []
             for attr in node.tests:
-                chain.append((self.insert_ast(attr[0]),self.insert_ast(atrr[1])))
+                chain.append((self.insert_ast(attr[0]),self.insert_ast(attr[1])))
             other = self.insert_ast(else_)
             return compiler.ast.If(chain, other)
 
@@ -336,12 +329,32 @@ class Engine( object ):
             other = self.insert_ast(else_)
             return compiler.ast.If(chain, body, other)
 
+        elif isinstance (node, compiler.ast.Printnl):
+            self.DEBUG( "Printnl_insert")
+            chain = []
+            for attr in node.nodes:
+                chain.append( CallFunc(Name('project_int'), [self.insert_ast( attr )] ) )
+            return Printnl( chain, None )
+
         elif isinstance (node, compiler.ast.Print):
-            pass
+            self.DEBUG( "Print_insert")
+            chain = []
+            for attr in node.nodes:
+                chain.append( CallFunc(Name('project_int'), [self.insert_ast( attr )] ) )
+            return Print( chain, None )
 
         elif isinstance (node, compiler.ast.CallFunc):
-            pass
+            self.DEBUG( "CallFunc_insert")
+            chain = []
+            for arg in node.args:
+                chain.append( CallFunc(Name('project_int'), [self.insert_ast( arg )] ) )
+            return CallFunc(Name('inject_bool'), [CallFunc( self.insert_ast(node.node), chain )] )
 
+        elif isinstance (node, compiler.ast.Getatrr):
+            self.DEBUG( "Getatrr_insert")
+            pointer =CallFunc(Name('create_object'),[node.expr])
+            x = CallFunc(Name('get_attr'), [pointer, Name(node.attrname)])
+            return x
 
         """
             return compiler.ast.Name( new_varname )
@@ -536,12 +549,28 @@ class Engine( object ):
             new_varname = self.flatten_ast_add_assign(expr)    
             return Name(new_varname)
 
-        ## probably not used anymore because of handeling in ast_insert
         elif isinstance( node, And ):
             self.DEBUG( "And" )
             flat_nodes = []
             cnt = 0
+            
+            new_varname = None
             for n in node.nodes:
+                if cnt == 0:
+                    ## first operand
+                    flat_node = self.flatten_ast(n)
+                    new_varname = self.faltten_ast_add_assign( flat_node )
+                    
+                else:
+                    if_body = Assign( AssName( new_varname ), n )
+                    expr = If( [( new_varname, Stmt( [if_body] ) )], None )
+                    self.flatten_ast(expr)
+                flat_node = self.flatten_ast(n)
+                new_varname = self.faltten_ast_add_assign( flat_node )
+                self.label_counter += 1
+                tmp_label = self.templabel + str(self.label_counter)
+                expr = If( [( new_varname, Stmt([Assign(AssName(new_varname), n)])LabelName( tmp_label ) )], None )
+                
                 flat_node = self.flatten_ast(n)
                 if (cnt == 0):
                     flat_nodes.append(flat_node)
@@ -555,7 +584,6 @@ class Engine( object ):
                 cnt += 1
             return Name(new_varname)
 
-        ## probably not used anymore because of handeling in ast_insert
         elif isinstance( node, Or ):
             self.DEBUG( "Or" )
             flat_nodes = []
