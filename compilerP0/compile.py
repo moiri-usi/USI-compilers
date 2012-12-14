@@ -141,21 +141,16 @@ class Engine( object ):
         self.asmlist_labeltable = {}
         self.class_table = {}
         self.fun_table = {}
+        self.ref_table = {
+            'class_list':{},    ## class_name:class_ptr
+            'object_list':{},   ## obj_name:obj_ptr
+            'string_list':{},   ## fun_name:ASM_str_label -> $.LC0
+            'method_list':{}    ## fun_name:ASM_meth_label -> $C_m
+        }
         self.scope = {
-            'global':{
-                'class_list':{},    ## class_name:class_ptr
-                'object_list':{},   ## obj_name:obj_ptr
-                'string_list':{},   ## fun_name:ASM_str_label -> $.LC0
-                'method_list':{}    ## fun_name:ASM_meth_label -> $C_m
-             },
             'main':{
-                'vartable':[],
-                'stack':[],
-                'asm_list':[]
-            },
-            'fun1':{
-                'vartable':[],
-                'stack':[],
+                'vartable':{},
+                'stack':{},
                 'asm_list':[]
             }
         }
@@ -168,7 +163,7 @@ class Engine( object ):
         if flatten:
             self.flat_ast = self.flatten_ast( new_ast, [] )
         self.expr_list = []
-        self.expr_list = self.flatten_ast_2_list( self.flat_ast )
+        self.expr_list = self.flatten_ast_2_list( self.flat_ast, self.scope['main'] )
 
     def check_plain_integer( self, val ):
         if type( val ) is not int:
@@ -350,7 +345,9 @@ class Engine( object ):
             chain = []
             test = CallFunc( Name('project_bool'), [self.insert_ast(node.test, parent_stmt)] )
             body = self.insert_ast( node.body, parent_stmt )
-            other = self.insert_ast( node.else_, parent_stmt )
+            other = None
+            if node.else_ != None:
+                other = self.insert_ast( node.else_, parent_stmt )
             return While( test, body, other )
 
         elif isinstance (node, Printnl):
@@ -370,10 +367,10 @@ class Engine( object ):
         elif isinstance (node, CallFunc):
             self.DEBUG( "CallFunc_insert" )
             if isinstance (node.node, Name):
-                if node.node.name in self.scope['global']['class_list']:
+                if node.node.name in self.ref_table['class_list']:
                     ## object allocation
                     name = node.node.name
-                    class_ptr = self.scope['global']['class_list'][name]
+                    class_ptr = self.ref_table['class_list'][name]
                     obj_ptr = CallFunc(Name('create_object'), [class_ptr])
                     meth = CallFunc(Name('get_attr'),[obj_ptr, Name('__init__')])
                     fun = CallFunc(Name('get_function'),[meth])
@@ -416,14 +413,22 @@ class Engine( object ):
                 base.append(node.bases[0])
             class_ptr = CallFunc(Name('create_class'), base)
             ## store result in global variable
-            self.scope['global']['class_list'].update({node.name:class_ptr})
+            self.ref_table['class_list'].update({node.name:class_ptr})
             for fun in node.code.nodes:
                 if isinstance(fun, Function):
                     fun_ptr = CallFunc(Name('create_closure'), [] )
                     parent_stmt.append(CallFunc(Name('set_attr'), [class_ptr, Name(fun.name), fun_ptr]))
-                    self.scope['global']['string_list'].update( {fun.name:self.str_label + str(self.str_label_cnt)} )
+                    self.ref_table['string_list'].update( {fun.name:self.str_label + str(self.str_label_cnt)} )
                     self.str_label_cnt += 1
-                    self.scope['global']['method_list'].update( {fun.name:node.name + "_" + fun.name} )
+                    self.ref_table['method_list'].update( {fun.name:node.name + "_" + fun.name} )
+                    ## init scope
+                    slef.scope.append({
+                        fun.name:{
+                            'vartable':{},
+                            'stack':{},
+                            'asm_list':[]
+                        }
+                    })
             return 
 
         elif isinstance (node, Function):
@@ -436,8 +441,8 @@ class Engine( object ):
 
     ## helper for insetr_ast
     def lookup_object( self, nam ):
-        if nam in self.scope['global']['object_list']:
-            return self.scope['global']['object_list'][nam]
+        if nam in self.ref_table['object_list']:
+            return self.ref_table['object_list'][nam]
         else:
             die("ERROR: trying to access an uninstanciated object")
         
@@ -748,23 +753,23 @@ class Engine( object ):
 
     ## convert the flattened AST into a list of ASM expressions
     ###########################################################
-    def flatten_ast_2_list( self, nd ):
+    def flatten_ast_2_list( self, nd, scope ):
         if isinstance( nd, Module ):
             self.DEBUG( "Module" )
-            self.flatten_ast_2_list( nd.node )
+            self.flatten_ast_2_list( nd.node, scope )
             return self.expr_list
 
         elif isinstance( nd, Stmt ):
             self.DEBUG( "Stmt" )
             ## program
             for chld in nd.getChildren():
-                self.flatten_ast_2_list( chld )
+                self.flatten_ast_2_list( chld, scope )
             return
 
         elif isinstance( nd, Add ):
             self.DEBUG( "Add" )
-            left = self.lookup( nd.left.name )
-            right = self.lookup( nd.right.name )
+            left = self.lookup( nd.left.name, scope )
+            right = self.lookup( nd.right.name, scope )
             ret = left
             if self.STACK:
                 self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
@@ -774,8 +779,8 @@ class Engine( object ):
 
         elif isinstance( nd, Sub ):
             self.DEBUG( "Sub" )
-            left = self.lookup( nd.left.name )
-            right = self.lookup( nd.right.name )
+            left = self.lookup( nd.left.name, scope )
+            right = self.lookup( nd.right.name, scope )
             ret = left
             if self.STACK:
                 self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
@@ -785,8 +790,8 @@ class Engine( object ):
 
         elif isinstance( nd, Mul ):
             self.DEBUG( "Mul" )
-            left = self.lookup( nd.left.name )
-            right = self.lookup( nd.right.name )
+            left = self.lookup( nd.left.name, scope )
+            right = self.lookup( nd.right.name, scope )
             ret = left
             if self.STACK:
                 self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
@@ -796,8 +801,8 @@ class Engine( object ):
 
         elif isinstance( nd, Bitand ):
             self.DEBUG( "Bitand" )
-            left = self.lookup( nd.nodes[0].name )
-            right = self.lookup( nd.nodes[1].name )
+            left = self.lookup( nd.nodes[0].name, scope )
+            right = self.lookup( nd.nodes[1].name, scope )
             ret = left
             if self.STACK:
                 self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
@@ -807,8 +812,8 @@ class Engine( object ):
 
         elif isinstance( nd, Bitor ):
             self.DEBUG( "Bitor" )
-            left = self.lookup( nd.nodes[0].name )
-            right = self.lookup( nd.nodes[1].name )
+            left = self.lookup( nd.nodes[0].name, scope )
+            right = self.lookup( nd.nodes[1].name, scope )
             ret = left
             if self.STACK:
                 self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
@@ -818,8 +823,8 @@ class Engine( object ):
 
         elif isinstance( nd, Bitxor ):
             self.DEBUG( "Bitxor" )
-            left = self.lookup( nd.nodes[0].name )
-            right = self.lookup( nd.nodes[1].name )
+            left = self.lookup( nd.nodes[0].name, scope )
+            right = self.lookup( nd.nodes[1].name, scope )
             ret = left
             if self.STACK:
                 self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
@@ -829,22 +834,22 @@ class Engine( object ):
 
         elif isinstance( nd, Invert ):
             self.DEBUG( "Invert" )
-            op = self.lookup(nd.expr.name)
+            op = self.lookup( nd.expr.name, scope )
             ret = op
             self.expr_list.append( ASM_notl( ret ) )
             return ret
 
         elif isinstance( nd, UnarySub ):
             self.DEBUG( "UnarySub" )
-            op = self.lookup(nd.expr.name)
+            op = self.lookup( nd.expr.name, scope )
             ret = op
             self.expr_list.append( ASM_negl( ret ) )
             return ret
 
         elif isinstance( nd, LeftShift ):
             self.DEBUG( "LeftShift" )
-            left = self.lookup( nd.left.name )
-            right = self.lookup( nd.right.name )
+            left = self.lookup( nd.left.name, scope )
+            right = self.lookup( nd.right.name, scope )
             ## shift needs the shifting value in the register ecx
             ## and is called with %cl
             self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
@@ -854,8 +859,8 @@ class Engine( object ):
 
         elif isinstance( nd, RightShift ):
             self.DEBUG( "LeftRight" )
-            left = self.lookup( nd.left.name )
-            right = self.lookup( nd.right.name )
+            left = self.lookup( nd.left.name, scope )
+            right = self.lookup( nd.right.name, scope )
             ## shift needs the shifting value in the register ecx
             ## and is called with %cl
             self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
@@ -865,8 +870,8 @@ class Engine( object ):
 
         elif isinstance( nd, Assign ) or isinstance( nd, AssignBool ):
             nam = nd.nodes[0].name ## just consider the first assignement variable
-            new_def_elem = self.lookup( nam, False )
-            op = self.flatten_ast_2_list( nd.expr )
+            new_def_elem = self.lookup( nam, scope, False )
+            op = self.flatten_ast_2_list( nd.expr, scope )
             if isinstance( nd, Assign ):
                 self.DEBUG( "Assign" )
                 if self.STACK:
@@ -895,7 +900,7 @@ class Engine( object ):
 
             if isinstance( new_def_elem, ASM_v_register ) and new_def_elem.is_new():
                 ## new_def_elem was priviously spilled and needs to be moved to the stack
-                self.expr_list.append( ASM_movl( new_def_elem, self.stack_lookup( new_def_elem.get_name(), False ) ) )
+                self.expr_list.append( ASM_movl( new_def_elem, self.stack_lookup( new_def_elem.get_name(), scope, False ) ) )
                 new_def_elem.set_new( False )
             return
 
@@ -905,7 +910,7 @@ class Engine( object ):
             ## rhs is name of the temp var for the param tree
             stack_offset = 0
             for attr in reversed(nd.args):
-                attr = self.flatten_ast_2_list( attr )
+                attr = self.flatten_ast_2_list( attr, scope )
                 if self.STACK:
                     self.expr_list.append( ASM_movl( attr, self.reg_list['eax'] ) )
                     attr = self.reg_list['eax']
@@ -928,7 +933,7 @@ class Engine( object ):
 
         elif isinstance( nd, Name ):
             self.DEBUG( "Name" )
-            return self.lookup( nd.name )
+            return self.lookup( nd.name, scope )
 
         elif isinstance( nd, LabelName ):
             self.DEBUG( "LabelName" )
@@ -946,8 +951,8 @@ class Engine( object ):
         elif isinstance( nd, Compare ):
             self.DEBUG( "Compare" )
             op1 = nd.ops[0]
-            left = self.flatten_ast_2_list( nd.expr )
-            right = self.flatten_ast_2_list( op1[1] )
+            left = self.flatten_ast_2_list( nd.expr, scope )
+            right = self.flatten_ast_2_list( op1[1], scope )
             if self.STACK:
                 self.expr_list.append( ASM_movl( right, self.reg_list['eax'] ) )
                 right = self.reg_list['eax']
@@ -959,7 +964,7 @@ class Engine( object ):
 
         elif isinstance( nd, Not ):
             self.DEBUG( "Not" )
-            v_reg = self.flatten_ast_2_list( nd.expr )
+            v_reg = self.flatten_ast_2_list( nd.expr, scope )
             self.expr_list.append( ASM_cmpl( ASM_immedeate( 0 ), v_reg ) )
             self.expr_list.append( ASM_movl( ASM_immedeate( 0 ), self.reg_list['edx'] ) )
             self.expr_list.append( ASM_sete( ASM_register('dl') ) )
@@ -969,18 +974,18 @@ class Engine( object ):
         elif isinstance( nd, If ):
             self.DEBUG( "If" )
             ## check if nd.tests[0][0] is true
-            self.expr_list.append( ASM_cmpl( ASM_immedeate( 0 ), self.flatten_ast_2_list( nd.tests[0][0] ) ) )
-            self.expr_list.append( ASM_jne( self.flatten_ast_2_list( nd.tests[0][1] ) ) )
+            self.expr_list.append( ASM_cmpl( ASM_immedeate( 0 ), self.flatten_ast_2_list( nd.tests[0][0], scope ) ) )
+            self.expr_list.append( ASM_jne( self.flatten_ast_2_list( nd.tests[0][1], scope ) ) )
             return
 
         elif isinstance( nd, Goto ):
             self.DEBUG( "Goto" )
-            self.expr_list.append( ASM_jmp( self.flatten_ast_2_list( nd.label ) ) )
+            self.expr_list.append( ASM_jmp( self.flatten_ast_2_list( nd.label, scope ) ) )
             return
 
         elif isinstance( nd, Label ):
             self.DEBUG( "Label" )
-            self.expr_list.append( ASM_plabel( self.flatten_ast_2_list( nd.name ) ) )
+            self.expr_list.append( ASM_plabel( self.flatten_ast_2_list( nd.name, scope ) ) )
             return
 
         else:
@@ -1020,39 +1025,39 @@ class Engine( object ):
         epilog.append( ASM_ret() )
         return epilog
 
-    def lookup( self, nam, defined=True ):
+    def lookup( self, nam, scope, defined=True ):
         if self.STACK:
-            return self.stack_lookup( nam, defined )
+            return self.stack_lookup( nam, scope, defined )
         else:
-            return self.vartable_lookup( nam, defined )
+            return self.vartable_lookup( nam, scope, defined )
 
-    def stack_lookup( self, nam, defined=True ):
-        if nam not in self.asmlist_stack:
+    def stack_lookup( self, nam, scope, defined=True ):
+        if nam not in scope['stack']:
             if defined:
                 die( "ERROR: variable %s was not defined" %nam )
             ## var is new -> add a new stack object to the dict
             new_elem = ASM_stack(0 - self.asmlist_mem, self.reg_list['ebp'])
             self.asmlist_mem += 4
-            self.asmlist_stack.update({nam:new_elem})
+            scope['stack'].update({nam:new_elem})
         ## return stack object containing the stack pos
-        return self.asmlist_stack[nam]
+        return scope['stack'][nam]
 
-    def vartable_lookup( self, nam, defined=True ):
-        if nam not in self.asmlist_vartable:
+    def vartable_lookup( self, nam, scope, defined=True ):
+        if nam not in scope['vartable']:
             if defined:
                 die( "ERROR: variable %s was not defined" %nam )
             ## var is new -> add a new virtual register object to the dict
             new_elem = ASM_v_register( nam )
-            self.asmlist_vartable.update({nam:new_elem})
+            scope['vartable'].update({nam:new_elem})
         ## return vartable object
-        v_reg = self.asmlist_vartable[nam]
+        v_reg = scope['vartable'][nam]
         if v_reg.is_spilled() and defined:
             ## instruction call using the spilled v_reg (not defining)
-            stack_pos = self.stack_lookup( v_reg.get_spilled_name() )
+            stack_pos = self.stack_lookup( v_reg.get_spilled_name(), scope )
             self.var_counter += 1
             new_name = self.tempvar + str(self.var_counter)
             new_elem = ASM_v_register( new_name ) ## new v_register
-            self.asmlist_vartable.update({new_name:new_elem})
+            scope['vartable'].update({new_name:new_elem})
             self.expr_list.append( ASM_movl( stack_pos, new_elem ) )
             v_reg = new_elem
         elif v_reg.is_spilled() and not defined:
@@ -1061,7 +1066,7 @@ class Engine( object ):
             new_name = self.tempvar + str(self.var_counter)
             v_reg.set_spilled_name( new_name ) ## indicate to the old v_reg the name of the new v_reg
             new_elem = ASM_v_register( new_name )
-            self.asmlist_vartable.update({new_name:new_elem})
+            scope['vartable'].update({new_name:new_elem})
             new_elem.set_new( True )
             v_reg = new_elem
         return v_reg
@@ -1396,6 +1401,7 @@ if 1 <= len( sys.argv[1:] ):
         print compl.DEBUG__print_list( )
         print ""
 
+        ## TODO: update to scope handling
         print "len of asmlist_vartable '%d'" % len(compl.asmlist_vartable)
         print compl.asmlist_vartable
 
