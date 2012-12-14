@@ -276,8 +276,8 @@ class Engine( object ):
             self.DEBUG( "And_insert")
             chain = []
             for attr in node.nodes:
-                chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr, parent_stmt)]))
-            return CallFunc(Name('inject_bool'), [And(chain)])
+                chain.append(self.insert_ast(attr, parent_stmt))
+            return And(chain)
 
         elif isinstance (node, compiler.ast.Not):
             self.DEBUG( "Not_insert")
@@ -288,8 +288,8 @@ class Engine( object ):
             self.DEBUG( "Or_insert")
             chain = []
             for attr in node.nodes:
-                chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr, parent_stmt)]))
-            return CallFunc(Name('inject_bool'), [Or(chain)])
+                chain.append(self.insert_ast(attr, parent_stmt))
+            return Or(chain)
 
         elif isinstance (node, compiler.ast.Compare):
             self.DEBUG( "Compare_insert")
@@ -591,7 +591,7 @@ class Engine( object ):
                     new_varname = self.flatten_ast_add_assign( flat_node, parent_stmt )
                 else:
                     if_body = Assign( [AssName( new_varname, 'OP_ASSIGN' )], n )
-                    expr = If( [( Name( new_varname ), Stmt( [if_body] ) )], None )
+                    expr = If( [( CallFunc(Name('project_int'), [Name( new_varname )]), Stmt( [if_body] ) )], None )
                     self.flatten_ast( expr, parent_stmt )
                 cnt += 1
             return Name(new_varname)
@@ -607,7 +607,7 @@ class Engine( object ):
                     new_varname = self.flatten_ast_add_assign( flat_node, parent_stmt )
                 else:
                     if_body = Assign( [AssName( new_varname, 'OP_ASSIGN' )], n )
-                    expr = If( [( Not( Name( new_varname ) ), Stmt( [if_body] ) )], None )
+                    expr = If( [( Not(CallFunc(Name('project_int'), [Name( new_varname )]) ), Stmt( [if_body] ) )], None )
                     self.flatten_ast( expr, parent_stmt )
                 cnt += 1
             return Name(new_varname)
@@ -691,6 +691,11 @@ class Engine( object ):
             new_varname = self.flatten_ast( node.test, parent_stmt )
             ## test
             parent_stmt.append( If( [( new_varname, LabelName( top_label ) )], None ) )
+            return
+
+        elif isinstance( node, Function ):
+            self.DEBUG( "Function" )
+            self.flatten_ast(node.code)
             return
 
         else:

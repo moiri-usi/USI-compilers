@@ -7,7 +7,7 @@ CFLAGS = -m32 $(RTFLAGS)
 # debugging support
 # CFLAGS = -g -m32 $(RTFLAGS)
 
-RUNTIME = hashtable.o hashtable_itr.o hashtable_utility.o runtime.o
+RUNTIME = hashtable.o hashtable_itr.o hashtable_utility.o runtime.o -lm
 
 # GC = gc/lib/libgc.a
 
