@@ -138,6 +138,7 @@ class Engine( object ):
         self.asmlist_stack = {}
         self.asmlist_labeltable = {}
         self.class_table = {}
+        self.fun_table = {}
 
     def compileme( self, expression=None, flatten=True ):
         self.asmlist_mem = 0
@@ -145,7 +146,7 @@ class Engine( object ):
         if expression:
             self.ast = compiler.parse( expression )
         if flatten:
-            self.flat_ast = self.flatten_ast( new_ast )
+            self.flat_ast = self.flatten_ast( new_ast, [] )
         self.expr_list = []
         self.expr_list = self.flatten_ast_2_list( self.flat_ast )
 
@@ -275,7 +276,7 @@ class Engine( object ):
             self.DEBUG( "And_insert")
             chain = []
             for attr in node.nodes:
-                chain.append(CallFunc(Name('project_bool'), [self.insert_ast(attr, parent_stmt)]))
+                chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr, parent_stmt)]))
             return CallFunc(Name('inject_bool'), [And(chain)])
 
         elif isinstance (node, compiler.ast.Not):
@@ -287,7 +288,7 @@ class Engine( object ):
             self.DEBUG( "Or_insert")
             chain = []
             for attr in node.nodes:
-                chain.append(CallFunc(Name('project_bool'), [self.insert_ast(attr, parent_stmt)]))
+                chain.append(CallFunc(Name('project_int'), [self.insert_ast(attr, parent_stmt)]))
             return CallFunc(Name('inject_bool'), [Or(chain)])
 
         elif isinstance (node, compiler.ast.Compare):
@@ -328,33 +329,38 @@ class Engine( object ):
             return compiler.ast.While( test, body, other )
 
         elif isinstance (node, compiler.ast.Printnl):
-            self.DEBUG( "Printnl_insert")
+            self.DEBUG( "Printnl_insert" )
             chain = []
             for attr in node.nodes:
-                chain.append( CallFunc(Name('project_int'), [self.insert_ast( attr, parent_stmt )] ) )
+                chain.append( self.insert_ast( attr, parent_stmt ) )
             return Printnl( chain, None )
 
         elif isinstance (node, compiler.ast.Print):
-            self.DEBUG( "Print_insert")
+            self.DEBUG( "Print_insert" )
             chain = []
             for attr in node.nodes:
-                chain.append( CallFunc(Name('project_int'), [self.insert_ast( attr, parent_stmt )] ) )
+                chain.append( self.insert_ast( attr, parent_stmt ) )
             return Print( chain, None )
 
         elif isinstance (node, compiler.ast.CallFunc):
-            self.DEBUG( "CallFunc_insert")
+            self.DEBUG( "CallFunc_insert" )
             if isinstance (node.node, Name):
                 ## normal function call
                 if node.node.name in self.class_table:
-                    x = callFunc(Name('create_object'), [node.node.name])
-                    return x
+                    ## object allocation
+                    name = node.node.name
+                    obj_ptr = CallFunc(Name('create_object'), [self.class_table[name]])
+                    fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [obj_ptr, Name('__init__')])
+                    parent_stmt.append( Assign([AssName('f')], fun_ptr) )
+                    return CallFunc('f', [CallFunc(Name('get_receiver'),[meth])])
                 else:
+                    ## any other function call
                     chain = []
                     for arg in node.args:
                         chain.append( CallFunc(Name('project_int'), [self.insert_ast( arg, parent_stmt )] ) )
-                return CallFunc( Name('inject_int'), [CallFunc( self.insert_ast(node.node, parent_stmt), chain )] )
+                    return CallFunc( Name('inject_int'), [CallFunc( self.insert_ast(node.node, parent_stmt), chain )] )
             else:
-                ## call of  method
+                ## call of a method
                 """
                     // i = c.m()
                     pyobj meth = get_attr(c, "m");
@@ -362,8 +368,8 @@ class Engine( object ):
                     pyobj (*f)(pyobj) = (pyobj (*)(pyobj)) get_fun_ptr(fun);
                     i = f(get_receiver(meth));
                 """
-                pointer = CallFunc(Name('create_object'),[node.node.expr])
-                meth = CallFunc(Name('get_attr'),[pointer,node.node.attrname])
+                class_ptr = self.lookup_class(node.node.expr.name)
+                meth = CallFunc(Name('get_attr'),[class_ptr, Name(node.node.attrname)])
                 fun = CallFunc(Name('get_function'),[meth])
                 parent_stmt.append(Assign([Name('meth')],meth)) ### meth
                 parent_stmt.append(Assign([Name('fun')],fun)) ### fun
@@ -372,68 +378,87 @@ class Engine( object ):
 
         elif isinstance (node, compiler.ast.Getattr):
             self.DEBUG( "Getatrr_insert")
-            pointer =CallFunc(Name('create_object'),[node.expr])
-            x = CallFunc(Name('get_attr'), [pointer, Name(node.attrname)])
-            return x
+            class_ptr = self.lookup_class(node.expr.name)
+            return CallFunc(Name('get_attr'), [class_ptr, Name(node.attrname)])
 
-        """
-            return compiler.ast.Name( new_varname )
-            be carefull with the equals!!!
-            parentesis when I return a chain??
-            check bitand?
-            else? equals
-        """
+        elif isinstance (node, compiler.ast.Class):
+            self.DEBUG( "Class_insert" )
+            base = []
+            if len(node.bases) > 0:
+                base.append(node.bases[0])
+            class_ptr = CallFunc(Name('create_class'), base)
+            ## store result in global variable
+            self.class_table.update({node.name:class_ptr})
+            for fun in node.code.nodes:
+                if isinstance(fun, Function):
+                    fun_ptr = CallFunc(Name('create_closure'), [] )
+                    parent_stmt.append(CallFunc(Name('set_attr'), [class_ptr, Name(fun.name), fun_ptr]))
+                    self.fun_table.append( fun.name )
+            return Class( node.name, node.bases, node.doc, self.insert_ast(node.code, parent_stmt) )
 
-
+        elif isinstance (node, compiler.ast.Function):
+            self.DEBUG( "Function_insert" )
+            stmts = []
+            for stmt in node.nodes:
+                stmts.append(self.insert_ast(stmt))
+            return Function( node.decorators, node.name, node.argnames, node.defaults, node.flags, node.doc, stmts )
 
     """++++++++++++++++++++++++++
     result boolen ojo compare
 
     """
 
-
+    def lookup_class( self, nam ):
+        if node.node.expr.name in self.class_table:
+            return self.class_table[nam]
+        else:
+            die("ERROR: calling a method on a non-existing class")
+        
 
     ## generate flatten AST
     #######################
-    def flatten_ast( self, node, flat_tmp=None ):
+    def flatten_ast( self, node, parent_stmt, flat_tmp=None ):
         if isinstance( node, Module):
             self.DEBUG( "Module" )
-            self.flat_ast = Module( None, self.flatten_ast(node.node) )
+            self.flat_ast = Module( None, self.flatten_ast(node.node, []) )
             return self.flat_ast
 
         elif isinstance( node, Stmt):
             self.DEBUG( "Stmt" )
+            self.DEBUG( "\t\t\tPARENT_STMT:" + str(parent_stmt) )
+            stmts = []
             for n in node.nodes:
-                self.flatten_ast(n)
-            return Stmt(self.flat_ast)
+                self.flatten_ast(n, stmts)
+                self.DEBUG( "\t\t\tSTMTS" + str(stmts) )
+            return Stmt(stmts)
 
         elif isinstance(node, Add):
             self.DEBUG( "Add" )
-            expr = Add( (self.flatten_ast(node.left), self.flatten_ast(node.right)) )
-            new_varname = self.flatten_ast_add_assign( expr )
+            expr = Add( (self.flatten_ast(node.left, parent_stmt), self.flatten_ast(node.right, parent_stmt)) )
+            new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
             return Name( new_varname )
 
         elif isinstance(node, Mul ):
             self.DEBUG( "Mul" )
-            expr = Mul( (self.flatten_ast( node.left ), self.flatten_ast( node.right )) )
-            new_varname = self.flatten_ast_add_assign( expr )
+            expr = Mul( (self.flatten_ast( node.left, parent_stmt ), self.flatten_ast( node.right, parent_stmt )) )
+            new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
             return Name( new_varname )
 
         elif isinstance(node, Sub ):
             self.DEBUG( "Sub" )
-            expr = Sub( (self.flatten_ast( node.left ), self.flatten_ast( node.right )) )
-            new_varname = self.flatten_ast_add_assign( expr )
+            expr = Sub( (self.flatten_ast( node.left, parent_stmt ), self.flatten_ast( node.right, parent_stmt )) )
+            new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
             return Name( new_varname )
 
         elif isinstance(node, Const):
             self.DEBUG( "Const" )
             val = self.check_plain_integer(node.value)
-            return Name( self.flatten_ast_add_assign( Const(val) ) )
+            return Name( self.flatten_ast_add_assign( Const(val), parent_stmt ) )
 
         elif isinstance(node, Discard):
             self.DEBUG( "Discard" )
-            expr = self.flatten_ast( node.expr )
-            new_varname = self.flatten_ast_add_assign( expr )
+            expr = self.flatten_ast( node.expr, parent_stmt )
+            new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
             return
 
         elif isinstance(node, AssName ):
@@ -442,80 +467,57 @@ class Engine( object ):
 
         elif isinstance( node, Assign ):
             self.DEBUG( "Assign" )
-            nodes = self.flatten_ast( node.nodes[0] )
-            expr = self.flatten_ast( node.expr )
-            self.flat_ast.append( Assign( [nodes], expr ) )
+            nodes = self.flatten_ast( node.nodes[0], parent_stmt )
+            expr = self.flatten_ast( node.expr, parent_stmt )
+            parent_stmt.append( Assign( [nodes], expr ) )
             return
 
         elif isinstance( node, Name ):
             self.DEBUG( "Name" )
             ## because of function names we need to create a new assignment
             expr = Name(node.name)
-            new_varname = self.flatten_ast_add_assign( expr )
+            new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
             return Name(new_varname)
 
         elif isinstance( node, CallFunc ):
             self.DEBUG( "CallFunc" )
             attr = []
             for attr_elem in node.args:
-                attr.append( self.flatten_ast( attr_elem ) )
+                attr.append( self.flatten_ast( attr_elem, parent_stmt ) )
             expr = CallFunc( node.node, attr )
-            new_varname = self.flatten_ast_add_assign( expr )
+            new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
             return Name(new_varname)
 
         elif isinstance( node, Printnl ) or isinstance( node, Print ):
             self.DEBUG( "Printnl" )
-            attr = self.flatten_ast(node.nodes[0])
-            self.flat_ast.append( CallFunc(Name('print_any'), [attr] ) )
+            attr = self.flatten_ast(node.nodes[0], parent_stmt)
+            parent_stmt.append( CallFunc(Name('print_any'), [attr] ) )
             ## returns nothing because print has no return value
             return
-          #  self.DEBUG( "PrintAny" )
-          #  self.flat_ast.append(CallFunc( Name('print_any'), [self.flatten_ast(node.nodes[0])] ))
-#         #   self.flatten_ast_add_assign( expr )
-          #  return
-          #  if isinstance( node, Printnl ):
-          #      fct_name = "print_int_nl"
-          #      self.DEBUG( "Printnl" )
-          #  elif isinstance( node, Print ):
-          #      fct_name = "print_int"
-          #      self.DEBUG( "Print" )
-          #  ## create a CallFunc AST with name 'print_int_nl'
-          #  attr = []
-          #  i = 0
-          #  for attr_elem in node.nodes:
-          #      i += 1
-          #      attr = [ self.flatten_ast( attr_elem ) ]
-          #      if len( node.nodes ) > i:
-          #          expr = CallFunc(Name( "print_int" ), attr )
-          #          self.flatten_ast_add_assign( expr )
-          #  expr = CallFunc(Name( fct_name ), attr )
-          #  self.flatten_ast_add_assign( expr )
-          #  ## returns nothing because print has no return value
-          #  return
 
         elif isinstance( node, UnarySub ):
             self.DEBUG( "UnarySub" )
-            expr = UnarySub(self.flatten_ast(node.expr))
-            new_varname = self.flatten_ast_add_assign( expr )
+            expr = UnarySub(self.flatten_ast(node.expr, parent_stmt))
+            new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
             return Name(new_varname)
 
         elif isinstance( node, UnaryAdd ):
             self.DEBUG( "UnaryAdd" )
             ## ignore UnaryAdd node and use only its content
-            expr = self.flatten_ast(node.expr)
-            new_varname = self.flatten_ast_add_assign( expr )
+            expr = self.flatten_ast(node.expr, parent_stmt)
+            new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
             return Name(new_varname)
 
         elif isinstance(node, LeftShift):
             self.DEBUG( "LeftShift" )
-            expr = LeftShift((self.flatten_ast(node.left), self.flatten_ast(node.right)))
-            new_varname = self.flatten_ast_add_assign( expr )
+            expr = LeftShift((self.flatten_ast(node.left, parent_stmt), self.flatten_ast(node.right, parent_stmt)))
+            new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
             return Name(new_varname)
 
         elif isinstance(node, RightShift):
             self.DEBUG( "RightShift" )
-            expr = RightShift((self.flatten_ast(node.left), self.flatten_ast(node.right)))
-            new_varname = self.flatten_ast_add_assign( expr )
+            expr = RightShift((self.flatten_ast(node.left, parent_stmt), self.flatten_ast(node.right, parent_stmt)))
+            new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
             return Name(new_varname)
 
         elif isinstance( node, Bitand ):
@@ -523,16 +525,16 @@ class Engine( object ):
             flat_nodes = []
             cnt = 0
             for n in node.nodes:
-                flat_node = self.flatten_ast(n)
+                flat_node = self.flatten_ast(n, parent_stmt)
                 if (cnt == 0):
                     flat_nodes.append(flat_node)
                 elif (cnt == 1):
                     flat_nodes.append(flat_node)
                     expr = Bitand(flat_nodes)
-                    new_varname = self.flatten_ast_add_assign( expr )
+                    new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
                 elif (cnt > 1):
                     expr = Bitand([Name(new_varname), flat_node])
-                    new_varname = self.flatten_ast_add_assign( expr )
+                    new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
                 cnt += 1
             return Name(new_varname)
 
@@ -541,16 +543,16 @@ class Engine( object ):
             flat_nodes = []
             cnt = 0
             for n in node.nodes:
-                flat_node = self.flatten_ast(n)
+                flat_node = self.flatten_ast(n, parent_stmt)
                 if (cnt == 0):
                     flat_nodes.append(flat_node)
                 elif (cnt == 1):
                     flat_nodes.append(flat_node)
                     expr = Bitor(flat_nodes)
-                    new_varname = self.flatten_ast_add_assign( expr )
+                    new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
                 elif (cnt > 1):
                     expr = Bitor([Name(new_varname), flat_node])
-                    new_varname = self.flatten_ast_add_assign( expr )
+                    new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
                 cnt += 1
             return Name(new_varname)
 
@@ -559,23 +561,23 @@ class Engine( object ):
             flat_nodes = []
             cnt = 0
             for n in node.nodes:
-                flat_node = self.flatten_ast(n)
+                flat_node = self.flatten_ast(n, parent_stmt)
                 if (cnt == 0):
                     flat_nodes.append(flat_node)
                 elif (cnt == 1):
                     flat_nodes.append(flat_node)
                     expr = Bitxor(flat_nodes)
-                    new_varname = self.flatten_ast_add_assign( expr )
+                    new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
                 elif (cnt > 1):
                     expr = Bitxor([Name(new_varname), flat_node])
-                    new_varname = self.flatten_ast_add_assign( expr )
+                    new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
                 cnt += 1
             return Name(new_varname)
 
         elif isinstance (node, Invert ):
             self.DEBUG("Invert")
-            expr = Invert(self.flatten_ast(node.expr))
-            new_varname = self.flatten_ast_add_assign(expr)
+            expr = Invert(self.flatten_ast(node.expr, parent_stmt) )
+            new_varname = self.flatten_ast_add_assign(expr, parent_stmt)
             return Name(new_varname)
 
         elif isinstance( node, And ):
@@ -585,12 +587,12 @@ class Engine( object ):
             for n in node.nodes:
                 if cnt == 0:
                     ## first operand
-                    flat_node = self.flatten_ast(n)
-                    new_varname = self.flatten_ast_add_assign( flat_node )
+                    flat_node = self.flatten_ast(n, parent_stmt)
+                    new_varname = self.flatten_ast_add_assign( flat_node, parent_stmt )
                 else:
                     if_body = Assign( [AssName( new_varname, 'OP_ASSIGN' )], n )
                     expr = If( [( Name( new_varname ), Stmt( [if_body] ) )], None )
-                    self.flatten_ast( expr )
+                    self.flatten_ast( expr, parent_stmt )
                 cnt += 1
             return Name(new_varname)
 
@@ -601,19 +603,19 @@ class Engine( object ):
             for n in node.nodes:
                 if cnt == 0:
                     ## first operand
-                    flat_node = self.flatten_ast(n)
-                    new_varname = self.flatten_ast_add_assign( flat_node )
+                    flat_node = self.flatten_ast(n, parent_stmt)
+                    new_varname = self.flatten_ast_add_assign( flat_node, parent_stmt )
                 else:
                     if_body = Assign( [AssName( new_varname, 'OP_ASSIGN' )], n )
                     expr = If( [( Not( Name( new_varname ) ), Stmt( [if_body] ) )], None )
-                    self.flatten_ast( expr )
+                    self.flatten_ast( expr, parent_stmt )
                 cnt += 1
             return Name(new_varname)
 
         elif isinstance( node, Not ):
             self.DEBUG( "Not" )
-            expr = Not( self.flatten_ast( node.expr ) )
-            new_varname = self.flatten_ast_add_assign( expr )
+            expr = Not( self.flatten_ast( node.expr, parent_stmt ) )
+            new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
             return Name( new_varname )
 
         elif isinstance( node, Compare ):
@@ -621,14 +623,14 @@ class Engine( object ):
             cnt = 0
             new_varname = None
             for op in node.ops:
-                flat_op = self.flatten_ast(op[1])
+                flat_op = self.flatten_ast(op[1], parent_stmt)
                 if cnt == 0:
-                    expr = Compare( self.flatten_ast( node.expr ), [(op[0], flat_op)] )
+                    expr = Compare( self.flatten_ast( node.expr, parent_stmt ), [(op[0], flat_op)] )
                 elif new_varname != None:
                     expr = Compare( Name( new_varname ), [(op[0], flat_op)] )
                 else:
                     die("ERROR: flattening compare, tried to assign to None")
-                new_varname = self.flatten_ast_add_assign_bool( expr, op[0] )
+                new_varname = self.flatten_ast_add_assign_bool( expr, op[0], parent_stmt )
                 cnt += 1
             return Name( new_varname )
 
@@ -643,9 +645,10 @@ class Engine( object ):
             if len(node.tests) == 0:
                 ## recursivity reached end
                 if node.else_ is not None:
-                    self.flatten_ast( node.else_ )
+                    for stmt in node.else_.nodes:
+                        self.flatten_ast( stmt, parent_stmt )
                     ## end_label
-                    self.flat_ast.append( Label( LabelName( end_label ) ) )
+                    parent_stmt.append( Label( LabelName( end_label ) ) )
             else:
                 test1 = node.tests[0]
                 ## set false_label
@@ -655,16 +658,17 @@ class Engine( object ):
                     self.label_counter += 1
                     false_label = self.templabel + str(self.label_counter)
                 ## if not cond1 goto false_label
-                new_varname = self.flatten_ast( Not( test1[0] ) )
-                self.flat_ast.append( If( [( new_varname, LabelName( false_label ) )], None ) )
+                new_varname = self.flatten_ast( Not( test1[0] ), parent_stmt )
+                parent_stmt.append( If( [( new_varname, LabelName( false_label ) )], None ) )
                 ## statement1 (cond1 is True)
-                self.flatten_ast( test1[1] )
+                for stmt in test1[1].nodes:
+                    self.flatten_ast( stmt, parent_stmt )
                 if node.else_ is not None or len(node.tests) > 1:
                     ## goto end_label
-                    self.flat_ast.append( Goto( LabelName( end_label ) ) )
+                    parent_stmt.append( Goto( LabelName( end_label ) ) )
                 ## start false_label and recoursively flatten If with one test less
-                self.flat_ast.append( Label( LabelName( false_label ) ) )
-                self.flatten_ast( If( node.tests[1:], node.else_ ), end_label )
+                parent_stmt.append( Label( LabelName( false_label ) ) )
+                self.flatten_ast( If( node.tests[1:], node.else_ ), parent_stmt, end_label )
             return
 
         elif isinstance( node, While ):
@@ -675,36 +679,37 @@ class Engine( object ):
             self.label_counter += 1
             test_label = self.templabel + str(self.label_counter)
             ## goto test
-            self.flat_ast.append( Goto( LabelName( test_label ) ) )
+            parent_stmt.append( Goto( LabelName( test_label ) ) )
             ## topLabel:
-            self.flat_ast.append( Label( LabelName( top_label ) ) )
+            parent_stmt.append( Label( LabelName( top_label ) ) )
             ## flatten while body
-            self.flatten_ast( node.body )
+            for stmt in node.body.nodes:
+                self.flatten_ast( stmt, parent_stmt )
             ## testLabel:
-            self.flat_ast.append( Label( LabelName( test_label ) ) )
+            parent_stmt.append( Label( LabelName( test_label ) ) )
             ## flatten condition
-            new_varname = self.flatten_ast( node.test )
+            new_varname = self.flatten_ast( node.test, parent_stmt )
             ## test
-            self.flat_ast.append( If( [( new_varname, LabelName( top_label ) )], None ) )
+            parent_stmt.append( If( [( new_varname, LabelName( top_label ) )], None ) )
             return
 
         else:
             die( "unknown AST node " + str( node ) )
 
     ## helper for flatten_ast
-    def flatten_ast_add_assign( self, expr ):
+    def flatten_ast_add_assign( self, expr, parent_stmt ):
         self.var_counter += 1
         name = self.tempvar + str( self.var_counter )
         nodes = AssName(name, 'OP_ASSIGN')
-        self.flat_ast.append( Assign( [nodes], expr ) )
+        parent_stmt.append( Assign( [nodes], expr ) )
         self.DEBUG( "\t\t\tnew statement node: append Assign" + str( name ) )
         return name
 
-    def flatten_ast_add_assign_bool( self, expr, op ):
+    def flatten_ast_add_assign_bool( self, expr, op, parent_stmt ):
         self.var_counter += 1
         name = self.tempvar + str( self.var_counter )
         nodes = AssName( name, 'OP_ASSIGN' )
-        self.flat_ast.append( AssignBool( [nodes], expr, op ) )
+        parent_stmt.append( AssignBool( [nodes], expr, op ) )
         self.DEBUG( "\t\t\tnew statement node: append AssignBool" + str( name ) )
         return name
 
