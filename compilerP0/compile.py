@@ -136,11 +136,7 @@ class Engine( object ):
         }
         ## list handling
         self.asmlist_mem = 0
-        self.asmlist_vartable = {}
-        self.asmlist_stack = {}
         self.asmlist_labeltable = {}
-        self.class_table = {}
-        self.fun_table = {}
         self.ref_table = {
             'class_list':{},    ## class_name:class_ptr
             'object_list':{},   ## obj_name:obj_ptr
