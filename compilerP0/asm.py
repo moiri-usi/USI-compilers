@@ -36,11 +36,15 @@ class ASM_label( object ):
 
 # text description used for the header
 class ASM_text( object ):
-    def __init__( self, text ):
+    def __init__( self, text, op=None ):
         self.DEBUG_type = "ASM_text"
         self.text = text
+        self.op = op
     def __str__( self ):
-        return "        ." + self.text
+        if self.op == None:
+            return "        ." + self.text
+        else:
+            return "        ." + self.text + " " + self.op
 
 
 ## ASM operand classes
@@ -123,7 +127,7 @@ class ASM_immedeate( ASM_operand ):
     def get_type_tag( self ):
         return self.type_tag
     def __str__( self ):
-        return '$%d' % self.val
+        return '$' + str(self.val)
 
 
 # function names and goto labels
