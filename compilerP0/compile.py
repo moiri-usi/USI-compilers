@@ -22,10 +22,10 @@ def usage():
     print "    %s [OPERATION] [ARGUMENT] FILE" % sys.argv[0]
     print "OPERATION:"
     print "    -pseudo:   prints ASM-pseudo-code using virtual registers"
-    print "    -liveness: prints the liveness analysis of the -pseudo ASM"
-    print "    -ig:       prints dot syntax of the interference graph"
-    print "    -ig-color: prints dot syntax of the colored interference graph"
-    print "    -alloc:    prints ASM-code using register allocation (default)"
+#    print "    -liveness: prints the liveness analysis of the -pseudo ASM"
+#    print "    -ig:       prints dot syntax of the interference graph"
+#    print "    -ig-color: prints dot syntax of the colored interference graph"
+#    print "    -alloc:    prints ASM-code using register allocation (default)"
     print "ARGUMENT:"
     print "    -debug:    prints additional debug information"
     print "    -o:        optimize the assembler code"
@@ -108,6 +108,8 @@ class Engine( object ):
         self.cond_label = "L"
         self.str_label_cnt = 0
         self.str_label = ".LC"
+        self.meth_label_cnt = 0
+        self.meth_label = "Cm"
 
         ## data structures
         self.flat_ast = []
@@ -135,34 +137,39 @@ class Engine( object ):
 #            'dl':ASM_register('dl'),
         }
         ## list handling
-        self.asmlist_mem = 0
         self.asmlist_labeltable = {}
         self.ref_table = {
             'class_list':{},    ## class_name:class_ptr
             'object_list':{},   ## obj_name:obj_ptr
             'string_list':{},   ## fun_name:ASM_str_label -> $.LC0
-            'method_list':{}    ## fun_name:ASM_meth_label -> $C_m
+            'method_list':{'main':'main'}    ## fun_name:ASM_meth_label -> $C_m
         }
         self.scope = {
             'main':{
                 'vartable':{},
                 'stack':{},
-                'asm_list':[]
+                'asm_list':[],
+                'stack_cnt':0
             }
         }
 
     def compileme( self, expression=None, flatten=True ):
-        self.asmlist_mem = 0
+        for block in self.scope:
+            self.scope[block]['vartable'] = {}
+            self.scope[block]['stack'] = {}
+            self.scope[block]['asm_list'] = []
+            self.scope[block]['stack_cnt'] = 0
         new_ast=self.insert_ast(self.ast, [])
         if expression:
             self.ast = compiler.parse( expression )
         if flatten:
             self.flat_ast = self.flatten_ast( new_ast, [] )
-        self.expr_list = []
-        self.expr_list = self.flatten_ast_2_list( self.flat_ast, self.scope['main'] )
+        self.flatten_ast_2_list( self.flat_ast, self.scope['main'] )
 
     def check_plain_integer( self, val ):
-        if type( val ) is not int:
+        if isinstance( val, LabelName ):
+            return val
+        elif type( val ) is not int:
             die( "ERROR: syntax error, no plain integer allowed" )
         return val
 
@@ -368,11 +375,15 @@ class Engine( object ):
                     name = node.node.name
                     class_ptr = self.ref_table['class_list'][name]
                     obj_ptr = CallFunc(Name('create_object'), [class_ptr])
-                    meth = CallFunc(Name('get_attr'),[obj_ptr, Name('__init__')])
-                    fun = CallFunc(Name('get_function'),[meth])
-                    parent_stmt.append(Assign([Name('meth')],meth)) ### meth
-                    parent_stmt.append(Assign([Name('f')],CallFunc(Name('get_fun_ptr')),[fun]))
+                    fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [obj_ptr, LabelName('__init__')])
+                    parent_stmt.append(Assign([Name('f')], fun_ptr))
+                    meth = CallFunc(Name('get_attr'),[obj_ptr, LabelName('__init__')])
                     return CallFunc(Name('f'), [CallFunc(Name('get_receiver'),[meth])])
+               #     meth = CallFunc(Name('get_attr'),[obj_ptr, Const(LabelName('__init__'))])
+               #     fun = CallFunc(Name('get_function'),[meth])
+               #     parent_stmt.append(Assign([Name('meth')],meth)) ### meth
+               #     parent_stmt.append(Assign([Name('f')],CallFunc(Name('get_fun_ptr')),[fun]))
+               #     return CallFunc(Name('f'), [CallFunc(Name('get_receiver'),[meth])])
                 else:
                     ## normal function call
                     ## any other function call
@@ -390,12 +401,16 @@ class Engine( object ):
                     i = f(get_receiver(meth));
                 """
                 obj_ptr = self.lookup_object(node.node.expr.name)
+                fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [obj_ptr, Name(node.node.attrname)])
+                parent_stmt.append(Assign([Name('f')],fun_ptr))
                 meth = CallFunc(Name('get_attr'),[obj_ptr, Name(node.node.attrname)])
-                fun = CallFunc(Name('get_function'),[meth])
-                parent_stmt.append(Assign([Name('meth')],meth)) ### meth
-                parent_stmt.append(Assign([Name('fun')],fun)) ### fun
-                parent_stmt.append(Assign([Name('f')],CallFunc(Name('get_fun_ptr')),[fun]))
-                return CallFunc('f', [CallFunc(Name('get_receiver'),[meth])])
+                return CallFunc(Name('f'), [CallFunc(Name('get_receiver'),[meth])])
+#                meth = CallFunc(Name('get_attr'),[obj_ptr, Name(node.node.attrname)])
+#                fun = CallFunc(Name('get_function'),[meth])
+#                parent_stmt.append(Assign([Name('meth')],meth)) ### meth
+#                parent_stmt.append(Assign([Name('fun')],fun)) ### fun
+#                parent_stmt.append(Assign([Name('f')],CallFunc(Name('get_fun_ptr')),[fun]))
+#                return CallFunc('f', [CallFunc(Name('get_receiver'),[meth])])
 
         elif isinstance (node, Getattr):
             self.DEBUG( "Getatrr_insert")
@@ -408,23 +423,28 @@ class Engine( object ):
             if len(node.bases) > 0:
                 base.append(node.bases[0])
             class_ptr = CallFunc(Name('create_class'), base)
+            parent_stmt.append(Assign([AssName(LabelName(node.name), 'OP_ASSIGN')], class_ptr))
             ## store result in global variable
             self.ref_table['class_list'].update({node.name:class_ptr})
             for fun in node.code.nodes:
                 if isinstance(fun, Function):
-                    fun_ptr = CallFunc(Name('create_closure'), [] )
-                    parent_stmt.append(CallFunc(Name('set_attr'), [class_ptr, Name(fun.name), fun_ptr]))
                     self.ref_table['string_list'].update( {fun.name:self.str_label + str(self.str_label_cnt)} )
                     self.str_label_cnt += 1
-                    self.ref_table['method_list'].update( {fun.name:node.name + "_" + fun.name} )
+                    self.ref_table['method_list'].update( {fun.name:self.meth_label + str(self.meth_label_cnt)} )
+                    self.meth_label_cnt += 1
                     ## init scope
-                    slef.scope.append({
+                    self.scope.update({
                         fun.name:{
                             'vartable':{},
                             'stack':{},
-                            'asm_list':[]
+                            'asm_list':[],
+                            'stack_cnt':0
                         }
                     })
+                    method_label = Const(LabelName(self.ref_table['method_list'][fun.name]))
+                    fun_ptr = CallFunc(Name('create_closure'), [method_label] )
+                    string_label = Const(LabelName(self.ref_table['string_list'][fun.name]))
+                    parent_stmt.append(CallFunc(Name('set_attr'), [LabelName(node.name), string_label, fun_ptr]))
             return 
 
         elif isinstance (node, Function):
@@ -453,11 +473,9 @@ class Engine( object ):
 
         elif isinstance( node, Stmt):
             self.DEBUG( "Stmt" )
-            self.DEBUG( "\t\t\tPARENT_STMT:" + str(parent_stmt) )
             stmts = []
             for n in node.nodes:
                 self.flatten_ast(n, stmts)
-                self.DEBUG( "\t\t\tSTMTS" + str(stmts) )
             return Stmt(stmts)
 
         elif isinstance(node, Add):
@@ -499,6 +517,10 @@ class Engine( object ):
             expr = self.flatten_ast( node.expr, parent_stmt )
             parent_stmt.append( Assign( [nodes], expr ) )
             return
+
+        elif isinstance( node, LabelName ):
+            self.DEBUG( "LabelName" )
+            return node
 
         elif isinstance( node, Name ):
             self.DEBUG( "Name" )
@@ -751,242 +773,252 @@ class Engine( object ):
     ###########################################################
     def flatten_ast_2_list( self, nd, scope ):
         if isinstance( nd, Module ):
-            self.DEBUG( "Module" )
+            self.DEBUG( "Module_asm" )
             self.flatten_ast_2_list( nd.node, scope )
-            return self.expr_list
+            return
 
         elif isinstance( nd, Stmt ):
-            self.DEBUG( "Stmt" )
+            self.DEBUG( "Stmt_asm" )
             ## program
             for chld in nd.getChildren():
                 self.flatten_ast_2_list( chld, scope )
             return
 
         elif isinstance( nd, Add ):
-            self.DEBUG( "Add" )
+            self.DEBUG( "Add_asm" )
             left = self.lookup( nd.left.name, scope )
             right = self.lookup( nd.right.name, scope )
             ret = left
             if self.STACK:
-                self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
+                scope['asm_list'].append( ASM_movl( ret, self.reg_list['eax'] ) )
                 ret = self.reg_list['eax']
-            self.expr_list.append( ASM_addl( right, ret ) )
+            scope['asm_list'].append( ASM_addl( right, ret ) )
             return ret
 
         elif isinstance( nd, Sub ):
-            self.DEBUG( "Sub" )
+            self.DEBUG( "Sub_asm" )
             left = self.lookup( nd.left.name, scope )
             right = self.lookup( nd.right.name, scope )
             ret = left
             if self.STACK:
-                self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
+                scope['asm_list'].append( ASM_movl( ret, self.reg_list['eax'] ) )
                 ret = self.reg_list['eax']
-            self.expr_list.append( ASM_subl( right, ret ) )
+            scope['asm_list'].append( ASM_subl( right, ret ) )
             return ret
 
         elif isinstance( nd, Mul ):
-            self.DEBUG( "Mul" )
+            self.DEBUG( "Mul_asm" )
             left = self.lookup( nd.left.name, scope )
             right = self.lookup( nd.right.name, scope )
             ret = left
             if self.STACK:
-                self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
+                scope['asm_list'].append( ASM_movl( ret, self.reg_list['eax'] ) )
                 ret = self.reg_list['eax']
-            self.expr_list.append( ASM_imull( right, ret ) )
+            scope['asm_list'].append( ASM_imull( right, ret ) )
             return ret
 
         elif isinstance( nd, Bitand ):
-            self.DEBUG( "Bitand" )
+            self.DEBUG( "Bitand_asm" )
             left = self.lookup( nd.nodes[0].name, scope )
             right = self.lookup( nd.nodes[1].name, scope )
             ret = left
             if self.STACK:
-                self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
+                scope['asm_list'].append( ASM_movl( ret, self.reg_list['eax'] ) )
                 ret = self.reg_list['eax']
-            self.expr_list.append( ASM_andl( right, ret ) )
+            scope['asm_list'].append( ASM_andl( right, ret ) )
             return ret
 
         elif isinstance( nd, Bitor ):
-            self.DEBUG( "Bitor" )
+            self.DEBUG( "Bitor_asm" )
             left = self.lookup( nd.nodes[0].name, scope )
             right = self.lookup( nd.nodes[1].name, scope )
             ret = left
             if self.STACK:
-                self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
+                scope['asm_list'].append( ASM_movl( ret, self.reg_list['eax'] ) )
                 ret = self.reg_list['eax']
-            self.expr_list.append( ASM_orl( right, ret ) )
+            scope['asm_list'].append( ASM_orl( right, ret ) )
             return ret
 
         elif isinstance( nd, Bitxor ):
-            self.DEBUG( "Bitxor" )
+            self.DEBUG( "Bitxor_asm" )
             left = self.lookup( nd.nodes[0].name, scope )
             right = self.lookup( nd.nodes[1].name, scope )
             ret = left
             if self.STACK:
-                self.expr_list.append( ASM_movl( ret, self.reg_list['eax'] ) )
+                scope['asm_list'].append( ASM_movl( ret, self.reg_list['eax'] ) )
                 ret = self.reg_list['eax']
-            self.expr_list.append( ASM_xorl( right, ret ) )
+            scope['asm_list'].append( ASM_xorl( right, ret ) )
             return ret
 
         elif isinstance( nd, Invert ):
-            self.DEBUG( "Invert" )
+            self.DEBUG( "Invert_asm" )
             op = self.lookup( nd.expr.name, scope )
             ret = op
-            self.expr_list.append( ASM_notl( ret ) )
+            scope['asm_list'].append( ASM_notl( ret ) )
             return ret
 
         elif isinstance( nd, UnarySub ):
-            self.DEBUG( "UnarySub" )
+            self.DEBUG( "UnarySub_asm" )
             op = self.lookup( nd.expr.name, scope )
             ret = op
-            self.expr_list.append( ASM_negl( ret ) )
+            scope['asm_list'].append( ASM_negl( ret ) )
             return ret
 
         elif isinstance( nd, LeftShift ):
-            self.DEBUG( "LeftShift" )
+            self.DEBUG( "LeftShift_asm" )
             left = self.lookup( nd.left.name, scope )
             right = self.lookup( nd.right.name, scope )
             ## shift needs the shifting value in the register ecx
             ## and is called with %cl
-            self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
+            scope['asm_list'].append( ASM_movl( right, self.reg_list['ecx'] ) )
             ret = left
-            self.expr_list.append( ASM_shll( ASM_register('cl'), ret ) )
+            scope['asm_list'].append( ASM_shll( ASM_register('cl'), ret ) )
             return ret
 
         elif isinstance( nd, RightShift ):
-            self.DEBUG( "LeftRight" )
+            self.DEBUG( "LeftRight_asm" )
             left = self.lookup( nd.left.name, scope )
             right = self.lookup( nd.right.name, scope )
             ## shift needs the shifting value in the register ecx
             ## and is called with %cl
-            self.expr_list.append( ASM_movl( right, self.reg_list['ecx'] ) )
+            scope['asm_list'].append( ASM_movl( right, self.reg_list['ecx'] ) )
             ret = left
-            self.expr_list.append( ASM_shrl( ASM_register('cl'), ret ) )
+            scope['asm_list'].append( ASM_shrl( ASM_register('cl'), ret ) )
             return ret
 
         elif isinstance( nd, Assign ) or isinstance( nd, AssignBool ):
-            nam = nd.nodes[0].name ## just consider the first assignement variable
-            new_def_elem = self.lookup( nam, scope, False )
+            if isinstance(nd.nodes[0].name, LabelName):
+                new_def_elem = self.labeltable_lookup(nd.nodes[0].name.name)
+            else:
+                nam = nd.nodes[0].name ## just consider the first assignement variable
+                new_def_elem = self.lookup( nam, scope, False )
             op = self.flatten_ast_2_list( nd.expr, scope )
             if isinstance( nd, Assign ):
-                self.DEBUG( "Assign" )
+                self.DEBUG( "Assign_asm: " + str(nd) )
                 if self.STACK:
-                    self.expr_list.append( ASM_movl( op, self.reg_list['eax'] ) )
+                    scope['asm_list'].append( ASM_movl( op, self.reg_list['eax'] ) )
                     op = self.reg_list['eax']
-                self.expr_list.append( ASM_movl( op, new_def_elem ) )
+                scope['asm_list'].append( ASM_movl( op, new_def_elem ) )
             elif isinstance( nd, AssignBool ):
-                self.DEBUG( "AssignBool" )
-                self.expr_list.append( ASM_movl( ASM_immedeate(0), self.reg_list['edx'] ) )
+                self.DEBUG( "AssignBool_asm" )
+                scope['asm_list'].append( ASM_movl( ASM_immedeate(0), self.reg_list['edx'] ) )
                 ## move condition flag (former operation must be ASM_cond() ) into new_def_elem
                 if nd.comp == '<':
-                    self.expr_list.append( ASM_setl( ASM_register('dl') ) )
+                    scope['asm_list'].append( ASM_setl( ASM_register('dl') ) )
                 elif nd.comp == '<=':
-                    self.expr_list.append( ASM_setle( ASM_register('dl') ) )
+                    scope['asm_list'].append( ASM_setle( ASM_register('dl') ) )
                 elif nd.comp == '>':
-                    self.expr_list.append( ASM_setg( ASM_register('dl') ) )
+                    scope['asm_list'].append( ASM_setg( ASM_register('dl') ) )
                 elif nd.comp == '>=':
-                    self.expr_list.append( ASM_setge( ASM_register('dl') ) )
+                    scope['asm_list'].append( ASM_setge( ASM_register('dl') ) )
                 elif nd.comp == '==':
-                    self.expr_list.append( ASM_sete( ASM_register('dl') ) )
+                    scope['asm_list'].append( ASM_sete( ASM_register('dl') ) )
                 elif nd.comp == '!=':
-                    self.expr_list.append( ASM_setne( ASM_register('dl') ) )
+                    scope['asm_list'].append( ASM_setne( ASM_register('dl') ) )
                 else:
                     die( "ERROR: unknown compare operator" )
-                self.expr_list.append( ASM_movl( self.reg_list['edx'], new_def_elem ) )
+                scope['asm_list'].append( ASM_movl( self.reg_list['edx'], new_def_elem ) )
 
             if isinstance( new_def_elem, ASM_v_register ) and new_def_elem.is_new():
                 ## new_def_elem was priviously spilled and needs to be moved to the stack
-                self.expr_list.append( ASM_movl( new_def_elem, self.stack_lookup( new_def_elem.get_name(), scope, False ) ) )
+                scope['asm_list'].append( ASM_movl( new_def_elem, self.stack_lookup( new_def_elem.get_name(), scope, False ) ) )
                 new_def_elem.set_new( False )
             return
 
         elif isinstance( nd, CallFunc ):
-            self.DEBUG( "CallFunc" )
+            self.DEBUG( "CallFunc_asm: " + str(nd) )
             ## lhs is name of the function
             ## rhs is name of the temp var for the param tree
             stack_offset = 0
-            for attr in reversed(nd.args):
+            arg_instrs = []
+            for attr in nd.args:
                 attr = self.flatten_ast_2_list( attr, scope )
                 if self.STACK:
-                    self.expr_list.append( ASM_movl( attr, self.reg_list['eax'] ) )
+                    arg_instrs.insert(0, ASM_movl( attr, self.reg_list['eax'] ) )
+                    #scope['asm_list'].append( ASM_movl( attr, self.reg_list['eax'] ) )
                     attr = self.reg_list['eax']
-                self.expr_list.append(
-                    ASM_movl( attr, ASM_stack( stack_offset, self.reg_list['esp']) )
-                )
+                arg_instrs.insert(1, ASM_movl( attr, ASM_stack( stack_offset, self.reg_list['esp']) ))
+                #scope['asm_list'].append(
+                #    ASM_movl( attr, ASM_stack( stack_offset, self.reg_list['esp']) )
+                #)
                 stack_offset += 4
+            scope['asm_list'] += arg_instrs
             myCallObj = ASM_call( nd.node.name )
             myCallObj.set_r_def( self.reg_list['eax'] )
             myCallObj.set_r_ignore( self.reg_list['eax'] )
             myCallObj.set_r_ignore( self.reg_list['ecx'] )
             myCallObj.set_r_ignore( self.reg_list['edx'] )
-            self.expr_list.append( myCallObj )
+            scope['asm_list'].append( myCallObj )
             return self.reg_list['eax']
 
         elif isinstance( nd, Discard ):
-            self.DEBUG( "Discard" )
+            self.DEBUG( "Discard_asm" )
             ## discard all below
             return
 
         elif isinstance( nd, Name ):
-            self.DEBUG( "Name" )
+            self.DEBUG( "Name_asm" )
             return self.lookup( nd.name, scope )
 
         elif isinstance( nd, LabelName ):
-            self.DEBUG( "LabelName" )
+            self.DEBUG( "LabelName_asm" )
             return self.labeltable_lookup( nd.name )
 
         elif isinstance( nd, Const ):
-            self.DEBUG( "Const" )
-            return ASM_immedeate(nd.value)
+            self.DEBUG( "Const_asm" )
+            if isinstance(nd.value, LabelName):
+                return ASM_immedeate(self.flatten_ast_2_list(nd.value, scope))
+            else:
+                return ASM_immedeate(nd.value)
 
         elif isinstance( nd, AssName ):
             ## handled by higher node
-            self.DEBUG( "AssName" )
+            self.DEBUG( "AssName_asm" )
             return
 
         elif isinstance( nd, Compare ):
-            self.DEBUG( "Compare" )
+            self.DEBUG( "Compare_asm" )
             op1 = nd.ops[0]
             left = self.flatten_ast_2_list( nd.expr, scope )
             right = self.flatten_ast_2_list( op1[1], scope )
             if self.STACK:
-                self.expr_list.append( ASM_movl( right, self.reg_list['eax'] ) )
+                scope['asm_list'].append( ASM_movl( right, self.reg_list['eax'] ) )
                 right = self.reg_list['eax']
-            self.expr_list.append(
+            scope['asm_list'].append(
                 ASM_cmpl( right, left )
             )
             ## no return value needed, this is handeled in AssignBool
             return
 
         elif isinstance( nd, Not ):
-            self.DEBUG( "Not" )
+            self.DEBUG( "Not_asm" )
             v_reg = self.flatten_ast_2_list( nd.expr, scope )
-            self.expr_list.append( ASM_cmpl( ASM_immedeate( 0 ), v_reg ) )
-            self.expr_list.append( ASM_movl( ASM_immedeate( 0 ), self.reg_list['edx'] ) )
-            self.expr_list.append( ASM_sete( ASM_register('dl') ) )
-            self.expr_list.append( ASM_movl( self.reg_list['edx'], v_reg ) )
+            scope['asm_list'].append( ASM_cmpl( ASM_immedeate( 0 ), v_reg ) )
+            scope['asm_list'].append( ASM_movl( ASM_immedeate( 0 ), self.reg_list['edx'] ) )
+            scope['asm_list'].append( ASM_sete( ASM_register('dl') ) )
+            scope['asm_list'].append( ASM_movl( self.reg_list['edx'], v_reg ) )
             return v_reg
 
         elif isinstance( nd, If ):
-            self.DEBUG( "If" )
+            self.DEBUG( "If_asm" )
             ## check if nd.tests[0][0] is true
-            self.expr_list.append( ASM_cmpl( ASM_immedeate( 0 ), self.flatten_ast_2_list( nd.tests[0][0], scope ) ) )
-            self.expr_list.append( ASM_jne( self.flatten_ast_2_list( nd.tests[0][1], scope ) ) )
+            scope['asm_list'].append( ASM_cmpl( ASM_immedeate( 0 ), self.flatten_ast_2_list( nd.tests[0][0], scope ) ) )
+            scope['asm_list'].append( ASM_jne( self.flatten_ast_2_list( nd.tests[0][1], scope ) ) )
             return
 
         elif isinstance( nd, Goto ):
-            self.DEBUG( "Goto" )
-            self.expr_list.append( ASM_jmp( self.flatten_ast_2_list( nd.label, scope ) ) )
+            self.DEBUG( "Goto_asm" )
+            scope['asm_list'].append( ASM_jmp( self.flatten_ast_2_list( nd.label, scope ) ) )
             return
 
         elif isinstance( nd, Label ):
-            self.DEBUG( "Label" )
-            self.expr_list.append( ASM_plabel( self.flatten_ast_2_list( nd.name, scope ) ) )
+            self.DEBUG( "Label_asm" )
+            scope['asm_list'].append( ASM_plabel( self.flatten_ast_2_list( nd.name, scope ) ) )
             return
 
         else:
             self.DEBUG( "*** ELSE ***" )
-            die( "ERROR: flatten_ast_2_list: unknown AST node " + str( node ) )
+            die( "ERROR: flatten_ast_2_list: unknown AST node " + str( nd ) )
             return
 
     ## helper for flatten_ast_2_list
@@ -1001,17 +1033,27 @@ class Engine( object ):
             ret_mem = 16
         return ret_mem
 
-    def get_prolog( self ):
+    def get_header( self ):
+        header = []
+        ## asm header
+        header.append( ASM_text("text") )
+#        header.append( ASM_plabel( self.labeltable_lookup( "LC0" ) ) )
+        header.append( ASM_text("ascii \"Compiled with JPSM!\"") )
+        for name in self.ref_table['class_list']:
+            header.append( ASM_text("comm", name + ",4,4") ) 
+        for name in self.ref_table['string_list']:
+            header.append( ASM_plabel( self.labeltable_lookup(self.ref_table['string_list'][name] ) ) )
+            header.append( ASM_text("string", "\"" + name + "\"" ) ) 
+        return header
+
+    def get_prolog( self, stack_cnt, nam ):
         prolog = []
         ## asm prolog
-        prolog.append( ASM_text("text") )
-        prolog.append( ASM_plabel( self.labeltable_lookup( "LC0" ) ) )
-        prolog.append( ASM_text("ascii \"Compiled with JPSM!\"") )
-        prolog.append( ASM_text("globl main") )
-        prolog.append( ASM_plabel( self.labeltable_lookup( "main" ) ) )
+        prolog.append( ASM_text("globl " + nam) )
+        prolog.append( ASM_plabel( self.labeltable_lookup( nam ) ) )
         prolog.append( ASM_pushl( self.reg_list['ebp'] ) )
         prolog.append( ASM_movl( self.reg_list['esp'], self.reg_list['ebp'] ) )
-        prolog.append( ASM_subl( ASM_immedeate( self.init_stack_mem(self.asmlist_mem) ), self.reg_list['esp'] ) )
+        prolog.append( ASM_subl( ASM_immedeate( self.init_stack_mem(stack_cnt) ), self.reg_list['esp'] ) )
         return prolog
 
     def get_epilog( self ):
@@ -1030,10 +1072,11 @@ class Engine( object ):
     def stack_lookup( self, nam, scope, defined=True ):
         if nam not in scope['stack']:
             if defined:
-                die( "ERROR: variable %s was not defined" %nam )
+                self.DEBUG('DEBUG: var not found')
+#                die( "ERROR: variable %s was not defined" %nam )
             ## var is new -> add a new stack object to the dict
-            new_elem = ASM_stack(0 - self.asmlist_mem, self.reg_list['ebp'])
-            self.asmlist_mem += 4
+            new_elem = ASM_stack(0 - scope['stack_cnt'], self.reg_list['ebp'])
+            scope['stack_cnt'] += 4
             scope['stack'].update({nam:new_elem})
         ## return stack object containing the stack pos
         return scope['stack'][nam]
@@ -1054,7 +1097,7 @@ class Engine( object ):
             new_name = self.tempvar + str(self.var_counter)
             new_elem = ASM_v_register( new_name ) ## new v_register
             scope['vartable'].update({new_name:new_elem})
-            self.expr_list.append( ASM_movl( stack_pos, new_elem ) )
+            scope['asm_list'].append( ASM_movl( stack_pos, new_elem ) )
             v_reg = new_elem
         elif v_reg.is_spilled() and not defined:
             ## instruction call defining the spilled v_reg
@@ -1076,209 +1119,210 @@ class Engine( object ):
         return self.asmlist_labeltable[nam]
 
     def cleanup_asm( self ):
-        iter_list = self.expr_list
-        self.expr_list = []
-        for expr in iter_list:
-            if isinstance(expr, ASM_movl):
-                ## cleanup move expressions moving a register to itself
-                left_color = None
-                right_color = None
-                if isinstance(expr.left, ASM_v_register):
-                    left_color = expr.left.get_color()
-                elif isinstance(expr.left, ASM_register):
-                    left_color = expr.left
-                if isinstance(expr.right, ASM_v_register):
-                    right_color = expr.right.get_color()
-                elif isinstance(expr.right, ASM_register):
-                    right_color = expr.right
-                if left_color == None or right_color == None or left_color != right_color:
-                    self.expr_list.append(expr)
-            else:
-                self.expr_list.append(expr)
-
-
-    ## liveness analysis
-    ####################
-    def liveness( self ):
-        changed = True
-        live_in = []
-        live_in_old = []
-        live_out = [[]]
-        live_out_old = [[]]
-        for i in range(0, len(self.expr_list), 1):
-            live_in.append([])
-            live_in_old.append([])
-            live_out.append([])
-            live_out_old.append([])
-        while changed:
-            changed = False
-            j = 0
-            last_ignores = []
-            label_list = {}
-            remove_ignores = False
-            for i in range( len(self.expr_list), 0, -1 ):
-                element = self.expr_list[i-1]
-                ## LIVE_in(i) = ( LIVE_out(i) - DEF(i) ) union USE(i)
-                temp_live = self.sub_def_live( element.get_r_def(), list(live_out[j]), live_out[j] )
-                temp_live = self.add_use_live( element.get_r_use(), temp_live )
-                if remove_ignores: ## the iteration before added no ignore elements
-                    temp_live = self.sub_def_live( last_ignores, temp_live )
-                    remove_ignores = False
-                if ( len( temp_live ) > 0 and len( element.get_r_ignore() ) > 0 ):
-                    ## the actual live element has live variables and the asm
-                    ## instruction has some special register handling
-                    temp_live = self.add_use_live( element.get_r_ignore(), temp_live )
-                    remove_ignores = True
-                    last_ignores = element.get_r_ignore()
-                if isinstance(element, ASM_plabel):
-                    ## get all labels from asm list (possible succeeders)
-                    label_list.update({element.label:temp_live})
-                live_in_old[j] = live_in[j]
-                live_in[j] = temp_live
-                ## LIVE_out(i) = union_{j in succ(i)} LIVE_in(j)
-                if isinstance( element, ASM_jmp ):
-                    if element.label not in label_list:
-                        label_list.update({element.label:[]})
-                    succ_union = label_list[element.label]
-                elif isinstance( element, ASM_je ):
-                    if element.label not in label_list:
-                        label_list.update({element.label:[]})
-                    succ_union = self.add_use_live( label_list[element.label], temp_live )
+        for block in self.scope:
+            asm_list = self.scope[block]['asm_list']
+            scope['asm_list'] = []
+            for expr in asm_list:
+                if isinstance(expr, ASM_movl):
+                    ## cleanup move expressions moving a register to itself
+                    left_color = None
+                    right_color = None
+                    if isinstance(expr.left, ASM_v_register):
+                        left_color = expr.left.get_color()
+                    elif isinstance(expr.left, ASM_register):
+                        left_color = expr.left
+                    if isinstance(expr.right, ASM_v_register):
+                        right_color = expr.right.get_color()
+                    elif isinstance(expr.right, ASM_register):
+                        right_color = expr.right
+                    if left_color == None or right_color == None or left_color != right_color:
+                        scope['asm_list'].append(expr)
                 else:
-                    succ_union = temp_live
-                live_out_old[j+1] = live_out[j+1]
-                live_out[j+1] = succ_union
-                if self.concat_live(live_out_old[j+1]) != self.concat_live(live_out[j+1]) or self.concat_live(live_in_old[j]) != self.concat_live(live_in[j]):
-                    changed = True
-                j += 1
-        return live_out
+                    scope['asm_list'].append(expr)
 
-    ## helper for liveness
-    def sub_def_live( self, defi, live, live_ptr=None ):
-        is_live = False
-        for oper1 in defi:
-            for oper2 in live:
-                if oper1.get_content().get_name() == oper2.get_content().get_name():
-                    live.remove( oper2 )
-                    is_live = True
-            if not is_live and live_ptr != None:
-                ## the variable was defined but never used
-                ## -> add edges in ig with all live vars just before the def
-                oper1.set_ignore( True )
-                live_ptr.append( oper1 )
-        return live
-
-    def add_use_live ( self, use, live ):
-        save = True
-        for oper1 in use:
-            for oper2 in live:
-                if oper1.get_content().get_name() == oper2.get_content().get_name():
-                    save = False
-            if save:
-                live.append( oper1 )
-        return live
-
-    def concat_live( self, live_elems ):
-        my_live_str = "#live: "
-        for item in live_elems:
-            if not item.is_ignore():
-                ## only print 'ususal' live elements
-                ## (ignore the special cases e.g. with call)
-                my_live_str += str( item ) + " "
-        return my_live_str
-
-
-    ## coloring
-    ###########
-    def create_ig( self, live ): ##lives is define as argument
-        ig = Graph()    ## OJO ig OBJECT = GRAPH CLASS
-        d = {}
-        node_list = {}
-        edge_list = []
-        node_cnt_list = {}
-        for registers in live: ## register are define here, and reg_live
-            ## create nodes del graph
-            for reg_live in registers:
-                reg = reg_live.get_content()###method get_conten,object reg_live.method get_content()
-                if reg.get_name() not in node_list:###method get_name ->reg_live.get_content.get_name??
-                    if isinstance( reg, ASM_register ):
-                        node = Node( reg, reg, False )
-                    else:
-                        node = Node( reg )
-                    node_list.update( {reg.get_name():node} ) ### update the list with the new node
-                    ig.add_node( node ) ### object ig . method add_node graph class
-                    node_cnt_list.update( {node.get_name():0} )
-            ## create edges
-            for reg_live1 in registers: ## reg_live1 defin here
-                reg1 = reg_live1.get_content() ###method get_conten,object reg_live1.method get_content()
-                for reg_live2 in registers:
-                    reg2 = reg_live2.get_content()
-                    node_pair = set([node_list[reg1.get_name()], node_list[reg2.get_name()]]) ##traverse all the live to do the node pair
-                    if (len(node_pair) is 2) and (node_pair not in edge_list):
-                        for edge_node in node_pair:
-                            if( edge_node.get_name() in node_cnt_list ):
-                                node_cnt_list[edge_node.get_name()] += 1
-                        edge_list.append( node_pair )
-                        edge = Edge( node_pair )
-                        ig.add_edge( edge ) ##SENDING DATA TO THE METHOD ADD.EDGE OF THE GRAPG CLASS
-        ig.set_constraint_list( node_cnt_list )
-        return ig
-
-    def color_ig( self, ig ):
-        picked_node = ig.get_most_constraint_node()
-        if picked_node == None:
-            return True
-        picked_node.set_active( False )
-        if not self.color_ig( ig ):
-            return False
-        picked_node.set_active( True )
-        picked = False
-        if isinstance(picked_node.get_content(), ASM_register):
-            picked = True
-        if not picked:
-            ## picked_node contains a v_register
-            for reg_name in self.reg_list:
-                color = self.reg_list[reg_name]
-                if color.is_caller():
-                    pick = True
-                    ## check if another node with the same color is connected
-                    for connected_node in ig.get_connected_nodes( picked_node ):
-                        if connected_node.is_active() and color == connected_node.get_color():
-                            pick = False
-                            break
-                    if pick:
-                        ## no other node with the same color is connected
-                        picked_node.set_color(color)
-                        picked = True
-                        break
-        if not picked:
-            ## spill this node
-            self.DEBUG( "Spilled " + str(picked_node) )
-            picked_node.get_content().set_spilled( True )
-            return False
-        return ig
+## not avaliable anymore since loops and conditionals
+#
+#    ## liveness analysis
+#    ####################
+#    def liveness( self ):
+#        changed = True
+#        live_in = []
+#        live_in_old = []
+#        live_out = [[]]
+#        live_out_old = [[]]
+#        for i in range(0, len(self.expr_list), 1):
+#            live_in.append([])
+#            live_in_old.append([])
+#            live_out.append([])
+#            live_out_old.append([])
+#        while changed:
+#            changed = False
+#            j = 0
+#            last_ignores = []
+#            label_list = {}
+#            remove_ignores = False
+#            for i in range( len(self.expr_list), 0, -1 ):
+#                element = self.expr_list[i-1]
+#                ## LIVE_in(i) = ( LIVE_out(i) - DEF(i) ) union USE(i)
+#                temp_live = self.sub_def_live( element.get_r_def(), list(live_out[j]), live_out[j] )
+#                temp_live = self.add_use_live( element.get_r_use(), temp_live )
+#                if remove_ignores: ## the iteration before added no ignore elements
+#                    temp_live = self.sub_def_live( last_ignores, temp_live )
+#                    remove_ignores = False
+#                if ( len( temp_live ) > 0 and len( element.get_r_ignore() ) > 0 ):
+#                    ## the actual live element has live variables and the asm
+#                    ## instruction has some special register handling
+#                    temp_live = self.add_use_live( element.get_r_ignore(), temp_live )
+#                    remove_ignores = True
+#                    last_ignores = element.get_r_ignore()
+#                if isinstance(element, ASM_plabel):
+#                    ## get all labels from asm list (possible succeeders)
+#                    label_list.update({element.label:temp_live})
+#                live_in_old[j] = live_in[j]
+#                live_in[j] = temp_live
+#                ## LIVE_out(i) = union_{j in succ(i)} LIVE_in(j)
+#                if isinstance( element, ASM_jmp ):
+#                    if element.label not in label_list:
+#                        label_list.update({element.label:[]})
+#                    succ_union = label_list[element.label]
+#                elif isinstance( element, ASM_je ):
+#                    if element.label not in label_list:
+#                        label_list.update({element.label:[]})
+#                    succ_union = self.add_use_live( label_list[element.label], temp_live )
+#                else:
+#                    succ_union = temp_live
+#                live_out_old[j+1] = live_out[j+1]
+#                live_out[j+1] = succ_union
+#                if self.concat_live(live_out_old[j+1]) != self.concat_live(live_out[j+1]) or self.concat_live(live_in_old[j]) != self.concat_live(live_in[j]):
+#                    changed = True
+#                j += 1
+#        return live_out
+#
+#    ## helper for liveness
+#    def sub_def_live( self, defi, live, live_ptr=None ):
+#        is_live = False
+#        for oper1 in defi:
+#            for oper2 in live:
+#                if oper1.get_content().get_name() == oper2.get_content().get_name():
+#                    live.remove( oper2 )
+#                    is_live = True
+#            if not is_live and live_ptr != None:
+#                ## the variable was defined but never used
+#                ## -> add edges in ig with all live vars just before the def
+#                oper1.set_ignore( True )
+#                live_ptr.append( oper1 )
+#        return live
+#
+#    def add_use_live ( self, use, live ):
+#        save = True
+#        for oper1 in use:
+#            for oper2 in live:
+#                if oper1.get_content().get_name() == oper2.get_content().get_name():
+#                    save = False
+#            if save:
+#                live.append( oper1 )
+#        return live
+#
+#    def concat_live( self, live_elems ):
+#        my_live_str = "#live: "
+#        for item in live_elems:
+#            if not item.is_ignore():
+#                ## only print 'ususal' live elements
+#                ## (ignore the special cases e.g. with call)
+#                my_live_str += str( item ) + " "
+#        return my_live_str
+#
+#
+#    ## coloring
+#    ###########
+#    def create_ig( self, live ): ##lives is define as argument
+#        ig = Graph()    ## OJO ig OBJECT = GRAPH CLASS
+#        d = {}
+#        node_list = {}
+#        edge_list = []
+#        node_cnt_list = {}
+#        for registers in live: ## register are define here, and reg_live
+#            ## create nodes del graph
+#            for reg_live in registers:
+#                reg = reg_live.get_content()###method get_conten,object reg_live.method get_content()
+#                if reg.get_name() not in node_list:###method get_name ->reg_live.get_content.get_name??
+#                    if isinstance( reg, ASM_register ):
+#                        node = Node( reg, reg, False )
+#                    else:
+#                        node = Node( reg )
+#                    node_list.update( {reg.get_name():node} ) ### update the list with the new node
+#                    ig.add_node( node ) ### object ig . method add_node graph class
+#                    node_cnt_list.update( {node.get_name():0} )
+#            ## create edges
+#            for reg_live1 in registers: ## reg_live1 defin here
+#                reg1 = reg_live1.get_content() ###method get_conten,object reg_live1.method get_content()
+#                for reg_live2 in registers:
+#                    reg2 = reg_live2.get_content()
+#                    node_pair = set([node_list[reg1.get_name()], node_list[reg2.get_name()]]) ##traverse all the live to do the node pair
+#                    if (len(node_pair) is 2) and (node_pair not in edge_list):
+#                        for edge_node in node_pair:
+#                            if( edge_node.get_name() in node_cnt_list ):
+#                                node_cnt_list[edge_node.get_name()] += 1
+#                        edge_list.append( node_pair )
+#                        edge = Edge( node_pair )
+#                        ig.add_edge( edge ) ##SENDING DATA TO THE METHOD ADD.EDGE OF THE GRAPG CLASS
+#        ig.set_constraint_list( node_cnt_list )
+#        return ig
+#
+#    def color_ig( self, ig ):
+#        picked_node = ig.get_most_constraint_node()
+#        if picked_node == None:
+#            return True
+#        picked_node.set_active( False )
+#        if not self.color_ig( ig ):
+#            return False
+#        picked_node.set_active( True )
+#        picked = False
+#        if isinstance(picked_node.get_content(), ASM_register):
+#            picked = True
+#        if not picked:
+#            ## picked_node contains a v_register
+#            for reg_name in self.reg_list:
+#                color = self.reg_list[reg_name]
+#                if color.is_caller():
+#                    pick = True
+#                    ## check if another node with the same color is connected
+#                    for connected_node in ig.get_connected_nodes( picked_node ):
+#                        if connected_node.is_active() and color == connected_node.get_color():
+#                            pick = False
+#                            break
+#                    if pick:
+#                        ## no other node with the same color is connected
+#                        picked_node.set_color(color)
+#                        picked = True
+#                        break
+#        if not picked:
+#            ## spill this node
+#            self.DEBUG( "Spilled " + str(picked_node) )
+#            picked_node.get_content().set_spilled( True )
+#            return False
+#        return ig
 
     ## print
     ########
-    def print_asm( self, expr_lst, alloc=False ):
-        self.DEBUG('\n\n\n')
-        for expr in expr_lst:
+    def print_asm( self, asm_list, alloc=False ):
+        for expr in asm_list:
             if alloc:
                 print expr.print_alloc()
             else:
                 print str( expr )
-
-    def print_liveness( self, live ):
-        j = len( self.expr_list )
-        for element in self.expr_list:
-            print self.concat_live( live[j] )
-            print str( element )
-            j -= 1
-        print self.concat_live( live[j] )
-
-    def print_ig( self, ig ): ## print the dot file
-        print str(ig)
-
+#
+#    def print_liveness( self, live ):
+#        j = len( self.expr_list )
+#        for element in self.expr_list:
+#            print self.concat_live( live[j] )
+#            print str( element )
+#            j -= 1
+#        print self.concat_live( live[j] )
+#
+#    def print_ig( self, ig ): ## print the dot file
+#        print str(ig)
+#
 
     ## debug
     ########
@@ -1288,15 +1332,15 @@ class Engine( object ):
     def DEBUG__print_flat( self ):
         return str( self.flat_ast )
 
-    def DEBUG__print_list( self ):
-        tmp = ""
-        for expr in self.expr_list:
-            if 0 != len( tmp ): tmp += " "
-            try:
-                tmp += expr.DEBUG_type
-            except:
-                tmp += " Elem"
-        return tmp
+#    def DEBUG__print_list( self ):
+#        tmp = ""
+#        for expr in self.expr_list:
+#            if 0 != len( tmp ): tmp += " "
+#            try:
+#                tmp += expr.DEBUG_type
+#            except:
+#                tmp += " Elem"
+#        return tmp
 
     def DEBUG( self, text ):
         if self.DEBUGMODE: print "\t\t%s" % str( text )
@@ -1331,28 +1375,28 @@ if 1 <= len( sys.argv[1:] ):
     elif 1 < len( sys.argv[1:] ) and "-stack" in sys.argv:
         GEN_STACK = True
         PRINT_STACK = True
-    elif 1 < len( sys.argv[1:] ) and "-liveness" in sys.argv:
-        GEN_PSEUDO = True
-        GEN_LIVENESS = True
-        PRINT_LIVENESS = True
-    elif 1 < len( sys.argv[1:] ) and "-ig" in sys.argv:
-        GEN_PSEUDO = True
-        GEN_LIVENESS = True
-        GEN_IG = True
-        PRINT_IG = True
-    elif 1 < len( sys.argv[1:] ) and "-ig-color" in sys.argv:
-        GEN_PSEUDO = True
-        GEN_LIVENESS = True
-        GEN_IG = True
-        GEN_IG_COLOR = True
-        PRINT_IG_COLOR = True
-    elif 1 < len( sys.argv[1:] ) and "-alloc" in sys.argv:
-        GEN_PSEUDO = True
-        GEN_LIVENESS = True
-        GEN_IG = True
-        GEN_IG_COLOR = True
-        GEN_ALLOC = True
-        PRINT_ALLOC = True
+#    elif 1 < len( sys.argv[1:] ) and "-liveness" in sys.argv:
+#        GEN_PSEUDO = True
+#        GEN_LIVENESS = True
+#        PRINT_LIVENESS = True
+#    elif 1 < len( sys.argv[1:] ) and "-ig" in sys.argv:
+#        GEN_PSEUDO = True
+#        GEN_LIVENESS = True
+#        GEN_IG = True
+#        PRINT_IG = True
+#    elif 1 < len( sys.argv[1:] ) and "-ig-color" in sys.argv:
+#        GEN_PSEUDO = True
+#        GEN_LIVENESS = True
+#        GEN_IG = True
+#        GEN_IG_COLOR = True
+#        PRINT_IG_COLOR = True
+#    elif 1 < len( sys.argv[1:] ) and "-alloc" in sys.argv:
+#        GEN_PSEUDO = True
+#        GEN_LIVENESS = True
+#        GEN_IG = True
+#        GEN_IG_COLOR = True
+#        GEN_ALLOC = True
+#        PRINT_ALLOC = True
     else:
         ## use stack as default
         GEN_STACK = True
@@ -1393,21 +1437,21 @@ if 1 <= len( sys.argv[1:] ):
         print compl.DEBUG__print_flat( )
         print ""
 
-        print "ASM LIST:"
-        print compl.DEBUG__print_list( )
-        print ""
-
-        ## TODO: update to scope handling
-        print "len of asmlist_vartable '%d'" % len(compl.asmlist_vartable)
-        print compl.asmlist_vartable
+#        ## TODO: update to scope handling
+#        print "ASM LIST:"
+#        print compl.DEBUG__print_list( )
+#        print ""
+#
+#        print "len of asmlist_vartable '%d'" % len(compl.asmlist_vartable)
+#        print compl.asmlist_vartable
+#
+#        print "len of asmlist_stack '%d'" % len(compl.asmlist_stack)
+#        print compl.asmlist_stack
 
         print "len of asmlist_labeltable '%d'" % len(compl.asmlist_labeltable)
         print compl.asmlist_labeltable
 
-        print "len of asmlist_stack '%d'" % len(compl.asmlist_stack)
-        print compl.asmlist_stack
-
-        print "asmlist_mem '%d'" % compl.asmlist_mem
+#        print "asmlist_mem '%d'" % compl.asmlist_mem
 
     if PRINT_IG:
         compl.print_ig( ig )
@@ -1416,16 +1460,19 @@ if 1 <= len( sys.argv[1:] ):
     elif PRINT_LIVENESS:
         compl.print_liveness( liveness )
     elif PRINT_PSEUDO:
-        compl.print_asm( compl.expr_list )
+        compl.print_asm( compl.scope )
     elif PRINT_STACK:
-        compl.print_asm( compl.get_prolog() )
-        compl.print_asm( compl.expr_list )
-        compl.print_asm( compl.get_epilog() )
+        compl.print_asm( compl.get_header() )
+        for block in compl.scope:
+            compl.print_asm( compl.get_prolog(compl.scope[block]['stack_cnt'], compl.ref_table['method_list'][block]) )
+            compl.print_asm( compl.scope[block]['asm_list'] )
+            compl.print_asm( compl.get_epilog() )
     elif PRINT_ALLOC:
-        ## object that call the method, print_asm, with the argument compl.expr_list OF THE CLASS ENGINE
-        compl.print_asm( compl.get_prolog() )
-        compl.print_asm( compl.expr_list, True )
-        compl.print_asm( compl.get_epilog() )
+        compl.print_asm( compl.get_header() )
+        for block in compl.scope:
+            compl.print_asm( compl.get_prolog(compl.scope[block]['stack_cnt'], compl.ref_table['method_list'][block]) )
+            compl.print_asm( compl.scope[block]['asm_list'], True )
+            compl.print_asm( compl.get_epilog() )
     else:
         usage()
         die( "ERROR: wrong parametrisation" )
