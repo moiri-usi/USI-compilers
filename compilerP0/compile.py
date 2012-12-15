@@ -145,17 +145,15 @@ class Engine( object ):
                 'stack':{},
                 'asm_list':[],
                 'stack_cnt':0,
-                'string_list':{},   ## {meth/attr}_name:ASM_str_label -> $.LC0
-                'object_list':{},   ## obj_name:obj_ptr
             }
         }
-        ## self.class_ref = {
-        ##     class_name: {
-        ##         class_ptr:class_ptr,
-        ##         object_list: {},   ## obj_name:obj_ptr
-        ##         string_list: {},   ## {meth/attr}_name:ASM_str_label -> $.LC0
-        ## }
-        self.class_ref = {}    ## class_name:class_ptr
+        self.class_ref = {
+            'object':{
+                'class_ptr':None,
+                'object_list':{},   ## obj_name:{'obj_ptr':obj_ptr, 'class_name':class_name}
+                'string_list':{}    ## {meth/attr}_name:ASM_str_label -> $.LC0
+            }
+        }
         self.scope_list = ['main']
         self.scope_cnt = 0
 
@@ -173,7 +171,7 @@ class Engine( object ):
 
         self.DEBUG( "\nCOMPUTE INSERT_AST" )
         self.scope_cnt = 0
-        new_ast=self.insert_ast(self.ast, [], None)
+        new_ast=self.insert_ast(self.ast, [], self.class_ref['object'])
         self.DEBUG( "\n-----------------------------------------------------" )
         self.DEBUG( "\nINSERT_AST\n" )
         if DEBUG: dump_ast(new_ast)
@@ -195,15 +193,16 @@ class Engine( object ):
         self.DEBUG( "\nCOMPUTE AST_2_ASM" )
         self.scope_cnt = 0
         self.flatten_ast_2_list( self.flat_ast, None )
+        self.DEBUG( "\n=====================================================\n" )
 
     def check_plain_integer( self, val ):
         if isinstance( val, LabelName ):
             return val
         elif type( val ) is not int:
-            die( "ERROR: syntax error, no plain integer allowed" )
+            die( "ERROR: syntax error, no plain integer allowed, val: " + str(val) )
         return val
 
-    def insert_ast (self, node, parent_stmt, class_ref):
+    def insert_ast (self, node, parent_stmt, class_ref, temp=None):
         if isinstance( node, Module):
             self.DEBUG ("Module_insert")
             insertar = Module (None, self.insert_ast(node.node, parent_stmt, class_ref))
@@ -294,12 +293,15 @@ class Engine( object ):
             if isinstance (node.nodes[0], AssAttr):
                 ## addressing an attribute in an object
                 attrname = node.nodes[0].attrname
-                expr = self.insert_ast( node.expr, parent_stmt, class_ref )
-                obj_ptr = self.lookup_object(node.nodes[0].expr.name, class_ref)
+                expr = self.insert_ast( node.expr, parent_stmt, class_ref, attrname )
+                obj_ptr = self.lookup_object_ptr(node.nodes[0].expr.name, class_ref)
                 new_str_label = self.str_label + str(self.str_label_cnt)
                 self.str_label_cnt += 1
                 class_ref['string_list'].update({attrname:new_str_label})
                 ret = CallFunc(Name('set_attr'), [obj_ptr, Const(LabelName(new_str_label)), expr])
+            elif isinstance(node.nodes[0], AssName):
+                expr = self.insert_ast( node.expr, parent_stmt, class_ref, node.nodes[0].name )
+                ret = Assign( [node.nodes[0]], expr )
             else:
                 nodes = self.insert_ast( node.nodes[0], parent_stmt, class_ref)
                 expr = self.insert_ast( node.expr, parent_stmt, class_ref )
@@ -408,10 +410,16 @@ class Engine( object ):
             if isinstance (node.node, Name):
                 if node.node.name in self.class_ref:
                     ## object allocation
-                    name = node.node.name
-                    class_ptr = self.class_ref[name]['class_ptr']
+                    class_name = node.node.name
+                    class_ptr = self.class_ref[class_name]['class_ptr']
                     obj_ptr = CallFunc(Name('create_object'), [class_ptr])
-                    attrname = self.lookup_string('__init__', class_ref)
+                    class_ref['object_list'].update({
+                        temp:{
+                            'obj_ptr':obj_ptr,
+                            'class_name':class_name
+                        }
+                    })
+                    attrname = self.lookup_string('__init__', self.class_ref[class_name])
                     label_name = Const(LabelName(attrname))
                     fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [obj_ptr, label_name])
                     parent_stmt.append(Assign([Name('f')], fun_ptr))
@@ -439,11 +447,18 @@ class Engine( object ):
                     pyobj (*f)(pyobj) = (pyobj (*)(pyobj)) get_fun_ptr(fun);
                     i = f(get_receiver(meth));
                 """
-                attrname = self.lookup_string(node.node.attrname)
-                obj_ptr = self.lookup_object(node.node.expr.name, class_ref)
-                fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [obj_ptr, Const(LabelName(attrname))])
+                obj_name = node.node.expr.name
+                meth_name = node.node.attrname
+                ## set reference to corresponding class
+                class_name = self.lookup_object_class_name(obj_name, class_ref)
+                temp_class_ref = self.class_ref[class_name]
+                ## get method label from class
+                meth_label = self.lookup_string(meth_name, temp_class_ref)
+                ## get object pointer from object
+                obj_ptr = self.lookup_object_ptr(obj_name, class_ref)
+                fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [obj_ptr, Const(LabelName(meth_label))])
                 parent_stmt.append(Assign([Name('f')],fun_ptr))
-                meth = CallFunc(Name('get_attr'),[obj_ptr, Const(LabelName(attrname))])
+                meth = CallFunc(Name('get_attr'),[obj_ptr, Const(LabelName(meth_label))])
                 return CallFunc(Name('f'), [CallFunc(Name('get_receiver'),[meth])])
 #                meth = CallFunc(Name('get_attr'),[obj_ptr, Name(node.node.attrname)])
 #                fun = CallFunc(Name('get_function'),[meth])
@@ -454,7 +469,7 @@ class Engine( object ):
 
         elif isinstance (node, Getattr):
             self.DEBUG( "Getatrr_insert")
-            obj_ptr = self.lookup_object(node.expr.name, class_ref)
+            obj_ptr = self.lookup_object_ptr(node.expr.name, class_ref)
             attrname = self.lookup_string( node.attrname, class_ref )
             return CallFunc(Name('get_attr'), [obj_ptr, Const(LabelName(attrname))])
 
@@ -473,7 +488,7 @@ class Engine( object ):
                     'string_list':{}
                 }
             })
-            class_ref = self.class_ref[node.name]
+            new_class_ref = self.class_ref[node.name]
             for fun in node.code.nodes:
                 if isinstance(fun, Function):
                     new_str_label = self.str_label + str(self.str_label_cnt)
@@ -486,39 +501,49 @@ class Engine( object ):
                             'vartable':{},
                             'stack':{},
                             'asm_list':[],
-                            'stack_cnt':0,
-                            'string_list':{fun.name:new_str_label},
-                            'object_list':{}
+                            'stack_cnt':0
                         }
                     })
                     self.scope_list.append(new_meth_label)
+                    new_class_ref['string_list'].update({fun.name:new_str_label})
                     method_label = Const(LabelName(new_meth_label))
                     fun_ptr = CallFunc(Name('create_closure'), [method_label] )
                     string_label = Const(LabelName(new_str_label))
                     parent_stmt.append(CallFunc(Name('set_attr'), [LabelName(node.name), string_label, fun_ptr]))
-                    parent_stmt.append(self.insert_ast(fun, parent_stmt, class_ref))
+                    parent_stmt.append(self.insert_ast(fun, parent_stmt, new_class_ref))
                 else:
                     die( "ERROR: invalid syntax, only function definitions allowed in class body")
             return 
 
         elif isinstance (node, Function):
             self.DEBUG( "Function_insert" )
-            code = self.insert_ast(node.code, parent_stmt, class_ref)
+            code = self.insert_ast( node.code, parent_stmt, class_ref )
             return Function(node.decorators, node.name, node.argnames, node.defaults, node.flags, node.doc, code)
+
+        elif isinstance( node, Return ):
+            self.DEBUG( "Return_insert" )
+            expr = self.insert_ast( node.value, parent_stmt, class_ref )
+            return Return( expr )
 
         else:
             die( "ERROR: insert_ast: unknown AST node " + str( node ) )
 
 
     ## helper for insetr_ast
-    def lookup_object( self, nam, class_ref ):
+    def lookup_object_ptr( self, nam, class_ref ):
         if nam in class_ref['object_list']:
-            return class_ref['object_list'][nam]
+            return class_ref['object_list'][nam]['obj_ptr']
         elif nam == 'self':
             ## in definition process of a method (nat an actual call)
             return Name(nam)
         else:
-            die( "ERROR: trying to access an uninstanciated object" + nam )
+            die( "ERROR: trying to access an uninstanciated object: " + nam )
+
+    def lookup_object_class_name( self, nam, class_ref ):
+        if nam in class_ref['object_list']:
+            return class_ref['object_list'][nam]['class_name']
+        else:
+            die( "ERROR: trying to access an object of unknown class. obj_name: " + nam )
         
     def lookup_string( self, nam, class_ref ):
         if nam in class_ref['string_list']:
@@ -817,6 +842,11 @@ class Engine( object ):
             parent_stmt.append( expr )
             return
 
+        elif isinstance( node, Return ):
+            self.DEBUG( "Return" )
+            expr = self.flatten_ast(node.value, parent_stmt)
+            return Return( expr )
+
         else:
             die( "ERROR: flatten_ast: unknown AST node " + str( node ) )
 
@@ -1100,6 +1130,11 @@ class Engine( object ):
                 stack_offset += 4
             return
 
+        elif isinstance( node, Return ):
+            self.DEBUG( "Return_asm" )
+            child_scope['asm_list'].append( ASM_movl( self.lookup( node.value, scope ), self.reg_list['eax'] ) )
+            return
+
         else:
             self.DEBUG( "*** ELSE ***" )
             die( "ERROR: flatten_ast_2_list: unknown AST node " + str( nd ) )
@@ -1123,13 +1158,12 @@ class Engine( object ):
         header.append( ASM_text("text") )
 #        header.append( ASM_plabel( self.labeltable_lookup( "LC0" ) ) )
         header.append( ASM_text("ascii \"Compiled with JPSM!\"") )
-        for name in self.class_ref:
-            header.append( ASM_text("comm", name + ",4,4") ) 
-        for block in self.scope:
-            str_list = self.scope[block]['string_list']
-            for name in str_list:
-                header.append( ASM_plabel( self.labeltable_lookup(str_list[name] ) ) )
-                header.append( ASM_text("string", "\"" + name + "\"" ) ) 
+        for class_name in self.class_ref:
+            header.append( ASM_text("comm", class_name + ",4,4") )
+            str_list = self.class_ref[class_name]['string_list']
+            for str_name in str_list:
+                header.append( ASM_plabel( self.labeltable_lookup(str_list[str_name] ) ) )
+                header.append( ASM_text("string", "\"" + str_name + "\"" ) ) 
         return header
 
     def get_prolog( self, stack_cnt, nam ):
