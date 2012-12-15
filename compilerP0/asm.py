@@ -129,7 +129,6 @@ class ASM_immedeate( ASM_operand ):
     def __str__( self ):
         return '$' + str(self.val)
 
-
 # function names and goto labels
 class ASM_name( ASM_operand ):
     def __init__(self, name ):
@@ -139,6 +138,14 @@ class ASM_name( ASM_operand ):
         return self.name
     def __str__( self ):
         return self.name
+
+# pointer element (i.e *eax:)
+class ASM_pointer( object ):
+    def __init__( self, reg ):
+        self.DEBUG_type = "ASM_pointer"
+        self.reg = reg
+    def __str__( self ):
+        return '*' + str(self.reg)
 
 
 ## ASM Instruction classes

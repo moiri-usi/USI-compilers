@@ -87,6 +87,16 @@ class AssignBool(Node):
         tpl += (expr,)
         return tpl
 
+class Pointer(Node):
+    def __init__(self, name):
+        self.name = name
+
+    def getChildren(self):
+        return (self.name)
+
+    def getChildNodes(self):
+        return (self.name)
+
 
 ## P0 compiler implementation
 #############################
@@ -413,18 +423,24 @@ class Engine( object ):
                     class_name = node.node.name
                     class_ptr = self.class_ref[class_name]['class_ptr']
                     obj_ptr = CallFunc(Name('create_object'), [class_ptr])
+                    new_varname = self.tempvar + str(self.var_counter)
+                    self.var_counter += 1
+                    parent_stmt.append(Assign([AssName(new_varname, 'OP_ASSIGN')], obj_ptr))
                     class_ref['object_list'].update({
                         temp:{
-                            'obj_ptr':obj_ptr,
+                            'obj_ptr':Name(new_varname),
                             'class_name':class_name
                         }
                     })
                     attrname = self.lookup_string('__init__', self.class_ref[class_name])
                     label_name = Const(LabelName(attrname))
-                    fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [obj_ptr, label_name])
-                    parent_stmt.append(Assign([Name('f')], fun_ptr))
-                    meth = CallFunc(Name('get_attr'),[obj_ptr, label_name])
-                    return CallFunc(Name('f'), [CallFunc(Name('get_receiver'),[meth])])
+                    fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [Name(new_varname), label_name])
+                    parent_stmt.append(Assign([AssName('f', 'OP_ASSIGN')], fun_ptr))
+                    return CallFunc(Pointer('f'), [Name(new_varname)])
+                    #parent_stmt.append(Assign([Name('f')], fun_ptr))
+                    #meth = CallFunc(Name('get_attr'),[obj_ptr, label_name])
+                    #return CallFunc(Name('f'), [CallFunc(Name('get_receiver'),[meth])])
+                    #return CallFunc(Name('f'), [fun_ptr])
                #     meth = CallFunc(Name('get_attr'),[obj_ptr, Const(LabelName('__init__'))])
                #     fun = CallFunc(Name('get_function'),[meth])
                #     parent_stmt.append(Assign([Name('meth')],meth)) ### meth
@@ -457,9 +473,15 @@ class Engine( object ):
                 ## get object pointer from object
                 obj_ptr = self.lookup_object_ptr(obj_name, class_ref)
                 fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [obj_ptr, Const(LabelName(meth_label))])
-                parent_stmt.append(Assign([Name('f')],fun_ptr))
-                meth = CallFunc(Name('get_attr'),[obj_ptr, Const(LabelName(meth_label))])
-                return CallFunc(Name('f'), [CallFunc(Name('get_receiver'),[meth])])
+                parent_stmt.append(Assign([Name('f')], fun_ptr))
+                #meth = CallFunc(Name('get_attr'),[obj_ptr, Const(LabelName(meth_label))])
+                #return CallFunc(Name('f'), [CallFunc(Name('get_receiver'),[meth])])
+                #TODO attributes!!!
+                args = []
+                for arg in node.args:
+                    args.append( self.insert_ast( arg, class_ref ) )
+                args.insert( 0, obj_ptr )
+                return CallFunc(Pointer('f'), args)
 #                meth = CallFunc(Name('get_attr'),[obj_ptr, Name(node.node.attrname)])
 #                fun = CallFunc(Name('get_function'),[meth])
 #                parent_stmt.append(Assign([Name('meth')],meth)) ### meth
@@ -483,7 +505,7 @@ class Engine( object ):
             ## store result in global variable
             self.class_ref.update({
                 node.name:{
-                    'class_ptr':class_ptr,
+                    'class_ptr':LabelName(node.name),
                     'object_list':{},
                     'string_list':{}
                 }
@@ -847,6 +869,9 @@ class Engine( object ):
             expr = self.flatten_ast(node.value, parent_stmt)
             return Return( expr )
 
+        elif isinstance( node, Pointer ):
+            return node
+
         else:
             die( "ERROR: flatten_ast: unknown AST node " + str( node ) )
 
@@ -1045,7 +1070,11 @@ class Engine( object ):
                 #)
                 stack_offset += 4
             scope['asm_list'] += arg_instrs
-            myCallObj = ASM_call( nd.node.name )
+            if isinstance( nd.node, Pointer ):
+                name = self.flatten_ast_2_list( nd.node, scope )
+            else:
+                name = nd.node
+            myCallObj = ASM_call( name.name )
             myCallObj.set_r_def( self.reg_list['eax'] )
             myCallObj.set_r_ignore( self.reg_list['eax'] )
             myCallObj.set_r_ignore( self.reg_list['ecx'] )
@@ -1126,14 +1155,24 @@ class Engine( object ):
             for argname in nd.argnames:
                 target = self.lookup( argname, scope, False )
                 op = ASM_stack( stack_offset, self.reg_list['ebp'])
-                child_scope['asm_list'].insert(0, ASM_movl(op, target) )
+                index = 0
+                if self.STACK:
+                    child_scope['asm_list'].insert(index, ASM_movl( target, self.reg_list['eax'] ) )
+                    target = self.reg_list['eax']
+                    index += 1
+                child_scope['asm_list'].insert(index, ASM_movl(op, target) )
                 stack_offset += 4
             return
 
-        elif isinstance( node, Return ):
+        elif isinstance( nd, Return ):
             self.DEBUG( "Return_asm" )
-            child_scope['asm_list'].append( ASM_movl( self.lookup( node.value, scope ), self.reg_list['eax'] ) )
+            child_scope['asm_list'].append( ASM_movl( self.lookup( nd.value, scope ), self.reg_list['eax'] ) )
             return
+
+        elif isinstance( nd, Pointer ):
+            self.DEBUG( "Pointer_asm" )
+            scope['asm_list'].append( ASM_movl( self.lookup(nd.name, scope ), self.reg_list['eax'] ) )
+            return Pointer(ASM_pointer(self.reg_list['eax']))
 
         else:
             self.DEBUG( "*** ELSE ***" )
