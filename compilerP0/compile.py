@@ -303,6 +303,7 @@ class Engine( object ):
             if isinstance (node.nodes[0], AssAttr):
                 ## addressing an attribute in an object
                 attrname = node.nodes[0].attrname
+                ## special case: pass the assign name to the next step (object creation)
                 expr = self.insert_ast( node.expr, parent_stmt, class_ref, attrname )
                 obj_ptr = self.lookup_object_ptr(node.nodes[0].expr.name, class_ref)
                 new_str_label = self.str_label + str(self.str_label_cnt)
@@ -310,6 +311,7 @@ class Engine( object ):
                 class_ref['string_list'].update({attrname:new_str_label})
                 ret = CallFunc(Name('set_attr'), [obj_ptr, Const(LabelName(new_str_label)), expr])
             elif isinstance(node.nodes[0], AssName):
+                ## special case: pass the assign name to the next step (object creation)
                 expr = self.insert_ast( node.expr, parent_stmt, class_ref, node.nodes[0].name )
                 ret = Assign( [node.nodes[0]], expr )
             else:
@@ -430,9 +432,10 @@ class Engine( object ):
                 obj_ptr = self.lookup_object_ptr(obj_name, class_ref)
                 fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [obj_ptr, Const(LabelName(meth_label))])
                 parent_stmt.append(Assign([Name('f')], fun_ptr))
+                ## handle arguments
                 args = []
                 for arg in node.args:
-                    args.append( self.insert_ast( arg, class_ref ) )
+                    args.append( self.insert_ast( arg, parent_stmt, class_ref ) )
                 args.insert( 0, obj_ptr )
                 return CallFunc(Pointer('f'), args)
             else:
@@ -444,17 +447,23 @@ class Engine( object ):
                     new_varname = self.tempvar + str(self.var_counter)
                     self.var_counter += 1
                     parent_stmt.append(Assign([AssName(new_varname, 'OP_ASSIGN')], obj_ptr))
+                    obj_name_ptr = Name(new_varname)
                     class_ref['object_list'].update({
                         temp:{
-                            'obj_ptr':Name(new_varname),
+                            'obj_ptr':obj_name_ptr,
                             'class_name':class_name
                         }
                     })
                     attrname = self.lookup_string('__init__', self.class_ref[class_name])
                     label_name = Const(LabelName(attrname))
-                    fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [Name(new_varname), label_name])
+                    fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [obj_name_ptr, label_name])
                     parent_stmt.append(Assign([AssName('f', 'OP_ASSIGN')], fun_ptr))
-                    return CallFunc(Pointer('f'), [Name(new_varname)])
+                    ## handle arguments
+                    args = []
+                    for arg in node.args:
+                        args.append( self.insert_ast( arg, parent_stmt, class_ref ) )
+                    args.insert( 0, obj_name_ptr )
+                    return CallFunc(Pointer('f'), [obj_name_ptr])
                 else:
                     ## normal function call
                     chain = []
@@ -525,7 +534,7 @@ class Engine( object ):
             die( "ERROR: insert_ast: unknown AST node " + str( node ) )
 
 
-    ## helper for insetr_ast
+    ## helper for insert_ast
     def lookup_object_ptr( self, nam, class_ref ):
         if nam in class_ref['object_list']:
             return class_ref['object_list'][nam]['obj_ptr']
