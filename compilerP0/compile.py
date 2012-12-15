@@ -417,7 +417,25 @@ class Engine( object ):
 
         elif isinstance (node, CallFunc):
             self.DEBUG( "CallFunc_insert" )
-            if isinstance (node.node, Name):
+            if isinstance (node.node, Getattr):
+                ## call of a method
+                obj_name = node.node.expr.name
+                meth_name = node.node.attrname
+                ## set reference to corresponding class
+                class_name = self.lookup_object_class_name(obj_name, class_ref)
+                temp_class_ref = self.class_ref[class_name]
+                ## get method label from class
+                meth_label = self.lookup_string(meth_name, temp_class_ref)
+                ## get object pointer from object
+                obj_ptr = self.lookup_object_ptr(obj_name, class_ref)
+                fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [obj_ptr, Const(LabelName(meth_label))])
+                parent_stmt.append(Assign([Name('f')], fun_ptr))
+                args = []
+                for arg in node.args:
+                    args.append( self.insert_ast( arg, class_ref ) )
+                args.insert( 0, obj_ptr )
+                return CallFunc(Pointer('f'), args)
+            else:
                 if node.node.name in self.class_ref:
                     ## object allocation
                     class_name = node.node.name
@@ -437,57 +455,13 @@ class Engine( object ):
                     fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [Name(new_varname), label_name])
                     parent_stmt.append(Assign([AssName('f', 'OP_ASSIGN')], fun_ptr))
                     return CallFunc(Pointer('f'), [Name(new_varname)])
-                    #parent_stmt.append(Assign([Name('f')], fun_ptr))
-                    #meth = CallFunc(Name('get_attr'),[obj_ptr, label_name])
-                    #return CallFunc(Name('f'), [CallFunc(Name('get_receiver'),[meth])])
-                    #return CallFunc(Name('f'), [fun_ptr])
-               #     meth = CallFunc(Name('get_attr'),[obj_ptr, Const(LabelName('__init__'))])
-               #     fun = CallFunc(Name('get_function'),[meth])
-               #     parent_stmt.append(Assign([Name('meth')],meth)) ### meth
-               #     parent_stmt.append(Assign([Name('f')],CallFunc(Name('get_fun_ptr')),[fun]))
-               #     return CallFunc(Name('f'), [CallFunc(Name('get_receiver'),[meth])])
                 else:
                     ## normal function call
-                    ## any other function call
                     chain = []
                     for arg in node.args:
                         chain.append( CallFunc(Name('project_int'), [self.insert_ast( arg, parent_stmt, class_ref )] ) )
                     arg = CallFunc( self.insert_ast(node.node, parent_stmt, class_ref), chain )
                     return CallFunc( Name('inject_int'), [arg] )
-            else:
-                ## call of a method
-                """
-                    // i = c.m()
-                    pyobj meth = get_attr(c, "m");
-                    pyobj fun = get_function(meth);
-                    pyobj (*f)(pyobj) = (pyobj (*)(pyobj)) get_fun_ptr(fun);
-                    i = f(get_receiver(meth));
-                """
-                obj_name = node.node.expr.name
-                meth_name = node.node.attrname
-                ## set reference to corresponding class
-                class_name = self.lookup_object_class_name(obj_name, class_ref)
-                temp_class_ref = self.class_ref[class_name]
-                ## get method label from class
-                meth_label = self.lookup_string(meth_name, temp_class_ref)
-                ## get object pointer from object
-                obj_ptr = self.lookup_object_ptr(obj_name, class_ref)
-                fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [obj_ptr, Const(LabelName(meth_label))])
-                parent_stmt.append(Assign([Name('f')], fun_ptr))
-                #meth = CallFunc(Name('get_attr'),[obj_ptr, Const(LabelName(meth_label))])
-                #return CallFunc(Name('f'), [CallFunc(Name('get_receiver'),[meth])])
-                #TODO attributes!!!
-                args = []
-                for arg in node.args:
-                    args.append( self.insert_ast( arg, class_ref ) )
-                args.insert( 0, obj_ptr )
-                return CallFunc(Pointer('f'), args)
-#                meth = CallFunc(Name('get_attr'),[obj_ptr, Name(node.node.attrname)])
-#                fun = CallFunc(Name('get_function'),[meth])
-#                parent_stmt.append(Assign([Name('meth')],meth)) ### meth
-#                parent_stmt.append(Assign([Name('fun')],fun)) ### fun
-#                parent_stmt.append(Assign([Name('f')],CallFunc(Name('get_fun_ptr')),[fun]))
-#                return CallFunc('f', [CallFunc(Name('get_receiver'),[meth])])
 
         elif isinstance (node, Getattr):
             self.DEBUG( "Getatrr_insert")
