@@ -177,38 +177,24 @@ class Engine( object ):
         self.scope_list = ['main']
         self.scope_cnt = 0
 
-    def compileme( self, expression=None, flatten=True ):
+    def compileme( self, compute_ast=True ):
        # for block in self.scope:
        #     self.scope[block]['vartable'] = {}
        #     self.scope[block]['stack'] = {}
        #     self.scope[block]['asm_list'] = []
        #     self.scope[block]['stack_cnt'] = 0
-        self.DEBUG( "\n-----------------------------------------------------" )
-        self.DEBUG( "\nAST\n" )
-        if DEBUG: dump_ast(self.ast)
-        self.DEBUG( "\n-----------------------------------------------------" )
-        self.DEBUG( "\n=====================================================" )
+        if compute_ast:
+            if DEBUG: self.DEBUG__print_ast( self.ast )
 
-        self.DEBUG( "\nCOMPUTE INSERT_AST" )
-        self.scope_cnt = 0
-        new_ast=self.insert_ast(self.ast, [], self.class_ref[self.init_class])
-        self.DEBUG( "\n-----------------------------------------------------" )
-        self.DEBUG( "\nINSERT_AST\n" )
-        if DEBUG: dump_ast(new_ast)
-        self.DEBUG( "\n-----------------------------------------------------" )
-        self.DEBUG( "\n=====================================================" )
+            self.DEBUG( "\nCOMPUTE INSERT_AST" )
+            self.scope_cnt = 0
+            insert_ast = self.insert_ast(self.ast, [], self.class_ref[self.init_class])
+            self.DEBUG__print_insert_ast( insert_ast )
 
-        self.DEBUG( "\nCOMPUTE FLATTEN_AST" )
-        self.scope_cnt = 0
-        if expression:
-            self.ast = compiler.parse( expression )
-        if flatten:
-            self.flat_ast = self.flatten_ast( new_ast, [], None )
-        self.DEBUG( "\n-----------------------------------------------------" )
-        self.DEBUG( "\nFLATTEN_AST" )
-        if DEBUG: dump_ast(self.flat_ast)
-        self.DEBUG( "\n-----------------------------------------------------" )
-        self.DEBUG( "\n=====================================================" )
+            self.DEBUG( "\nCOMPUTE FLATTEN_AST" )
+            self.scope_cnt = 0
+            self.flat_ast = self.flatten_ast( insert_ast, [], None )
+            self.DEBUG__print_flatten_ast( self.flat_ast )
 
         self.DEBUG( "\nCOMPUTE AST_2_ASM" )
         self.scope_cnt = 0
@@ -250,6 +236,7 @@ class Engine( object ):
             elif node.name == 'None':
                 expr = CallFunc( Name( self.box_big ), [Const( 0 )] )
             else:
+                #expr = CallFunc( Name( self.box_int ), [node] )
                 expr = node
             return expr
 
@@ -377,12 +364,12 @@ class Engine( object ):
             expr = self.insert_ast( node.expr, parent_stmt, class_ref )
             chain_final = []
             for attr in node.ops:
-                if attr[0] != '==' and attr[0] != '!=':
-                    operand_1 = attr[0]
+                if attr[0] == '==':
                     operand_2 = self.insert_ast( attr[1], parent_stmt, class_ref )
-                    chain_final.append( (operand_1, CallFunc( Name( self.unbox_int ), [operand_2] )) )
-                    expr = Compare( CallFunc( Name( self.unbox_int ), [expr] ),chain_final )
-                    return CallFunc( Name( self.box_bool ), [expr] )
+                    return CallFunc( Name( self.box_bool ), [CallFunc( Name( 'equal' ), [expr, operand_2] )])
+                elif attr[0] == '!=':
+                    operand_2 = self.insert_ast( attr[1], parent_stmt, class_ref )
+                    return CallFunc( Name( self.box_bool ), [Not( CallFunc( Name( 'equal' ), [expr, operand_2] ) )] )
                 elif node.expr != True and node.expr != False:
                     operand_1 = attr[0]
                     operand_2 = self.insert_ast( attr[1], parent_stmt, class_ref )
@@ -487,10 +474,8 @@ class Engine( object ):
                     ## normal function call
                     chain = []
                     for arg in node.args:
-                        expr = self.insert_ast( arg, parent_stmt, class_ref )
-                        chain.append( CallFunc( Name( self.unbox_int ), [expr] ) )
-                    arg = CallFunc( self.insert_ast( node.node, parent_stmt, class_ref ), chain )
-                    return CallFunc( Name( self.box_int ), [arg] )
+                        chain.append( self.insert_ast( arg, parent_stmt, class_ref ) )
+                    return CallFunc( self.insert_ast( node.node, parent_stmt, class_ref ), chain )
 
         elif isinstance( node, Getattr ):
             self.DEBUG( "Getatrr_insert" )
@@ -551,13 +536,13 @@ class Engine( object ):
                     parent_stmt.append( CallFunc( Name( 'set_attr' ), [LabelName( node.name ), string_label, fun_ptr] ) )
                     parent_stmt.append( self.insert_ast( fun, parent_stmt, new_class_ref ) )
                 else:
-                    die( "ERROR: invalid syntax, only function definitions allowed in class body")
+                    die( "ERROR: invalid syntax, only function definitions allowed in class body" )
             return 
 
-        elif isinstance (node, Function):
+        elif isinstance( node, Function ):
             self.DEBUG( "Function_insert" )
             code = self.insert_ast( node.code, parent_stmt, class_ref )
-            return Function(node.decorators, node.name, node.argnames, node.defaults, node.flags, node.doc, code)
+            return Function( node.decorators, node.name, node.argnames, node.defaults, node.flags, node.doc, code )
 
         elif isinstance( node, Return ):
             self.DEBUG( "Return_insert" )
@@ -596,8 +581,7 @@ class Engine( object ):
     def flatten_ast( self, node, parent_stmt, flat_tmp=None ):
         if isinstance( node, Module):
             self.DEBUG( "Module" )
-            self.flat_ast = Module( None, self.flatten_ast(node.node, []) )
-            return self.flat_ast
+            return Module( None, self.flatten_ast(node.node, []) )
 
         elif isinstance( node, Stmt):
             self.DEBUG( "Stmt" )
@@ -665,7 +649,11 @@ class Engine( object ):
             attr = []
             for attr_elem in node.args:
                 attr.append( self.flatten_ast( attr_elem, parent_stmt ) )
-            expr = CallFunc( node.node, attr )
+            if node.node.name == "input":
+                name = Name( "input_int" )
+            else:
+                name = node.node
+            expr = CallFunc( name, attr )
             new_varname = self.flatten_ast_add_assign( expr, parent_stmt )
             return Name(new_varname)
 
@@ -1170,14 +1158,13 @@ class Engine( object ):
             child_scope= self.flatten_ast_2_list( nd.code, scope )
             stack_offset = 8
             for argname in nd.argnames:
-                target = self.lookup( argname, scope, False )
+                target = self.lookup( argname, child_scope, False )
                 op = ASM_stack( stack_offset, self.reg_list['ebp'])
-                index = 0
                 if self.STACK:
-                    child_scope['asm_list'].insert(index, ASM_movl( target, self.reg_list['eax'] ) )
-                    target = self.reg_list['eax']
-                    index += 1
-                child_scope['asm_list'].insert(index, ASM_movl(op, target) )
+                    child_scope['asm_list'].insert( 0, ASM_movl( op, self.reg_list['eax'] ) )
+                    child_scope['asm_list'].insert( 1, ASM_movl( self.reg_list['eax'], target ) )
+                else:
+                    child_scope['asm_list'].insert(0, ASM_movl(op, target) )
                 stack_offset += 4
             return
 
@@ -1253,8 +1240,8 @@ class Engine( object ):
                 self.DEBUG('DEBUG: var not found: ' + nam)
 #                die( "ERROR: variable %s was not defined" %nam )
             ## var is new -> add a new stack object to the dict
-            new_elem = ASM_stack(0 - scope['stack_cnt'], self.reg_list['ebp'])
             scope['stack_cnt'] += 4
+            new_elem = ASM_stack(0 - scope['stack_cnt'], self.reg_list['ebp'])
             scope['stack'].update({nam:new_elem})
         ## return stack object containing the stack pos
         return scope['stack'][nam]
@@ -1502,23 +1489,28 @@ class Engine( object ):
 #        print str(ig)
 #
 #
-#    ## debug
-#    ########
-#    def DEBUG__print_ast( self ):
-#        return str( self.ast )
-#
-#    def DEBUG__print_flat( self ):
-#        return str( self.flat_ast )
-#
-##    def DEBUG__print_list( self ):
-##        tmp = ""
-##        for expr in self.expr_list:
-##            if 0 != len( tmp ): tmp += " "
-##            try:
-##                tmp += expr.DEBUG_type
-##            except:
-##                tmp += " Elem"
-##        return tmp
+    ## debug
+    ########
+    def DEBUG__print_ast( self, ast ):
+        print( "\n-----------------------------------------------------" )
+        print( "\nAST\n" )
+        dump_ast( ast )
+        print( "\n-----------------------------------------------------" )
+        print( "\n=====================================================" )
+
+    def DEBUG__print_insert_ast( self, ast ):
+        print( "\n-----------------------------------------------------" )
+        print( "\nINSERT_AST\n" )
+        dump_ast( ast )
+        print( "\n-----------------------------------------------------" )
+        print( "\n=====================================================" )
+
+    def DEBUG__print_flatten_ast( self, ast ):
+        print( "\n-----------------------------------------------------" )
+        print( "\nFLATTEN_AST" )
+        dump_ast( ast )
+        print( "\n-----------------------------------------------------" )
+        print( "\n=====================================================" )
 
     def DEBUG( self, text ):
         if self.DEBUGMODE: print "\t\t%s" % str( text )
@@ -1591,7 +1583,7 @@ if 1 <= len( sys.argv[1:] ):
     if GEN_IG_COLOR:
         ig_color = False
         while True:
-            compl.compileme( None, False )
+            compl.compileme( False )
             liveness = compl.liveness()
             ig = compl.create_ig( liveness )
             ig_color = compl.color_ig( ig )
@@ -1604,33 +1596,6 @@ if 1 <= len( sys.argv[1:] ):
 
     if CLEANUP_ASM:
         compl.cleanup_asm()
-
-    ## print results
-#    if DEBUG == True:
-#        print "AST:"
-#        print compl.DEBUG__print_ast( )
-#        print ""
-#
-#        print "FLAT AST:"
-#        print compl.DEBUG__print_flat( )
-#        print ""
-#
-##        ## TODO: update to scope handling
-##        print "ASM LIST:"
-##        print compl.DEBUG__print_list( )
-##        print ""
-##
-##        print "len of asmlist_vartable '%d'" % len(compl.asmlist_vartable)
-##        print compl.asmlist_vartable
-##
-##        print "len of asmlist_stack '%d'" % len(compl.asmlist_stack)
-##        print compl.asmlist_stack
-#
-#        print "len of asmlist_labeltable '%d'" % len(compl.asmlist_labeltable)
-#        print compl.asmlist_labeltable
-
-#        print "asmlist_mem '%d'" % compl.asmlist_mem
-
     if PRINT_IG:
         compl.print_ig( ig )
     elif PRINT_IG_COLOR:
