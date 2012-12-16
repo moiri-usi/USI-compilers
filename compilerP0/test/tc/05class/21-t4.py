@@ -11,7 +11,7 @@ class Circle(object):
         self.ray = ray
 
     def area(self):
-        return (2*self.ray)*3.14
+        return (2*self.ray)*3
 
 
 r = Rectangle(5, 7)

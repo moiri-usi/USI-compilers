@@ -21,133 +21,140 @@ main:
 	.cfi_def_cfa_register 5
 	pushl	%ebx
 	andl	$-16, %esp
-	subl	$96, %esp
+	subl	$112, %esp
 	.cfi_offset 3, -12
 	call	setup_classes
 	movl	C, %eax
 	movl	%eax, (%esp)
 	call	create_object
-	movl	%eax, 24(%esp)
+	movl	%eax, 28(%esp)
 	movl	D, %eax
 	movl	%eax, (%esp)
 	call	create_object
-	movl	%eax, 28(%esp)
-	movl	$1, (%esp)
-	call	create_int
 	movl	%eax, 32(%esp)
-	movl	$3, (%esp)
-	call	create_int
+	movl	$1, (%esp)
+	call	inject_int
 	movl	%eax, 36(%esp)
-	movl	32(%esp), %eax
-	movl	%eax, 8(%esp)
-	movl	$.LC0, 4(%esp)
-	movl	24(%esp), %eax
-	movl	%eax, (%esp)
-	call	set_attr
-	movl	32(%esp), %eax
+	movl	$3, (%esp)
+	call	inject_int
+	movl	%eax, 40(%esp)
+	movl	36(%esp), %eax
 	movl	%eax, 8(%esp)
 	movl	$.LC0, 4(%esp)
 	movl	28(%esp), %eax
 	movl	%eax, (%esp)
 	call	set_attr
+	movl	36(%esp), %eax
+	movl	%eax, 8(%esp)
+	movl	$.LC0, 4(%esp)
+	movl	32(%esp), %eax
+	movl	%eax, (%esp)
+	call	set_attr
 	movl	$.LC1, 4(%esp)
-	movl	24(%esp), %eax
+	movl	28(%esp), %eax
 	movl	%eax, (%esp)
 	call	get_attr
-	movl	%eax, 40(%esp)
-	movl	40(%esp), %eax
-	movl	%eax, (%esp)
-	call	get_function
 	movl	%eax, 44(%esp)
 	movl	44(%esp), %eax
 	movl	%eax, (%esp)
-	call	get_fun_ptr
+	call	get_function
 	movl	%eax, 48(%esp)
-	movl	40(%esp), %eax
+	movl	48(%esp), %eax
+	movl	%eax, (%esp)
+	call	get_fun_ptr
+	movl	%eax, 52(%esp)
+	movl	52(%esp), %eax
+	movl	%eax, 56(%esp)
+	movl	44(%esp), %eax
 	movl	%eax, (%esp)
 	call	get_receiver
 	movl	%eax, (%esp)
-	movl	48(%esp), %eax
+	movl	56(%esp), %eax
 	call	*%eax
-	movl	%eax, 52(%esp)
+	movl	%eax, 60(%esp)
 	movl	$.LC1, 4(%esp)
-	movl	28(%esp), %eax
+	movl	32(%esp), %eax
 	movl	%eax, (%esp)
 	call	get_attr
-	movl	%eax, 56(%esp)
-	movl	56(%esp), %eax
+	movl	%eax, 64(%esp)
+	movl	64(%esp), %eax
 	movl	%eax, (%esp)
 	call	get_function
-	movl	%eax, 60(%esp)
-	movl	60(%esp), %eax
+	movl	%eax, 68(%esp)
+	movl	68(%esp), %eax
 	movl	%eax, (%esp)
 	call	get_fun_ptr
-	movl	%eax, 64(%esp)
-	movl	56(%esp), %eax
+	movl	%eax, 72(%esp)
+	movl	72(%esp), %eax
+	movl	%eax, 76(%esp)
+	movl	64(%esp), %eax
 	movl	%eax, (%esp)
 	call	get_receiver
 	movl	%eax, (%esp)
-	movl	64(%esp), %eax
+	movl	76(%esp), %eax
 	call	*%eax
-	movl	%eax, 68(%esp)
+	movl	%eax, 80(%esp)
 	movl	$.LC2, 4(%esp)
-	movl	28(%esp), %eax
+	movl	32(%esp), %eax
 	movl	%eax, (%esp)
 	call	get_fun_ptr_from_attr
-	movl	%eax, 72(%esp)
-	movl	36(%esp), %eax
-	movl	%eax, 4(%esp)
-	movl	28(%esp), %eax
-	movl	%eax, (%esp)
-	movl	72(%esp), %eax
-	call	*%eax
-	movl	$.LC1, 4(%esp)
-	movl	28(%esp), %eax
-	movl	%eax, (%esp)
-	call	get_attr
-	movl	%eax, 76(%esp)
-	movl	76(%esp), %eax
-	movl	%eax, (%esp)
-	call	get_function
-	movl	%eax, 80(%esp)
-	movl	80(%esp), %eax
-	movl	%eax, (%esp)
-	call	get_fun_ptr
 	movl	%eax, 84(%esp)
-	movl	76(%esp), %eax
-	movl	%eax, (%esp)
-	call	get_receiver
+	movl	40(%esp), %eax
+	movl	%eax, 4(%esp)
+	movl	32(%esp), %eax
 	movl	%eax, (%esp)
 	movl	84(%esp), %eax
 	call	*%eax
+	movl	$.LC1, 4(%esp)
+	movl	32(%esp), %eax
+	movl	%eax, (%esp)
+	call	get_attr
 	movl	%eax, 88(%esp)
-	movl	52(%esp), %eax
+	movl	88(%esp), %eax
+	movl	%eax, (%esp)
+	call	get_function
+	movl	%eax, 92(%esp)
+	movl	92(%esp), %eax
+	movl	%eax, (%esp)
+	call	get_fun_ptr
+	movl	%eax, 96(%esp)
+	movl	96(%esp), %eax
+	movl	%eax, 100(%esp)
+	movl	88(%esp), %eax
+	movl	%eax, (%esp)
+	call	get_receiver
+	movl	%eax, (%esp)
+	movl	100(%esp), %eax
+	call	*%eax
+	movl	%eax, 104(%esp)
+	movl	60(%esp), %eax
 	movl	%eax, (%esp)
 	call	project_int
 	movl	%eax, %ebx
-	movl	68(%esp), %eax
+	movl	80(%esp), %eax
 	movl	%eax, (%esp)
 	call	project_int
 	addl	%eax, %ebx
-	movl	88(%esp), %eax
+	movl	104(%esp), %eax
 	movl	%eax, (%esp)
 	call	project_int
 	addl	%ebx, %eax
 	movl	%eax, (%esp)
-	call	create_int
-	movl	%eax, 92(%esp)
-	movl	52(%esp), %eax
+	call	inject_int
+	movl	%eax, 108(%esp)
+	movl	60(%esp), %eax
 	movl	%eax, (%esp)
 	call	print_any
-	movl	68(%esp), %eax
+	movl	80(%esp), %eax
 	movl	%eax, (%esp)
 	call	print_any
-	movl	88(%esp), %eax
+	movl	104(%esp), %eax
 	movl	%eax, (%esp)
 	call	print_any
-	movl	92(%esp), %eax
+	movl	108(%esp), %eax
 	movl	%eax, (%esp)
 	call	print_any
+	movl	$0, %eax
 	movl	-4(%ebp), %ebx
 	leave
 	.cfi_restore 5
@@ -168,10 +175,10 @@ setup_classes:
 	.cfi_def_cfa_register 5
 	subl	$56, %esp
 	movl	$0, (%esp)
-	call	create_int
+	call	inject_int
 	movl	%eax, -32(%ebp)
 	movl	$1, (%esp)
-	call	create_int
+	call	inject_int
 	movl	%eax, -28(%ebp)
 	movl	-32(%ebp), %eax
 	movl	%eax, (%esp)
@@ -285,7 +292,7 @@ D_m:
 	movl	-12(%ebp), %eax
 	addl	$1, %eax
 	movl	%eax, (%esp)
-	call	create_int
+	call	inject_int
 	leave
 	.cfi_restore 5
 	.cfi_def_cfa 4, 4
@@ -310,7 +317,8 @@ D_n:
 	movl	8(%ebp), %eax
 	movl	%eax, (%esp)
 	call	set_attr
-	movl	$0, %eax
+	movl	$0, (%esp)
+	call	inject_big
 	leave
 	.cfi_restore 5
 	.cfi_def_cfa 4, 4
