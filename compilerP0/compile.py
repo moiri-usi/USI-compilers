@@ -189,12 +189,12 @@ class Engine( object ):
             self.DEBUG( "\nCOMPUTE INSERT_AST" )
             self.scope_cnt = 0
             insert_ast = self.insert_ast(self.ast, [], self.class_ref[self.init_class])
-            self.DEBUG__print_insert_ast( insert_ast )
+            if DEBUG: self.DEBUG__print_insert_ast( insert_ast )
 
             self.DEBUG( "\nCOMPUTE FLATTEN_AST" )
             self.scope_cnt = 0
             self.flat_ast = self.flatten_ast( insert_ast, [], None )
-            self.DEBUG__print_flatten_ast( self.flat_ast )
+            if DEBUG: self.DEBUG__print_flatten_ast( self.flat_ast )
 
         self.DEBUG( "\nCOMPUTE AST_2_ASM" )
         self.scope_cnt = 0
