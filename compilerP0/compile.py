@@ -157,6 +157,7 @@ class Engine( object ):
 #            'dl':ASM_register('dl'),
         }
         ## list handling
+        self.init_class = '$_object'
         self.asmlist_labeltable = {}
         self.scope = {
             'main':{
@@ -167,7 +168,7 @@ class Engine( object ):
             }
         }
         self.class_ref = {
-            'Object':{
+            self.init_class:{
                 'class_ptr':None,
                 'object_list':{},   ## obj_name:{'obj_ptr':obj_ptr, 'class_name':class_name}
                 'string_list':{}    ## {meth/attr}_name:ASM_str_label -> $.LC0
@@ -190,7 +191,7 @@ class Engine( object ):
 
         self.DEBUG( "\nCOMPUTE INSERT_AST" )
         self.scope_cnt = 0
-        new_ast=self.insert_ast(self.ast, [], self.class_ref['Object'])
+        new_ast=self.insert_ast(self.ast, [], self.class_ref[self.init_class])
         self.DEBUG( "\n-----------------------------------------------------" )
         self.DEBUG( "\nINSERT_AST\n" )
         if DEBUG: dump_ast(new_ast)
@@ -221,295 +222,316 @@ class Engine( object ):
             die( "ERROR: syntax error, no plain integer allowed, val: " + str(val) )
         return val
 
-    def insert_ast (self, node, parent_stmt, class_ref, temp=None):
-        if isinstance( node, Module):
-            self.DEBUG ("Module_insert")
-            insertar = Module (None, self.insert_ast(node.node, parent_stmt, class_ref))
+    def insert_ast( self, node, parent_stmt, class_ref, temp=None ):
+        if isinstance( node, Module ):
+            self.DEBUG( "Module_insert" )
+            insertar = Module( None, self.insert_ast(node.node, parent_stmt, class_ref ) )
             return insertar
 
-        elif isinstance (node, Stmt):
-            self.DEBUG ("Stmt_insert")
+        elif isinstance( node, Stmt ):
+            self.DEBUG( "Stmt_insert" )
             chain = []
             for n in node.nodes:
-                elem = self.insert_ast(n, chain, class_ref)
+                elem = self.insert_ast( n, chain, class_ref )
                 if elem != None:
-                    chain.append(elem)
-            return Stmt(chain)
+                    chain.append( elem )
+            return Stmt( chain )
 
-        elif isinstance (node, Const):
-            self.DEBUG ("Const_insert")
-            return CallFunc(Name(self.box_int), [Const(node.value)])
+        elif isinstance( node, Const ):
+            self.DEBUG( "Const_insert" )
+            return CallFunc( Name( self.box_int ), [Const( node.value )] )
 
-        elif isinstance (node, Name):
-            self.DEBUG ("Name_insert")
+        elif isinstance( node, Name ):
+            self.DEBUG( "Name_insert" )
             if node.name == 'True':
-                expr = CallFunc(Name(self.box_bool), [Const(1)])
+                expr = CallFunc( Name( self.box_bool ), [Const( 1 )] )
             elif node.name == 'False':
-                expr = CallFunc(Name(self.box_bool), [Const(0)])
+                expr = CallFunc( Name( self.box_bool ), [Const( 0 )] )
             elif node.name == 'None':
-                expr = CallFunc(Name(self.box_big), [Const(0)])
-            else :
+                expr = CallFunc( Name( self.box_big ), [Const( 0 )] )
+            else:
                 expr = node
             return expr
 
-        elif isinstance (node, Add):
-            self.DEBUG ("Add_insert")
-            left = self.insert_ast(node.left, parent_stmt, class_ref)
-            right = self.insert_ast(node.right, parent_stmt, class_ref)
-            return CallFunc(Name(self.box_int), [Add((CallFunc(Name(self.unbox_int), [left]), CallFunc(Name(self.unbox_int), [right])))])
+        elif isinstance( node, Add ):
+            self.DEBUG( "Add_insert" )
+            left = CallFunc( Name( self.unbox_int ), [self.insert_ast( node.left, parent_stmt, class_ref )] )
+            right = CallFunc( Name( self.unbox_int ), [self.insert_ast( node.right, parent_stmt, class_ref )] )
+            return CallFunc( Name( self.box_int ), [Add( (left, right) )] )
 
-        elif isinstance (node, Sub):
-            self.DEBUG ("Sub_insert")
-            left = self.insert_ast(node.left, parent_stmt, class_ref)
-            right = self.insert_ast(node.right, parent_stmt, class_ref)
-            return CallFunc(Name(self.box_int), [Sub((CallFunc(Name(self.unbox_int), [left]), CallFunc(Name(self.unbox_int), [right])))])
+        elif isinstance( node, Sub ):
+            self.DEBUG("Sub_insert")
+            left = CallFunc( Name( self.unbox_int ), [self.insert_ast( node.left, parent_stmt, class_ref )] )
+            right = CallFunc( Name( self.unbox_int ), [self.insert_ast( node.right, parent_stmt, class_ref )] )
+            return CallFunc( Name( self.box_int ), [Sub( (left, right) )] )
 
-        elif isinstance (node, Mul):
-            self.DEBUG ("Mul_insert")
-            left = self.insert_ast(node.left, parent_stmt, class_ref)
-            right = self.insert_ast(node.right, parent_stmt, class_ref)
-            return CallFunc(Name(self.box_int), [Mul((CallFunc(Name(self.unbox_int), [left]), CallFunc(Name(self.unbox_int), [right])))])
+        elif isinstance( node, Mul ):
+            self.DEBUG( "Mul_insert" )
+            left = CallFunc( Name( self.unbox_int ), [self.insert_ast( node.left, parent_stmt, class_ref )] )
+            right = CallFunc( Name( self.unbox_int ), [self.insert_ast( node.right, parent_stmt, class_ref )] )
+            return CallFunc( Name( self.box_int ), [Mul( (left, right) )] )
 
         elif isinstance( node, UnarySub ):
             self.DEBUG( "UnarySub_insert" )
-            expr = self.insert_ast(node.expr, parent_stmt, class_ref)
-            return CallFunc(Name(self.box_int), [UnarySub(CallFunc(Name(self.unbox_int), [expr]))])
+            expr = self.insert_ast( node.expr, parent_stmt, class_ref )
+            return CallFunc( Name( self.box_int ), [UnarySub( CallFunc( Name( self.unbox_int ), [expr] ) )] )
 
         elif isinstance( node, UnaryAdd ):
             self.DEBUG( "UnaryAdd_insert" )
             ## ignore UnaryAdd node and use only its content
-            expr = self.insert_ast(node.expr, parent_stmt, class_ref)
-            return CallFunc(Name(self.box_int), [UnaryAdd(CallFunc(Name(self.unbox_int), [expr]))])
+            expr = self.insert_ast( node.expr, parent_stmt, class_ref )
+            return CallFunc( Name( self.box_int ), [UnaryAdd( CallFunc( Name( self.unbox_int ), [expr] ) )] )
 
-        elif isinstance (node, Invert ):
-            self.DEBUG("Invert_insert")
-            expr = self.insert_ast(node.expr, parent_stmt, class_ref)
-            return CallFunc(Name(self.box_int), [Invert(CallFunc(Name(self.unbox_int), [expr]))])
+        elif isinstance( node, Invert ):
+            self.DEBUG( "Invert_insert" )
+            expr = self.insert_ast( node.expr, parent_stmt, class_ref )
+            return CallFunc( Name( self.box_int ), [Invert( CallFunc( Name( self.unbox_int ), [expr] ) )] )
 
-        elif isinstance(node, LeftShift):
+        elif isinstance( node, LeftShift ):
             self.DEBUG( "LeftShift_insert" )
-            left = self.insert_ast(node.left, parent_stmt, class_ref)
-            right = self.insert_ast(node.right, parent_stmt, class_ref)
-            return CallFunc(Name(self.box_int), [LeftShift(CallFunc(Name(self.unbox_int), [left]), CallFunc(Name(self.unbox_int), [right]))])
+            left = CallFunc( Name( self.unbox_int ), [self.insert_ast( node.left, parent_stmt, class_ref )] )
+            right = CallFunc( Name( self.unbox_int ), [self.insert_ast( node.right, parent_stmt, class_ref )] )
+            return CallFunc( Name( self.box_int ), [LeftShift( (left, right) )] )
 
-        elif isinstance(node, RightShift):
+        elif isinstance( node, RightShift ):
             self.DEBUG( "RightShift_insert" )
-            left = self.insert_ast(node.left, parent_stmt, class_ref)
-            right = self.insert_ast(node.right, parent_stmt, class_ref)
-            return CallFunc(Name(self.box_int), [RightShift(CallFunc(Name(self.unbox_int), [left]), CallFunc(Name(self.unbox_int), [right]))])
+            left = CallFunc( Name( self.unbox_int ), [self.insert_ast( node.left, parent_stmt, class_ref )] )
+            right = CallFunc( Name( self.unbox_int ), [self.insert_ast( node.right, parent_stmt, class_ref )] )
+            return CallFunc( Name( self.box_int ), [RightShift( (left, right) )] )
 
-        elif isinstance(node, Discard):
+        elif isinstance( node, Discard ):
             self.DEBUG( "Discard_insert" )
             expr = self.insert_ast( node.expr, parent_stmt, class_ref )
             return Discard( expr )
 
-        elif isinstance(node, AssName ):
+        elif isinstance( node, AssName ):
             self.DEBUG( "AssName_insert" )
             return node
 
         elif isinstance( node, Assign ):
             self.DEBUG( "Assign_insert" )
-            if isinstance (node.nodes[0], AssAttr):
+            if isinstance ( node.nodes[0], AssAttr ):
                 ## addressing an attribute in an object
                 attrname = node.nodes[0].attrname
                 ## special case: pass the assign name to the next step (object creation)
                 expr = self.insert_ast( node.expr, parent_stmt, class_ref, attrname )
-                obj_ptr = self.lookup_object_ptr(node.nodes[0].expr.name, class_ref)
-                new_str_label = self.str_label + str(self.str_label_cnt)
+                obj_ptr = self.lookup_object_ptr( node.nodes[0].expr.name, class_ref )
+                new_str_label = self.str_label + str( self.str_label_cnt )
                 self.str_label_cnt += 1
-                class_ref['string_list'].update({attrname:new_str_label})
-                ret = CallFunc(Name('set_attr'), [obj_ptr, Const(LabelName(new_str_label)), expr])
-            elif isinstance(node.nodes[0], AssName):
+                class_ref['string_list'].update( {attrname:new_str_label} )
+                ret = CallFunc( Name( 'set_attr' ), [obj_ptr, Const( LabelName( new_str_label ) ), expr] )
+            elif isinstance( node.nodes[0], AssName ):
                 ## special case: pass the assign name to the next step (object creation)
                 expr = self.insert_ast( node.expr, parent_stmt, class_ref, node.nodes[0].name )
                 ret = Assign( [node.nodes[0]], expr )
             else:
-                nodes = self.insert_ast( node.nodes[0], parent_stmt, class_ref)
+                nodes = self.insert_ast( node.nodes[0], parent_stmt, class_ref )
                 expr = self.insert_ast( node.expr, parent_stmt, class_ref )
                 ret = Assign( [nodes], expr )
             return ret
 
-        elif isinstance (node, Bitand) :
-            self.DEBUG( "Bitand_insert")
+        elif isinstance( node, Bitand ):
+            self.DEBUG( "Bitand_insert" )
             chain = []
             for attr in node.nodes:
-                chain.append(CallFunc(Name(self.unbox_int), [self.insert_ast(attr, parent_stmt, class_ref)]))
-            return CallFunc(Name(self.box_int), [Bitand(chain)])
+                chain.append( CallFunc( Name( self.unbox_int ), [self.insert_ast( attr, parent_stmt, class_ref )] ) )
+            return CallFunc( Name( self.box_int ), [Bitand( chain )] )
 
-        elif isinstance (node, Bitor):
-            self.DEBUG( "Bitor_insert")
+        elif isinstance( node, Bitor ):
+            self.DEBUG( "Bitor_insert" )
             chain = []
             for attr in node.nodes:
-                chain.append(CallFunc(Name(self.unbox_int), [self.insert_ast(attr, parent_stmt, class_ref)]))
-            return CallFunc(Name(self.box_int), [Bitor(chain)])
+                chain.append( CallFunc( Name( self.unbox_int ), [self.insert_ast( attr, parent_stmt, class_ref )] ) )
+            return CallFunc( Name( self.box_int ), [Bitor( chain )] )
 
-        elif isinstance (node, Bitxor):
-            self.DEBUG( "Bitxor_insert")
+        elif isinstance( node, Bitxor ):
+            self.DEBUG( "Bitxor_insert" )
             chain = []
             for attr in node.nodes:
-                chain.append(CallFunc(Name(self.unbox_int), [self.insert_ast(attr, parent_stmt, class_ref)]))
-            return CallFunc(Name(self.box_int), [Bitxor(chain)])
+                chain.append( CallFunc( Name( self.unbox_int ), [self.insert_ast( attr, parent_stmt, class_ref )] ) )
+            return CallFunc( Name( self.box_int ), [Bitxor( chain )] )
 
-        elif isinstance (node, And):
-            self.DEBUG( "And_insert")
+        elif isinstance(node, And):
+            self.DEBUG( "And_insert" )
+            ## special case: don't box and unbox here -> is handeled in flatten_ast
             chain = []
             for attr in node.nodes:
-                chain.append(self.insert_ast(attr, parent_stmt, class_ref))
-            return And(chain)
+                chain.append( self.insert_ast( attr, parent_stmt, class_ref ) )
+            return And( chain )
 
-        elif isinstance (node, Not):
-            self.DEBUG( "Not_insert")
-            expr = self.insert_ast(node.expr, parent_stmt, class_ref)
-            return CallFunc(Name(self.box_bool), [Not(CallFunc(Name(self.unbox_bool), [expr]))])
+        elif isinstance( node, Not ):
+            self.DEBUG( "Not_insert" )
+            expr = self.insert_ast( node.expr, parent_stmt, class_ref )
+            return CallFunc( Name( self.box_bool ), [Not( CallFunc( Name( self.unbox_bool ), [expr] ) )] )
 
-        elif isinstance (node, Or):
-            self.DEBUG( "Or_insert")
+        elif isinstance( node, Or ):
+            self.DEBUG( "Or_insert" )
+            ## special case: don't box and unbox here -> is handeled in flatten_ast
             chain = []
             for attr in node.nodes:
-                chain.append(self.insert_ast(attr, parent_stmt, class_ref))
-            return Or(chain)
+                chain.append( self.insert_ast( attr, parent_stmt, class_ref ) )
+            return Or( chain )
 
-        elif isinstance (node, Compare):
-            self.DEBUG( "Compare_insert")
-            expr = self.insert_ast(node.expr, parent_stmt, class_ref)
+        elif isinstance( node, Compare ):
+            self.DEBUG( "Compare_insert" )
+            expr = self.insert_ast( node.expr, parent_stmt, class_ref )
             chain_final = []
             for attr in node.ops:
                 if attr[0] != '==' and attr[0] != '!=':
                     operand_1 = attr[0]
-                    operand_2 = self.insert_ast(attr[1], parent_stmt, class_ref)
-                    chain_final.append((operand_1, CallFunc(Name(self.unbox_int), [operand_2])))
-                    return CallFunc(Name(self.box_bool), [Compare(CallFunc(Name(self.unbox_int), [expr]),chain_final)])
+                    operand_2 = self.insert_ast( attr[1], parent_stmt, class_ref )
+                    chain_final.append( (operand_1, CallFunc( Name( self.unbox_int ), [operand_2] )) )
+                    expr = Compare( CallFunc( Name( self.unbox_int ), [expr] ),chain_final )
+                    return CallFunc( Name( self.box_bool ), [expr] )
                 elif node.expr != True and node.expr != False:
                     operand_1 = attr[0]
-                    operand_2 = self.insert_ast(attr[1], parent_stmt, class_ref)
-                    chain_final.append((operand_1, CallFunc(Name(self.unbox_int), [operand_2])))
-                    return CallFunc(Name(self.box_bool), [Compare(CallFunc(Name(self.unbox_int), [expr]),chain_final)])
+                    operand_2 = self.insert_ast( attr[1], parent_stmt, class_ref )
+                    chain_final.append( (operand_1, CallFunc( Name( self.unbox_int ), [operand_2] )) )
+                    expr = Compare( CallFunc( Name( self.unbox_int ), [expr] ),chain_final )
+                    return CallFunc( Name( self.box_bool ), [expr] )
                 else:
                     operand_1 = attr[0]
-                    operand_2 = self.insert_ast(attr[1], parent_stmt, class_ref)
-                    chain_final.append((operand_1, CallFunc(Name(self.unbox_bool), [operand_2])))
-                    return CallFunc(Name(self.box_bool), [Compare(CallFunc(Name(self.unbox_bool), [expr]),chain_final)])
+                    operand_2 = self.insert_ast( attr[1], parent_stmt, class_ref )
+                    chain_final.append( (operand_1, CallFunc( Name( self.unbox_bool ), [operand_2] )) )
+                    expr = Compare( CallFunc( Name( self.unbox_bool ), [expr] ),chain_final )
+                    return CallFunc( Name( self.box_bool ), [expr] )
 
-        elif isinstance (node, If):
-            self.DEBUG( "If_insert")
+        elif isinstance( node, If ):
+            self.DEBUG( "If_insert" )
             chain = []
             for attr in node.tests:
-                left = self.insert_ast(attr[0], parent_stmt, class_ref)
-                right = self.insert_ast(attr[1], parent_stmt, class_ref )
-                chain.append( ( CallFunc(Name(self.unbox_bool), [left]), right ) )
+                left = self.insert_ast( attr[0], parent_stmt, class_ref )
+                right = self.insert_ast( attr[1], parent_stmt, class_ref )
+                chain.append( (CallFunc( Name( self.unbox_bool ), [left]), right) )
             other = None
             if node.else_ != None:
                 other = self.insert_ast( node.else_, parent_stmt, class_ref )
-            return If(chain, other)
+            return If( chain, other )
 
-        elif isinstance (node, While):
+        elif isinstance( node, While ):
             self.DEBUG( "While_insert" )
             chain = []
-            test = CallFunc( Name(self.unbox_bool), [self.insert_ast(node.test, parent_stmt, class_ref)] )
+            test = CallFunc( Name( self.unbox_bool ), [self.insert_ast( node.test, parent_stmt, class_ref )] )
             body = self.insert_ast( node.body, parent_stmt, class_ref )
             other = None
             if node.else_ != None:
                 other = self.insert_ast( node.else_, parent_stmt, class_ref )
             return While( test, body, other )
 
-        elif isinstance (node, Printnl):
+        elif isinstance( node, Printnl ):
             self.DEBUG( "Printnl_insert" )
             chain = []
             for attr in node.nodes:
                 chain.append( self.insert_ast( attr, parent_stmt, class_ref ) )
             return Printnl( chain, None )
 
-        elif isinstance (node, Print):
+        elif isinstance( node, Print ):
             self.DEBUG( "Print_insert" )
             chain = []
             for attr in node.nodes:
                 chain.append( self.insert_ast( attr, parent_stmt, class_ref ) )
             return Print( chain, None )
 
-        elif isinstance (node, CallFunc):
+        elif isinstance( node, CallFunc ):
             self.DEBUG( "CallFunc_insert" )
-            if isinstance (node.node, Getattr):
+            if isinstance( node.node, Getattr ):
                 ## call of a method
                 obj_name = node.node.expr.name
                 meth_name = node.node.attrname
                 ## set reference to corresponding class
-                class_name = self.lookup_object_class_name(obj_name, class_ref)
+                class_name = self.lookup_object_class_name( obj_name, class_ref )
                 temp_class_ref = self.class_ref[class_name]
                 ## get method label from class
-                meth_label = self.lookup_string(meth_name, temp_class_ref)
+                meth_label = self.lookup_string( meth_name, temp_class_ref )
                 ## get object pointer from object
-                obj_ptr = self.lookup_object_ptr(obj_name, class_ref)
-                fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [obj_ptr, Const(LabelName(meth_label))])
-                parent_stmt.append(Assign([Name('f')], fun_ptr))
+                obj_ptr = self.lookup_object_ptr( obj_name, class_ref )
+                fun_ptr = CallFunc( Name( 'get_fun_ptr_from_attr' ), [obj_ptr, Const( LabelName( meth_label ) )] )
+                new_varname = self.tempvar + str( self.var_counter )
+                self.var_counter += 1
+                parent_stmt.append( Assign( [Name( new_varname )], fun_ptr ) )
                 ## handle arguments
                 args = []
                 for arg in node.args:
                     args.append( self.insert_ast( arg, parent_stmt, class_ref ) )
                 args.insert( 0, obj_ptr )
-                return CallFunc(Pointer('f'), args)
+                return CallFunc( Pointer( new_varname ), args )
             else:
                 if node.node.name in self.class_ref:
                     ## object allocation
                     class_name = node.node.name
                     class_ptr = self.class_ref[class_name]['class_ptr']
-                    obj_ptr = CallFunc(Name('create_object'), [class_ptr])
-                    new_varname = self.tempvar + str(self.var_counter)
+                    obj_ptr = CallFunc( Name( 'create_object' ), [class_ptr] )
+                    new_varname = self.tempvar + str( self.var_counter )
                     self.var_counter += 1
-                    parent_stmt.append(Assign([AssName(new_varname, 'OP_ASSIGN')], obj_ptr))
-                    obj_name_ptr = Name(new_varname)
+                    parent_stmt.append( Assign( [AssName( new_varname, 'OP_ASSIGN' )], obj_ptr ) )
+                    obj_name_ptr = Name( new_varname )
                     class_ref['object_list'].update({
                         temp:{
                             'obj_ptr':obj_name_ptr,
                             'class_name':class_name
                         }
                     })
-                    attrname = self.lookup_string('__init__', self.class_ref[class_name])
-                    label_name = Const(LabelName(attrname))
-                    fun_ptr = CallFunc(Name('get_fun_ptr_from_attr'), [obj_name_ptr, label_name])
-                    parent_stmt.append(Assign([AssName('f', 'OP_ASSIGN')], fun_ptr))
+                    attrname = self.lookup_string( '__init__', self.class_ref[class_name] )
+                    label_name = Const( LabelName( attrname ) )
+                    fun_ptr = CallFunc( Name( 'get_fun_ptr_from_attr' ), [obj_name_ptr, label_name] )
+                    new_varname = self.tempvar + str( self.var_counter )
+                    self.var_counter += 1
+                    parent_stmt.append( Assign( [AssName( new_varname, 'OP_ASSIGN' )], fun_ptr ) )
                     ## handle arguments
                     args = []
                     for arg in node.args:
                         args.append( self.insert_ast( arg, parent_stmt, class_ref ) )
                     args.insert( 0, obj_name_ptr )
-                    return CallFunc(Pointer('f'), args)
+                    return CallFunc( Pointer( new_varname ), args )
                 else:
                     ## normal function call
                     chain = []
                     for arg in node.args:
-                        chain.append( CallFunc(Name(self.unbox_int), [self.insert_ast( arg, parent_stmt, class_ref )] ) )
-                    arg = CallFunc( self.insert_ast(node.node, parent_stmt, class_ref), chain )
-                    return CallFunc( Name(self.box_int), [arg] )
+                        expr = self.insert_ast( arg, parent_stmt, class_ref )
+                        chain.append( CallFunc( Name( self.unbox_int ), [expr] ) )
+                    arg = CallFunc( self.insert_ast( node.node, parent_stmt, class_ref ), chain )
+                    return CallFunc( Name( self.box_int ), [arg] )
 
-        elif isinstance (node, Getattr):
-            self.DEBUG( "Getatrr_insert")
-            obj_ptr = self.lookup_object_ptr(node.expr.name, class_ref)
+        elif isinstance( node, Getattr ):
+            self.DEBUG( "Getatrr_insert" )
+            obj_ptr = self.lookup_object_ptr( node.expr.name, class_ref )
             attrname = self.lookup_string( node.attrname, class_ref )
-            return CallFunc(Name('get_attr'), [obj_ptr, Const(LabelName(attrname))])
+            return CallFunc( Name( 'get_attr' ), [obj_ptr, Const( LabelName( attrname ) )] )
 
-        elif isinstance (node, Class):
+        elif isinstance( node, Class ):
             self.DEBUG( "Class_insert" )
-            ## TODO: superclass
-            #base = []
-            #if len(node.bases) > 0:
-            #    base.append(node.bases[0])
-            base = CallFunc(Name('create_list'), [self.insert_ast(Const(0), parent_stmt, class_ref)])
-            class_ptr = CallFunc(Name('create_class'), [base])
-            parent_stmt.append(Assign([AssName(LabelName(node.name), 'OP_ASSIGN')], class_ptr))
+            ## handle parent class
+            zero = self.insert_ast( Const( 0 ), parent_stmt, class_ref )
+            one = self.insert_ast( Const( 1 ), parent_stmt, class_ref )
+            if len(node.bases) > 0:
+                super_name = node.bases[0].name
+                list1 = CallFunc( Name( 'create_list' ), [one] )
+                base = CallFunc( Name( 'set_subscript' ), [list1, zero, LabelName( super_name )] )
+                self.class_ref.update({
+                    super_name:{
+                        'class_ptr':LabelName( super_name ),
+                        'object_list':{},
+                        'string_list':{}
+                    }
+                })
+            else:
+                base = CallFunc( Name( 'create_list' ), [zero] )
+            class_ptr = CallFunc( Name( 'create_class' ), [base] )
+            parent_stmt.append( Assign( [AssName( LabelName( node.name ), 'OP_ASSIGN' )], class_ptr ) )
             ## store result in global variable
             self.class_ref.update({
                 node.name:{
-                    'class_ptr':LabelName(node.name),
+                    'class_ptr':LabelName( node.name ),
                     'object_list':{},
                     'string_list':{}
                 }
             })
             new_class_ref = self.class_ref[node.name]
             for fun in node.code.nodes:
-                if isinstance(fun, Function):
-                    new_str_label = self.str_label + str(self.str_label_cnt)
+                if isinstance( fun, Function ):
+                    new_str_label = self.str_label + str( self.str_label_cnt )
                     self.str_label_cnt += 1
-                    new_meth_label = self.meth_label + str(self.meth_label_cnt)
+                    new_meth_label = self.meth_label + str( self.meth_label_cnt )
                     self.meth_label_cnt += 1
                     ## init scope
                     self.scope.update({
@@ -520,14 +542,14 @@ class Engine( object ):
                             'stack_cnt':0
                         }
                     })
-                    self.scope_list.append(new_meth_label)
-                    new_class_ref['string_list'].update({fun.name:new_str_label})
-                    method_label = Const(LabelName(new_meth_label))
-                    list0 = CallFunc(Name('create_list'), [self.insert_ast(Const(0), parent_stmt, class_ref)])
-                    fun_ptr = CallFunc(Name('create_closure'), [method_label, list0] )
-                    string_label = Const(LabelName(new_str_label))
-                    parent_stmt.append(CallFunc(Name('set_attr'), [LabelName(node.name), string_label, fun_ptr]))
-                    parent_stmt.append(self.insert_ast(fun, parent_stmt, new_class_ref))
+                    self.scope_list.append( new_meth_label )
+                    new_class_ref['string_list'].update( {fun.name:new_str_label} )
+                    method_label = Const( LabelName( new_meth_label ) )
+                    list0 = CallFunc( Name( 'create_list' ), [self.insert_ast( Const( 0 ), parent_stmt, class_ref )] )
+                    fun_ptr = CallFunc( Name( 'create_closure' ), [method_label, list0] )
+                    string_label = Const( LabelName( new_str_label ) )
+                    parent_stmt.append( CallFunc( Name( 'set_attr' ), [LabelName( node.name ), string_label, fun_ptr] ) )
+                    parent_stmt.append( self.insert_ast( fun, parent_stmt, new_class_ref ) )
                 else:
                     die( "ERROR: invalid syntax, only function definitions allowed in class body")
             return 
@@ -1193,7 +1215,7 @@ class Engine( object ):
 #        header.append( ASM_plabel( self.labeltable_lookup( "LC0" ) ) )
         header.append( ASM_text("ascii \"Compiled with JPSM!\"") )
         for class_name in self.class_ref:
-            if class_name != "Object":
+            if class_name != self.init_class:
                 header.append( ASM_text("comm", class_name + ",4,4") )
         for class_name in self.class_ref:
             str_list = self.class_ref[class_name]['string_list']

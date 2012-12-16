@@ -21,8 +21,7 @@
 ##              - uses script x86interp.py and in_pseude.sh
 ##  -alloc:     run testbench with allocation assembler
 ##              - use in_x86.sh
-
-
+runtime_dir=../runtime/
 PSEUDO=0
 ALLOC=0
 STACK=0
@@ -31,12 +30,12 @@ if [[ $1 == "-pseudo" ]]; then
     PSEUDO=1
     SRC=in_pseudo.sh
     echo "PSEUDO-code"
-elif [[ $1 == "-stack" ]]; then
-    STACK=1
-    echo "STACK-code"
-else
+elif [[ $1 == "-alloc" ]]; then
     ALLOC=1
     echo "ALLOC-code"
+else
+    STACK=1
+    echo "STACK-code"
 fi
 
 source $SRC
@@ -58,7 +57,8 @@ generate(){
 
 compile(){
     RES=0
-    gcc -m32 ./${1}.s ./runtime.c -o ./${1}.exe || RES=1
+    gcc -m32 "${1}.s" $runtime_dir/hashtable.o $runtime_dir/hashtable_itr.o $runtime_dir/hashtable_utility.o $runtime_dir/runtime.o -lm -o "${1}.exe" || RES=1
+##    gcc -m32 ./${1}.s ./runtime.c -o ./${1}.exe || RES=1
 }
 
 execute()
