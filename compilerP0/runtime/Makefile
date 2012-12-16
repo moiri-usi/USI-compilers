@@ -14,7 +14,7 @@ RUNTIME = hashtable.o hashtable_itr.o hashtable_utility.o runtime.o -lm
 runtime: $(RUNTIME)
 	@true
 
-test: test1 test2 test3 test4
+test: test1 test2 test3 test4 test5
 
 test1: $(RUNTIME) test1.o
 	@$(CC) $(CFLAGS) -o test1 $(RUNTIME) test1.o $(GC)
@@ -35,6 +35,11 @@ test4: $(RUNTIME) test4.o
 	@$(CC) $(CFLAGS) -o test4 $(RUNTIME) test4.o $(GC)
 	@./test4 > test4.out
 	@if cmp test4.out test4.expected; then echo test4 ok ; else echo test4 failed ; fi
+
+test5: $(RUNTIME) test5.o
+	@$(CC) $(CFLAGS) -o test5 $(RUNTIME) test5.o $(GC)
+	@./test5 > test5.out
+	@if cmp test5.out test5.expected; then echo test5 ok ; else echo test5 failed ; fi
 
 retest: test-clean test
 

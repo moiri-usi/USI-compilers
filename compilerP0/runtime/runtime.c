@@ -247,6 +247,9 @@ static int is_zero(pyobj val) {
 #endif
 }
 
+static void print_object(pyobj o) {
+  printf("<object>");
+}
 static void print_int(int x) {
   printf("%d", x);
 }
@@ -276,6 +279,9 @@ static void print_pyobj(pyobj x) {
     break;
   case LIST:
     print_list(x);
+    break;
+  case OBJECT:
+    print_object(x);
     break;
   default:
     assert(0);
@@ -585,6 +591,8 @@ static int equal_pyobj(pyobj a, pyobj b)
     case DICT:
       return dict_equal(x->u.d, y->u.d);
     case CLASS:
+    case FUN:
+    case OBJECT:
       return x == y;
     default:
       return 0;
@@ -765,31 +773,7 @@ pyobj append(pyobj a, pyobj b) {
 }
 
 int equal(pyobj a, pyobj b) {
-  switch (big_tag(a)) {
-  case LIST:
-    switch (big_tag(b)) {
-    case LIST:
-      return list_equal(project_big(a)->u.l, project_big(a)->u.l);
-    default:
-      return 0;
-    }
-  case DICT:
-    switch (big_tag(b)) {
-    case DICT:
-      return dict_equal(project_big(a)->u.d, project_big(a)->u.d);
-    default:
-      return 0;
-    }
-  case CLASS:
-    switch (big_tag(b)) {
-    case CLASS:
-      return a == b;
-    default:
-      return 0;
-    }
-  default:
-    return 0;
-  }
+  return equal_pyobj(a, b);
 }
 
 int not_equal(pyobj x, pyobj y) { return !equal(x, y); }
@@ -972,6 +956,21 @@ pyobj create_class(pyobj bases)
 #else
   return ret;
 #endif
+}
+
+pyobj create_class_without_superclass()
+{
+  pyobj zero = inject_int(0);
+  pyobj list0 = create_list(zero);
+  return create_class(list0);
+}
+
+pyobj create_class_with_superclass(pyobj base)
+{
+  pyobj one = inject_int(1);
+  pyobj list1 = create_list(one);
+  set_subscript(list1, one, base); // list1[0] = base
+  return create_class(list1);
 }
 
 /* we leave calling the __init__ function for a separate step. */
@@ -1189,6 +1188,14 @@ pyobj get_attr(pyobj c, char* attr)
     printf("error in get attribute, not a class or object\n");
     exit(-1);
   }
+}
+
+pyobj set_fun(pyobj obj, char* attr, void *fp)
+{
+    pyobj zero = inject_int(0);
+    pyobj list0 = create_list(zero);
+    pyobj closure = create_closure(fp, list0);
+    set_attr(obj, attr, closure);
 }
 
 pyobj set_attr(pyobj obj, char* attr, pyobj val)

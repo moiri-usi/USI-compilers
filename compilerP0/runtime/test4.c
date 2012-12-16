@@ -44,7 +44,8 @@ int main()
   {
     pyobj meth = get_attr(c, "m");
     pyobj fun = get_function(meth);
-    pyobj (*f)(pyobj) = (pyobj (*)(pyobj)) get_fun_ptr(fun);
+    void *fp = get_fun_ptr(fun);
+    pyobj (*f)(pyobj) = (pyobj (*)(pyobj)) fp; // cast to a function pointer type
     i = f(get_receiver(meth));
   }
 
@@ -52,11 +53,12 @@ int main()
   {
     pyobj meth = get_attr(d, "m");
     pyobj fun = get_function(meth);
-    pyobj (*f)(pyobj) = (pyobj (*)(pyobj)) get_fun_ptr(fun);
+    void *fp = get_fun_ptr(fun);
+    pyobj (*f)(pyobj) = (pyobj (*)(pyobj)) fp; // cast to a function pointer type
     j = f(get_receiver(meth));
   }
 
-  // d.n(1)
+  // d.n(3)
   {
     pyobj (*f)(pyobj, pyobj) = (pyobj (*)(pyobj, pyobj)) get_fun_ptr_from_attr(d, "n");
     f(d, three);
@@ -66,7 +68,8 @@ int main()
   {
     pyobj meth = get_attr(d, "m");
     pyobj fun = get_function(meth);
-    pyobj (*f)(pyobj) = (pyobj (*)(pyobj)) get_fun_ptr(fun);
+    void *fp = get_fun_ptr(fun);
+    pyobj (*f)(pyobj) = (pyobj (*)(pyobj)) fp; // cast to a function pointer type
     k = f(get_receiver(meth));
   }
 
@@ -88,6 +91,7 @@ int main()
   print_any(j);
   print_any(k);
   print_any(h);
+  return 0;
 }
 
 /* code to create classes C and D */

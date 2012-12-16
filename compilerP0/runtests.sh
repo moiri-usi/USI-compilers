@@ -85,10 +85,10 @@ for testpy in "$@"; do
 
     # compile to .s
     python compile.py "$test.py" > "$test.s"
-    gcc $ccopts "$test.s" $runtime_dir/hashtable.o $runtime_dir/hashtable_itr.o $runtime_dir/hashtable_utility.o $runtime_dir/runtime.o -lm -o "$test"
+    gcc $ccopts "$test.s" $runtime_dir/hashtable.o $runtime_dir/hashtable_itr.o $runtime_dir/hashtable_utility.o $runtime_dir/runtime.o -lm -o "$test.exe"
 
     python "$test.py" < "$in" > "$test.expected"
-    "./$test" < "$in" > "$test.test"
+    "./$test.exe" < "$in" > "$test.test"
 
     if diff "$test.expected" "$test.test" > /dev/null 2>&1; then
       echo "$test" ok

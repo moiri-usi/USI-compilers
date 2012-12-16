@@ -158,7 +158,7 @@ class Engine( object ):
             }
         }
         self.class_ref = {
-            'object':{
+            'Object':{
                 'class_ptr':None,
                 'object_list':{},   ## obj_name:{'obj_ptr':obj_ptr, 'class_name':class_name}
                 'string_list':{}    ## {meth/attr}_name:ASM_str_label -> $.LC0
@@ -181,7 +181,7 @@ class Engine( object ):
 
         self.DEBUG( "\nCOMPUTE INSERT_AST" )
         self.scope_cnt = 0
-        new_ast=self.insert_ast(self.ast, [], self.class_ref['object'])
+        new_ast=self.insert_ast(self.ast, [], self.class_ref['Object'])
         self.DEBUG( "\n-----------------------------------------------------" )
         self.DEBUG( "\nINSERT_AST\n" )
         if DEBUG: dump_ast(new_ast)
@@ -437,7 +437,6 @@ class Engine( object ):
                 for arg in node.args:
                     args.append( self.insert_ast( arg, parent_stmt, class_ref ) )
                 args.insert( 0, obj_ptr )
-                self.DEBUG( "\nARGS_" + meth_name + "\n" + str(args) )
                 return CallFunc(Pointer('f'), args)
             else:
                 if node.node.name in self.class_ref:
@@ -464,7 +463,6 @@ class Engine( object ):
                     for arg in node.args:
                         args.append( self.insert_ast( arg, parent_stmt, class_ref ) )
                     args.insert( 0, obj_name_ptr )
-                    self.DEBUG( "\nARGS_init\n" + str(args) )
                     return CallFunc(Pointer('f'), args)
                 else:
                     ## normal function call
@@ -482,10 +480,12 @@ class Engine( object ):
 
         elif isinstance (node, Class):
             self.DEBUG( "Class_insert" )
-            base = []
-            if len(node.bases) > 0:
-                base.append(node.bases[0])
-            class_ptr = CallFunc(Name('create_class'), base)
+            ## TODO: superclass
+            #base = []
+            #if len(node.bases) > 0:
+            #    base.append(node.bases[0])
+            base = CallFunc(Name('create_list'), [self.insert_ast(Const(0), parent_stmt, class_ref)])
+            class_ptr = CallFunc(Name('create_class'), [base])
             parent_stmt.append(Assign([AssName(LabelName(node.name), 'OP_ASSIGN')], class_ptr))
             ## store result in global variable
             self.class_ref.update({
@@ -514,7 +514,8 @@ class Engine( object ):
                     self.scope_list.append(new_meth_label)
                     new_class_ref['string_list'].update({fun.name:new_str_label})
                     method_label = Const(LabelName(new_meth_label))
-                    fun_ptr = CallFunc(Name('create_closure'), [method_label] )
+                    list0 = CallFunc(Name('create_list'), [self.insert_ast(Const(0), parent_stmt, class_ref)])
+                    fun_ptr = CallFunc(Name('create_closure'), [method_label, list0] )
                     string_label = Const(LabelName(new_str_label))
                     parent_stmt.append(CallFunc(Name('set_attr'), [LabelName(node.name), string_label, fun_ptr]))
                     parent_stmt.append(self.insert_ast(fun, parent_stmt, new_class_ref))
@@ -1183,7 +1184,9 @@ class Engine( object ):
 #        header.append( ASM_plabel( self.labeltable_lookup( "LC0" ) ) )
         header.append( ASM_text("ascii \"Compiled with JPSM!\"") )
         for class_name in self.class_ref:
-            header.append( ASM_text("comm", class_name + ",4,4") )
+            if class_name != "Object":
+                header.append( ASM_text("comm", class_name + ",4,4") )
+        for class_name in self.class_ref:
             str_list = self.class_ref[class_name]['string_list']
             for str_name in str_list:
                 header.append( ASM_plabel( self.labeltable_lookup(str_list[str_name] ) ) )
@@ -1202,7 +1205,7 @@ class Engine( object ):
 
     def get_epilog( self ):
         epilog = []
-        epilog.append( ASM_movl( ASM_stack( 0, self.reg_list['ebp'] ), self.reg_list['eax'] ) )
+        #epilog.append( ASM_movl( ASM_stack( 0, self.reg_list['ebp'] ), self.reg_list['eax'] ) )
         epilog.append( ASM_leave() )
         epilog.append( ASM_ret() )
         return epilog

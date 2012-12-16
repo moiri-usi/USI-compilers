@@ -157,6 +157,8 @@ pyobj set_free_vars(pyobj b, pyobj free_vars);
 void *get_fun_ptr_from_attr(pyobj c, char* attr);
 
 pyobj create_class(pyobj bases); /* bases should be a list of classes */
+pyobj create_class_without_superclass(); /* calls create_class with an empty list */
+pyobj create_class_with_superclass(pyobj base); /* calls create_class with a singleton list */
 pyobj create_object(pyobj cl);
 int inherits(pyobj c1, pyobj c2); /* Returns true if class c1 inherits from class c2 */
 pyobj get_class(pyobj o); /* Get the class from an object or unbound method */
