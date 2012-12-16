@@ -437,6 +437,7 @@ class Engine( object ):
                 for arg in node.args:
                     args.append( self.insert_ast( arg, parent_stmt, class_ref ) )
                 args.insert( 0, obj_ptr )
+                self.DEBUG( "\nARGS_" + meth_name + "\n" + str(args) )
                 return CallFunc(Pointer('f'), args)
             else:
                 if node.node.name in self.class_ref:
@@ -463,7 +464,8 @@ class Engine( object ):
                     for arg in node.args:
                         args.append( self.insert_ast( arg, parent_stmt, class_ref ) )
                     args.insert( 0, obj_name_ptr )
-                    return CallFunc(Pointer('f'), [obj_name_ptr])
+                    self.DEBUG( "\nARGS_init\n" + str(args) )
+                    return CallFunc(Pointer('f'), args)
                 else:
                     ## normal function call
                     chain = []
