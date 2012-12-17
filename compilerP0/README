@@ -1,0 +1,23 @@
+Simon Maurer
+Josafat Piraquive 
+
+WHAT IS IMPLEMENTED
+===================
+- Booleans, conditionals, and loops.
+- Class definitions, constructors, and object allocation.
+- Field accesses and assignments.
+- Method calls and return.
+- P0 language features
+- Scope handling (each method has his own scope)
+
+OPTIMIZATIONS
+=============
+- Tagging and Boxing
+
+KNOWN BUGS (FIXME tags in the code)
+==========
+- Superclasses dont work (always an empty list is passed)
+- Pass an object as attribute to a method (not supported)
+
+WARNING!!!
+Please check the test cases submited in test.tar.gz some of them are illegal.
