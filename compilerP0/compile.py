@@ -520,6 +520,12 @@ class Engine( object ):
             if len(node.bases) > 0:
                 super_name = node.bases[0].name
                 self.var_counter += 1
+                if super_name == "object":
+                    if super_name not in self.class_ref:
+                        base = CallFunc( Name( 'create_list' ), [zero] )
+                        class_ptr = CallFunc( Name( 'create_class' ), [base] )
+                        parent_stmt.append( Assign( [AssName( LabelName( super_name ), 'OP_ASSIGN' )], class_ptr ) )
+                        
                 new_varname = self.tempvar + str( self.var_counter )
                 list1 = CallFunc( Name( 'create_list' ), [one] )
                 base = Name( new_varname )
