@@ -171,7 +171,8 @@ class Engine( object ):
             self.init_class:{
                 'class_ptr':None,
                 'object_list':{},   ## obj_name:{'obj_ptr':obj_ptr, 'class_name':class_name}
-                'string_list':{}    ## {meth/attr}_name:ASM_str_label -> $.LC0
+                'string_list':{},   ## {meth/attr}_name:ASM_str_label -> $.LC0
+                'super_class':None
             }
         }
         self.scope_list = ['main']
@@ -516,7 +517,7 @@ class Engine( object ):
             ## handle parent class
             zero = self.insert_ast( Const( 0 ), parent_stmt, class_ref )
             one = self.insert_ast( Const( 1 ), parent_stmt, class_ref )
-            ## FIXME: super classes don't work
+            super_name = None
             if len(node.bases) > 0:
                 super_name = node.bases[0].name
                 self.var_counter += 1
@@ -525,20 +526,19 @@ class Engine( object ):
                         base = CallFunc( Name( 'create_list' ), [zero] )
                         class_ptr = CallFunc( Name( 'create_class' ), [base] )
                         parent_stmt.append( Assign( [AssName( LabelName( super_name ), 'OP_ASSIGN' )], class_ptr ) )
-                        
+                        self.class_ref.update({
+                            super_name:{
+                                'class_ptr':LabelName( super_name ),
+                                'object_list':{},
+                                'string_list':{},
+                                'super_class':None
+                            }
+                        })
                 new_varname = self.tempvar + str( self.var_counter )
                 list1 = CallFunc( Name( 'create_list' ), [one] )
                 base = Name( new_varname )
                 parent_stmt.append( Assign( [AssName( new_varname, 'OP_ASSIGN')], list1 ) )
                 parent_stmt.append( CallFunc( Name( 'set_subscript' ), [base, zero, LabelName( super_name )] ) )
-                if super_name not in self.class_ref:
-                    self.class_ref.update({
-                        super_name:{
-                            'class_ptr':LabelName( super_name ),
-                            'object_list':{},
-                            'string_list':{}
-                        }
-                    })
             else:
                 base = CallFunc( Name( 'create_list' ), [zero] )
             class_ptr = CallFunc( Name( 'create_class' ), [base] )
@@ -548,7 +548,8 @@ class Engine( object ):
                 node.name:{
                     'class_ptr':LabelName( node.name ),
                     'object_list':{},
-                    'string_list':{}
+                    'string_list':{},
+                    'super_class':super_name
                 }
             })
             new_class_ref = self.class_ref[node.name]
@@ -591,7 +592,8 @@ class Engine( object ):
 
         elif isinstance( node, Pass ):
             self.DEBUG( "Pass_insert" )
-            return Return( Name('None') )
+            return Pass() 
+            ##return Return( Name('None') )
 
         else:
             die( "ERROR: insert_ast: unknown AST node " + str( node ) )
@@ -918,6 +920,10 @@ class Engine( object ):
         elif isinstance( node, Pointer ):
             return node
 
+        elif isinstance( node, Pass ):
+            self.DEBUG( "Pass" )
+            return Pass() 
+
         else:
             die( "ERROR: flatten_ast: unknown AST node " + str( node ) )
 
@@ -1219,6 +1225,11 @@ class Engine( object ):
             scope['asm_list'].append( ASM_movl( self.lookup(nd.name, scope ), self.reg_list['eax'] ) )
             return Pointer(ASM_pointer(self.reg_list['eax']))
 
+        elif isinstance( node, Pass ):
+            self.DEBUG( "Pass" )
+            scope['asm_list'].append( ASM_nop() )
+            return
+ 
         else:
             self.DEBUG( "*** ELSE ***" )
             die( "ERROR: flatten_ast_2_list: unknown AST node " + str( nd ) )

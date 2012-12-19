@@ -180,6 +180,13 @@ class ASM_instruction( object ):
     def print_debug( self ):
         return self.DEBUG_type
 
+# nop
+class ASM_nop( ASM_instruction ):
+    def __init__( self ):
+        pass
+    def __str__( self ):
+        return self.inst_ident + "nop"
+
 # move 
 class ASM_movl( ASM_instruction ):
     def __init__( self, left, right ):
