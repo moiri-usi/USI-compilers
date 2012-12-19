@@ -456,7 +456,7 @@ class Engine( object ):
                     if arg in class_ref['object_list']:
                         ## FIXME: passing objects as parameter is not working
                         ## update class_ref of owner of function
-                        pass    
+                        pass
                     args.append( self.insert_ast( arg, parent_stmt, class_ref ) )
                 args.insert( 0, obj_ptr )
                 return CallFunc( Pointer( new_fun_varname ), args )
@@ -517,24 +517,24 @@ class Engine( object ):
             zero = self.insert_ast( Const( 0 ), parent_stmt, class_ref )
             one = self.insert_ast( Const( 1 ), parent_stmt, class_ref )
             ## FIXME: super classes don't work
-           # if len(node.bases) > 0:
-           #     super_name = node.bases[0].name
-           #     self.var_counter += 1
-           #     new_varname = self.tempvar + str( self.var_counter )
-           #     list1 = CallFunc( Name( 'create_list' ), [one] )
-           #     base = Name( new_varname )
-           #     parent_stmt.append( Assign( [AssName( new_varname, 'OP_ASSIGN')], list1 ) )
-           #     parent_stmt.append( CallFunc( Name( 'set_subscript' ), [base, zero, LabelName( super_name )] ) )
-           #     self.class_ref.update({
-           #         super_name:{
-           #             'class_ptr':LabelName( super_name ),
-           #             'object_list':{},
-           #             'string_list':{}
-           #         }
-           #     })
-           # else:
-           #     base = CallFunc( Name( 'create_list' ), [zero] )
-            base = CallFunc( Name( 'create_list' ), [zero] )
+            if len(node.bases) > 0:
+                super_name = node.bases[0].name
+                self.var_counter += 1
+                new_varname = self.tempvar + str( self.var_counter )
+                list1 = CallFunc( Name( 'create_list' ), [one] )
+                base = Name( new_varname )
+                parent_stmt.append( Assign( [AssName( new_varname, 'OP_ASSIGN')], list1 ) )
+                parent_stmt.append( CallFunc( Name( 'set_subscript' ), [base, zero, LabelName( super_name )] ) )
+                if super_name not in self.class_ref:
+                    self.class_ref.update({
+                        super_name:{
+                            'class_ptr':LabelName( super_name ),
+                            'object_list':{},
+                            'string_list':{}
+                        }
+                    })
+            else:
+                base = CallFunc( Name( 'create_list' ), [zero] )
             class_ptr = CallFunc( Name( 'create_class' ), [base] )
             parent_stmt.append( Assign( [AssName( LabelName( node.name ), 'OP_ASSIGN' )], class_ptr ) )
             ## store result in global variable
